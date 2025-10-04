@@ -10,55 +10,88 @@
 ---
 
 ## **📌 Description**
-NeoSaaS est un **template open-source** conçu pour accélérer le développement de votre application SaaS. Il intègre une architecture modulaire basée sur **Docker** et **Docker Compose**, permettant un déploiement simple et une scalabilité immédiate.
-
-Le projet est organisé pour séparer les fonctionnalités clés (vente, contenu, blog, etc.) et faciliter les contributions communautaires.
+NeoSaaS est un **template open-source** conçu pour accélérer le développement de ton application SaaS. Il intègre une architecture modulaire basée sur **Docker** et **GitHub Actions** pour un déploiement automatisé et une scalabilité immédiate.
 
 ---
 
 ## **⚙️ Prérequis**
 - **Docker** (version 20.10 ou supérieure)
-- **Docker Compose** (version 1.29 ou supérieure)
-- **Git** (pour cloner le dépôt)
-- Un terminal (Linux/MacOS/Windows avec WSL)
+- **GitHub CLI** (`gh`) pour interagir avec GitHub Container Registry (GHCR)
+- Un **compte GitHub** avec accès au dépôt [neosaastech/neosaas-website](https://github.com/neosaastech/neosaas-website)
 
 ---
 
-## **🛠 Installation**
+## **🛠 Installation et lancement avec Docker**
 
-### **1. Cloner le dépôt**
+### **1. Récupérer l'image Docker depuis GitHub**
+Les images Docker sont automatiquement construites et poussées vers **GitHub Container Registry (GHCR)** via GitHub Actions. Voici comment les utiliser :
+
+#### **Nom de l'image**
+L'image est nommée selon le workflow GitHub Actions :
+- **Nom complet** : `ghcr.io/neosaastech/neosaas-website/web`
+- **Tags disponibles** :
+  - `development` (pour la branche `Development`)
+  - `sha-<shortsha>` (ex: `sha-abcdef1`)
+
+#### **Authentification avec GHCR**
+Avant de récupérer l'image, authentifie-toi avec GitHub Container Registry :
 ```bash
-git clone https://github.com/neomnia/neosaas.git
-cd neosaas
+echo "<TON_TOKEN_GITHUB>" | docker login ghcr.io -u <TON_USERNAME> --password-stdin
+```
+> Remplace `<TON_TOKEN_GITHUB>` par un [token GitHub](https://github.com/settings/tokens) avec les permissions `read:packages`.
+
+#### **Récupérer et lancer l'image**
+Pour utiliser l'image de la branche `Development` :
+```bash
+# Récupérer l'image
+docker pull ghcr.io/neosaastech/neosaas-website/web:development
+
+# Lancer le conteneur
+docker run -d -p 3000:3000 --name neosaas ghcr.io/neosaastech/neosaas-website/web:development
 ```
 
-### **2. Configurer les branches**
-Le dépôt est organisé avec deux branches principales :
-- **`prod`** : Version stable (déploiement en production).
-- **`dev`** : Version en développement (fonctionnalités en cours).
-
-Les autres branches correspondent aux **modules** du projet :
-- `vente` (à venir)
-- `contenu` (inclut le blog)
-
-Pour basculer vers une branche spécifique :
+Pour utiliser une version spécifique (ex: `sha-abcdef1`) :
 ```bash
-git checkout <nom-de-la-branche>
+docker pull ghcr.io/neosaastech/neosaas-website/web:sha-abcdef1
+docker run -d -p 3000:3000 --name neosaas ghcr.io/neosaastech/neosaas-website/web:sha-abcdef1
 ```
 
-### **3. Lancer l'application avec Docker**
-```bash
-# Construire les conteneurs
-docker-compose build
+---
 
-# Démarrer les services
+### **2. Utiliser Docker Compose**
+Si tu préfères utiliser `docker-compose`, crée un fichier `docker-compose.yml` :
+```yaml
+version: "3.9"
+services:
+  neosaas:
+    image: ghcr.io/neosaastech/neosaas-website/web:development
+    container_name: neosaas
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: always
+```
+
+Puis lance le service :
+```bash
 docker-compose up -d
-
-# Accéder à l'application
-open http://localhost:3000
 ```
 
-> ⚠️ **Note** : La première exécution peut prendre quelques minutes (téléchargement des images Docker).
+---
+
+### **3. Mettre à jour l'image**
+Pour récupérer la dernière version de l'image :
+```bash
+# Arrêter et supprimer l'ancien conteneur
+docker stop neosaas && docker rm neosaas
+
+# Récupérer la nouvelle image
+docker pull ghcr.io/neosaastech/neosaas-website/web:development
+
+# Relancer le conteneur
+docker run -d -p 3000:3000 --name neosaas ghcr.io/neosaastech/neosaas-website/web:development
+```
 
 ---
 
@@ -66,15 +99,12 @@ open http://localhost:3000
 ```
 neosaas/
 ├── docker/                  # Fichiers de configuration Docker
-│   ├── Dockerfile           # Configuration principale
-│   └── docker-compose.yml   # Orchestration des services
 ├── src/
 │   ├── vente/               # Module "Vente" (à venir)
 │   ├── contenu/             # Module "Contenu" (blog, pages statiques)
 │   └── core/                # Cœur de l'application (API, auth, etc.)
 ├── docs/                    # Documentation technique
-├── .gitignore
-├── LICENSE
+├── .github/workflows/       # Workflows GitHub Actions
 └── README.md
 ```
 
@@ -97,7 +127,7 @@ Les contributions sont les bienvenues ! Voici comment participer :
 2. Créer une **branche dédiée** (`git checkout -b ma-fonctionnalite`).
 3. Commiter vos changements (`git commit -m "Ajout de X"`).
 4. Pousser sur votre fork (`git push origin ma-fonctionnalite`).
-5. Ouvrir une **Pull Request** vers la branche `dev`.
+5. Ouvrir une **Pull Request** vers la branche `Development`.
 
 > 💡 **Bon à savoir** :
 > - Respectez les [conventions de commit](https://www.conventionalcommits.org/).
@@ -113,7 +143,7 @@ Les contributions sont les bienvenues ! Voici comment participer :
 ---
 ## **🔗 Liens utiles**
 - **Site officiel** : [https://neosaas.com](https://neosaas.com)
-- **Support** : [Ouvrir un ticket](https://github.com/neomnia/neosaas/issues)
+- **Support** : [Ouvrir un ticket](https://github.com/neosaastech/neosaas-website/issues)
 - **Communauté** : [Rejoindre Discord](https://discord.gg/neosaas)
 
 ---
