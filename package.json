@@ -2,12 +2,12 @@
   "name": "my-v0-project",
   "version": "0.1.0",
   "private": true,
-  "description": "Next.js app pour Plesk (Node 24.10, port dynamique)",
+  "description": "Next.js 15 + React 19 sur Plesk (Node 24.10, port dynamique)",
   "scripts": {
     "build": "next build",
     "dev": "next dev -H 0.0.0.0 -p 3000",
     "lint": "next lint",
-    "start": "next start -H 0.0.0.0 -p $PORT",
+    "start": "NODE_ENV=production next start -H 0.0.0.0 -p $PORT",
     "postinstall": "next build"
   },
   "engines": {
@@ -53,7 +53,7 @@
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
-    "next-themes": "0.3.0",
+    "next-themes": "^0.4.0",
     "postcss": "^8.5.0",
     "react": "19.0.0",
     "react-day-picker": "9.8.0",
