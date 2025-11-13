@@ -36,9 +36,9 @@ Les pages suivantes existent et sont prêtes à être connectées à la base de 
 
 Créez un fichier `.env.local` à la racine :
 
-```bash
+\`\`\`bash
 DATABASE_URL=postgresql://user:password@host.neon.tech/dbname?sslmode=require
-```
+\`\`\`
 
 > **Note** : Obtenez votre DATABASE_URL depuis votre dashboard Neon : https://console.neon.tech
 
@@ -46,7 +46,7 @@ DATABASE_URL=postgresql://user:password@host.neon.tech/dbname?sslmode=require
 
 Exemple de schéma pour la table `users` :
 
-```sql
+\`\`\`sql
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -61,13 +61,13 @@ INSERT INTO users (name, email, role, status) VALUES
 ('Emily Johnson', 'emily@example.com', 'Admin', 'Active'),
 ('Michael Brown', 'michael@example.com', 'User', 'Active'),
 ('Sarah Wilson', 'sarah@example.com', 'User', 'Inactive');
-```
+\`\`\`
 
 ### Étape 3 : Modifier `app/actions.ts` selon vos besoins
 
 Exemple pour récupérer les utilisateurs :
 
-```typescript
+\`\`\`typescript
 // app/actions.ts
 "use server";
 import { neon } from "@neondatabase/serverless";
@@ -93,13 +93,13 @@ export async function createUser(name: string, email: string) {
     `;
     return data[0];
 }
-```
+\`\`\`
 
 ### Étape 4 : Utiliser dans les pages dashboard
 
 Exemple pour `app/dashboard/users/page.tsx` :
 
-```typescript
+\`\`\`typescript
 import { getData } from "@/app/actions"
 
 export default async function UsersPage() {
@@ -131,7 +131,7 @@ export default async function UsersPage() {
     </div>
   )
 }
-```
+\`\`\`
 
 ## 🔒 Authentification
 
