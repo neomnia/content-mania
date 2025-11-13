@@ -30,7 +30,7 @@ export function DocsMobileNav() {
         },
         {
           title: "Download from GitHub",
-          href: "/docs/download",
+          href: "https://github.com/neosaastech/neosaas-website",
         },
       ],
     },

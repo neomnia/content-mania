@@ -256,9 +256,9 @@ export default function DocsPage() {
                 </Link>
               </li>
               <li>
-                <Link href="/docs/download" className="text-muted-foreground hover:text-foreground">
+                <a href="https://github.com/neosaastech/neosaas-website" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
                   Download from GitHub
-                </Link>
+                </a>
               </li>
               <li>
                 <Link href="/docs/architecture" className="text-muted-foreground hover:text-foreground">
@@ -283,9 +283,9 @@ export default function DocsPage() {
                 <Badge variant="outline">Beginner</Badge>
               </li>
               <li className="flex items-center justify-between">
-                <Link href="/docs/download" className="text-sm hover:underline">
+                <a href="https://github.com/neosaastech/neosaas-website" target="_blank" rel="noopener noreferrer" className="text-sm hover:underline">
                   Download Latest Version from GitHub
-                </Link>
+                </a>
                 <Badge variant="outline">Essential</Badge>
               </li>
               <li className="flex items-center justify-between">
