@@ -1,6 +1,6 @@
 import type React from "react"
 
-import { ThemeProvider } from "@/components/theme-provider"
+import { Providers } from "@/components/providers"
 import "./globals.css"
 
 import { Inter, Geist_Mono as V0_Font_Geist_Mono } from 'next/font/google'
@@ -100,9 +100,7 @@ export default function RootLayout({
         )}
       </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          {children}
-        </ThemeProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )
