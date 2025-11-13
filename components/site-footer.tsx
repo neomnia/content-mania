@@ -4,8 +4,8 @@ export function SiteFooter() {
   return (
     <footer className="w-full border-t bg-[#1A1A1A] text-white">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-10">
-        <div className="grid gap-8 md:grid-cols-3">
-          <div className="space-y-4">
+        <div className="grid gap-8 md:grid-cols-3 text-center md:text-left">
+          <div className="space-y-4 flex flex-col items-center md:items-start">
             <div className="flex items-center gap-2">
               <div className="font-bold text-xl tracking-tight">
                 <span className="text-white">Neo</span>
@@ -17,7 +17,7 @@ export function SiteFooter() {
             </p>
           </div>
 
-          <div>
+          <div className="flex flex-col items-center md:items-start">
             <h3 className="font-medium mb-4 text-[#CD7F32]">Product</h3>
             <ul className="space-y-2">
               <li>
@@ -38,7 +38,7 @@ export function SiteFooter() {
             </ul>
           </div>
 
-          <div>
+          <div className="flex flex-col items-center md:items-start">
             <h3 className="font-medium mb-4 text-[#CD7F32]">Company</h3>
             <ul className="space-y-2">
               <li>

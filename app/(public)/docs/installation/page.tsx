@@ -304,11 +304,11 @@ export default function InstallationPage() {
               <ArrowLeft className="h-4 w-4" /> Introduction
             </Button>
           </Link>
-          <Link href="/docs/download">
+          <a href="https://github.com/neosaastech/neosaas-website" target="_blank" rel="noopener noreferrer">
             <Button variant="outline" className="gap-1 bg-transparent">
-              Download from GitHub <ArrowRight className="h-4 w-4" />
+              View on GitHub <ArrowRight className="h-4 w-4" />
             </Button>
-          </Link>
+          </a>
         </div>
       </div>
     </div>

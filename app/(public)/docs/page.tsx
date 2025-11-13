@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowRight, Book } from "lucide-react"
-import Image from "next/image"
 
 export default function DocsPage() {
   return (
@@ -52,85 +51,30 @@ export default function DocsPage() {
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <div className="relative w-24 h-24 flex items-center justify-center">
-                <Image
-                  src="/images/design-mode/OIP.mJ5m2pvYDrgXgQV26fLoDQHaGp.webp"
-                  alt="Next.js"
-                  width={96}
-                  height={96}
-                  className="object-contain"
-                />
-              </div>
-              <div className="text-center">
-                <h4 className="font-semibold">Next.js 16</h4>
-                <p className="text-xs text-muted-foreground">React Framework</p>
-              </div>
-            </div>
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#000000]">Next.js</div>
+              <div className="text-xs text-muted-foreground mt-1">React Framework</div>
+            </Card>
 
-            <div className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <div className="relative w-24 h-24 flex items-center justify-center">
-                <Image
-                  src="/images/design-mode/OIP.UOCNslnMZiDcU4dXrJDeqwHaH0.webp"
-                  alt="Prisma"
-                  width={96}
-                  height={96}
-                  className="object-contain"
-                />
-              </div>
-              <div className="text-center">
-                <h4 className="font-semibold">Prisma</h4>
-                <p className="text-xs text-muted-foreground">Database ORM</p>
-              </div>
-            </div>
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#2D3748]">Prisma</div>
+              <div className="text-xs text-muted-foreground mt-1">Database ORM</div>
+            </Card>
 
-            <div className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <div className="relative w-24 h-24 flex items-center justify-center">
-                <Image
-                  src="/images/design-mode/OIP.rMNgqM_B76VzXugyzHZt0QHaEB.webp"
-                  alt="Neon"
-                  width={96}
-                  height={96}
-                  className="object-contain"
-                />
-              </div>
-              <div className="text-center">
-                <h4 className="font-semibold">Neon</h4>
-                <p className="text-xs text-muted-foreground">Serverless Postgres</p>
-              </div>
-            </div>
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#00E699]">Neon</div>
+              <div className="text-xs text-muted-foreground mt-1">Serverless Postgres</div>
+            </Card>
 
-            <div className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <div className="relative w-24 h-24 flex items-center justify-center">
-                <Image
-                  src="/images/design-mode/OIP.NZCHYfcUrSHlM7-QtwCwWAHaHa.webp"
-                  alt="Better Auth"
-                  width={96}
-                  height={96}
-                  className="object-contain"
-                />
-              </div>
-              <div className="text-center">
-                <h4 className="font-semibold">Better Auth</h4>
-                <p className="text-xs text-muted-foreground">Authentication</p>
-              </div>
-            </div>
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#CD7F32]">Better Auth</div>
+              <div className="text-xs text-muted-foreground mt-1">Authentication</div>
+            </Card>
 
-            <div className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <div className="relative w-24 h-24 flex items-center justify-center">
-                <Image
-                  src="/images/design-mode/OIP.dVVJ2i1BrGFxU5GBBuzyPAHaHa.webp"
-                  alt="Resend"
-                  width={96}
-                  height={96}
-                  className="object-contain"
-                />
-              </div>
-              <div className="text-center">
-                <h4 className="font-semibold">Resend</h4>
-                <p className="text-xs text-muted-foreground">Transactional Emails</p>
-              </div>
-            </div>
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#000000]">Resend</div>
+              <div className="text-xs text-muted-foreground mt-1">Transactional Emails</div>
+            </Card>
           </div>
         </div>
 
@@ -256,9 +200,9 @@ export default function DocsPage() {
                 </Link>
               </li>
               <li>
-                <Link href="/docs/download" className="text-muted-foreground hover:text-foreground">
+                <a href="https://github.com/neosaastech/neosaas-website" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
                   Download from GitHub
-                </Link>
+                </a>
               </li>
               <li>
                 <Link href="/docs/architecture" className="text-muted-foreground hover:text-foreground">
@@ -283,9 +227,9 @@ export default function DocsPage() {
                 <Badge variant="outline">Beginner</Badge>
               </li>
               <li className="flex items-center justify-between">
-                <Link href="/docs/download" className="text-sm hover:underline">
+                <a href="https://github.com/neosaastech/neosaas-website" target="_blank" rel="noopener noreferrer" className="text-sm hover:underline">
                   Download Latest Version from GitHub
-                </Link>
+                </a>
                 <Badge variant="outline">Essential</Badge>
               </li>
               <li className="flex items-center justify-between">
