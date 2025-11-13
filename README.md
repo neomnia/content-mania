@@ -5,7 +5,7 @@ Here’s your framework documentation in English:
 ![logo_neolux](https://github.com/user-attachments/assets/0f3b275c-a0da-4512-bfd1-4887ed773500)
 
 ### ✅ File: `README.md`
-```markdown
+\`\`\`markdown
 # Neosaas
 **Neosaas** is an open-source framework designed to accelerate the creation of SaaS applications. It provides a ready-to-use foundation, integrating essential tools to launch your own product in just a few steps.
 
@@ -33,19 +33,19 @@ Here’s your framework documentation in English:
 ---
 ## 🛠️ Local Installation
 ### 1. Clone the repository
-```bash
+\`\`\`bash
 git clone https://github.com/neoweb2212/Neosaas.git
 cd Neosaas
-```
+\`\`\`
 ### 2. Install dependencies
-```bash
+\`\`\`bash
 npm install
-```
+\`\`\`
 ### 3. Configure environment variables
 Create a `.env.local` file from `.env.example`:
-```bash
+\`\`\`bash
 cp .env.example .env.local
-```
+\`\`\`
 Fill in the following API keys:
 - `DATABASE_URL`
 - `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
@@ -53,9 +53,9 @@ Fill in the following API keys:
 - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
 - `RESEND_API_KEY`, etc.
 ### 4. Start the project
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 Access the application at: [http://localhost:3000](http://localhost:3000)
 
 ---
@@ -67,11 +67,11 @@ Access the application at: [http://localhost:3000](http://localhost:3000)
 - You can add your products in `/products`
 
 ### Useful Commands
-```bash
+\`\`\`bash
 npm run dev         # Start the dev server
 npm run build       # Build for production
 npm run start       # Run the app in production mode
-```
+\`\`\`
 
 ---
 ## 🧭 Deployment
@@ -95,12 +95,12 @@ Project maintained by [@neoweb2212](https://github.com/neoweb2212)
 
 ---
 > Neosaas — Build your SaaS like a pro, without starting from scratch.
-```
+\`\`\`
 
 ---
 
 ### ✅ File: `LICENSE` (MIT)
-```text
+\`\`\`text
 MIT License
 Copyright (c) 2025 Charles Van den driessche - NEOMNIA
 vandendriesschecharles@gmail.com
@@ -122,6 +122,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-```
+\`\`\`
 
 ---
