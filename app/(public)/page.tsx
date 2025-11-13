@@ -203,77 +203,37 @@ export default function HomePage() {
             </div>
           </div>
           <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-4 mt-12 items-center">
-            <Card className="flex items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <Image
-                src="/images/design-mode/OIP.mJ5m2pvYDrgXgQV26fLoDQHaGp.webp"
-                alt="Next.js"
-                width={120}
-                height={60}
-                className="object-contain"
-              />
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#000000]">Next.js</div>
+              <div className="text-xs text-muted-foreground mt-1">React Framework</div>
             </Card>
-            <Card className="flex items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <Image
-                src="/images/design-mode/OIP.2qv4I5DCIN_XE8cT6M_sFQAAAA.webp"
-                alt="Prisma"
-                width={120}
-                height={60}
-                className="object-contain"
-              />
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#2D3748]">Prisma</div>
+              <div className="text-xs text-muted-foreground mt-1">Database ORM</div>
             </Card>
-            <Card className="flex items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <Image
-                src="/images/design-mode/OIP.rMNgqM_B76VzXugyzHZt0QHaEB.webp"
-                alt="Neon Serverless Postgres"
-                width={140}
-                height={60}
-                className="object-contain"
-              />
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#00E699]">Neon</div>
+              <div className="text-xs text-muted-foreground mt-1">Serverless Postgres</div>
             </Card>
-            <Card className="flex items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <Image
-                src="/images/design-mode/OIP.NZCHYfcUrSHlM7-QtwCwWAHaHa.webp"
-                alt="Better Auth"
-                width={120}
-                height={60}
-                className="object-contain"
-              />
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#CD7F32]">Better Auth</div>
+              <div className="text-xs text-muted-foreground mt-1">Authentication</div>
             </Card>
-            <Card className="flex items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <Image
-                src="/images/design-mode/OIP.dVVJ2i1BrGFxU5GBBuzyPAHaHa.webp"
-                alt="Resend"
-                width={120}
-                height={60}
-                className="object-contain"
-              />
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#000000]">Resend</div>
+              <div className="text-xs text-muted-foreground mt-1">Email API</div>
             </Card>
-            <Card className="flex items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <Image
-                src="/images/design-mode/OIP.YorcsMZ-6bBZtrx_g494ZwHaEK.webp"
-                alt="Stripe"
-                width={120}
-                height={60}
-                className="object-contain"
-              />
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#635BFF]">Stripe</div>
+              <div className="text-xs text-muted-foreground mt-1">Payments</div>
             </Card>
-            <Card className="flex items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <Image
-                src="/images/design-mode/OIP.h3_xyxCdva0e9rRTncAzjgHaHa.webp"
-                alt="PayPal"
-                width={120}
-                height={60}
-                className="object-contain"
-              />
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#003087]">PayPal</div>
+              <div className="text-xs text-muted-foreground mt-1">Payments</div>
             </Card>
-            <Card className="flex items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <Image
-                src="/images/design-mode/OIP.k8AS-V_kTYFYl4SCg4HjggAAAA.webp"
-                alt="TailAdmin"
-                width={120}
-                height={60}
-                className="object-contain"
-              />
+            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
+              <div className="text-2xl font-bold text-[#CD7F32]">TailAdmin</div>
+              <div className="text-xs text-muted-foreground mt-1">Admin Dashboard</div>
             </Card>
           </div>
         </div>
@@ -306,7 +266,7 @@ export default function HomePage() {
                   </p>
                   <div className="flex items-center space-x-2">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src="/images/design-mode/44.jpg" alt="Jane Smith" />
+                      <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=JaneSmith&backgroundColor=CD7F32" alt="Jane Smith" />
                       <AvatarFallback>JS</AvatarFallback>
                     </Avatar>
                     <div>
@@ -331,7 +291,7 @@ export default function HomePage() {
                   </p>
                   <div className="flex items-center space-x-2">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src="/images/design-mode/32.jpg" alt="John Doe" />
+                      <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=JohnDoe&backgroundColor=635BFF" alt="John Doe" />
                       <AvatarFallback>JD</AvatarFallback>
                     </Avatar>
                     <div>
@@ -356,7 +316,7 @@ export default function HomePage() {
                   </p>
                   <div className="flex items-center space-x-2">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src="/images/design-mode/68.jpg" alt="Sarah Johnson" />
+                      <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=SarahJohnson&backgroundColor=00E699" alt="Sarah Johnson" />
                       <AvatarFallback>SJ</AvatarFallback>
                     </Avatar>
                     <div>
