@@ -80,7 +80,7 @@ export function DocsSidebar() {
         },
         {
           title: "Download from GitHub",
-          href: "https://github.com/neosaastech/neosaas-website",
+          href: "/docs/download",
         },
       ],
     },

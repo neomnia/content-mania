@@ -281,8 +281,8 @@ export default function InstallationPage() {
             <code className="bg-muted px-2 py-1 rounded">http://localhost:3000</code>
           </p>
           <p className="text-sm text-muted-foreground">
-            Access the admin dashboard at{" "}
-            <code className="bg-muted px-2 py-1 rounded">http://localhost:3000/dashboard</code>
+            Access the admin dashboard example at{" "}
+            <code className="bg-muted px-2 py-1 rounded">http://localhost:3000/dashboard-exemple</code>
           </p>
         </div>
 
@@ -304,11 +304,11 @@ export default function InstallationPage() {
               <ArrowLeft className="h-4 w-4" /> Introduction
             </Button>
           </Link>
-          <a href="https://github.com/neosaastech/neosaas-website" target="_blank" rel="noopener noreferrer">
+          <Link href="/docs/download">
             <Button variant="outline" className="gap-1 bg-transparent">
-              View on GitHub <ArrowRight className="h-4 w-4" />
+              Download from GitHub <ArrowRight className="h-4 w-4" />
             </Button>
-          </a>
+          </Link>
         </div>
       </div>
     </div>

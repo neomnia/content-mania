@@ -37,7 +37,7 @@ export function MainNav() {
                   </NavigationMenuLink>
                 </li>
                 <li>
-                  <Link href="/dashboard/analytics" legacyBehavior passHref>
+                  <Link href="/dashboard-exemple/analytics" legacyBehavior passHref>
                     <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
                       <div className="text-sm font-medium leading-none">Analytics</div>
                       <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
@@ -47,7 +47,7 @@ export function MainNav() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/dashboard/users" legacyBehavior passHref>
+                  <Link href="/dashboard-exemple/users" legacyBehavior passHref>
                     <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
                       <div className="text-sm font-medium leading-none">User Management</div>
                       <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
@@ -57,7 +57,7 @@ export function MainNav() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/dashboard/payments" legacyBehavior passHref>
+                  <Link href="/dashboard-exemple/payments" legacyBehavior passHref>
                     <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
                       <div className="text-sm font-medium leading-none">Payments</div>
                       <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">

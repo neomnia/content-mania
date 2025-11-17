@@ -1,112 +1,144 @@
-Here’s your framework documentation in English:
-
----
-
 ![logo_neolux](https://github.com/user-attachments/assets/0f3b275c-a0da-4512-bfd1-4887ed773500)
 
-### ✅ File: `README.md`
+### ✅ Fichier `README.md`
+
+
 \`\`\`markdown
 # Neosaas
-**Neosaas** is an open-source framework designed to accelerate the creation of SaaS applications. It provides a ready-to-use foundation, integrating essential tools to launch your own product in just a few steps.
+
+**Neosaas** est un framework open source conçu pour accélérer la création d'applications SaaS. Il offre un socle complet prêt à l’emploi, intégrant les outils essentiels pour lancer votre propre produit en quelques étapes.
 
 ---
-## 🚀 Key Features
-- 📊 **Analytics** with [Plausible](https://plausible.io/)
-- 📩 **Emailing** via **Mailchimp**, **Resend**, or **SMTP**
-- 🗂️ **File Storage** with **AWS S3**
-- 💳 **Payments** integrated with **Stripe**, **PayPal**, or **FastSpring**
-- 📚 **Documentation** generated with **Starlight** (based on [Astro.build](https://astro.build))
-- ⏱️ **Scheduled Tasks** via `node-cron`
-- ☁️ **Easy Deployment** on **[Railway](https://railway.app/)** or **[Fly.io](https://fly.io/)**
+
+## 🚀 Fonctionnalités principales
+
+- 📊 **Analytics** avec [Plausible](https://plausible.io/)
+- 📩 **Emailing** via **Mailchimp**, **Resend**, ou **SMTP**
+- 🗂️ **Stockage** de fichiers avec **AWS S3**
+- 💳 **Paiements** intégrés avec **Stripe**, **PayPal**, ou **FastSpring**
+- 📚 **Documentation** générée avec **Starlight** (basé sur [Astro.build](https://astro.build))
+- ⏱️ **Tâches planifiées** via `node-cron`
+- ☁️ **Déploiement simple** sur **[Railway](https://railway.app/)** ou **[Fly.io](https://fly.io/)**
 
 ---
-## 🧱 Tech Stack
-- **Next.js 14 (App Directory)**
+
+## 🧱 Stack technique
+
+- **Next.js 14 (app directory)**
 - **TypeScript**
 - **Tailwind CSS**
 - **ShadCN/UI**
 - **Prisma + PostgreSQL**
-- **Next-Auth** for authentication
-- **Zod** for validation
-- **tRPC or REST API**
+- **Next-Auth** pour l’authentification
+- **Zod** pour la validation
+- **tRPC ou REST API**
 
 ---
-## 🛠️ Local Installation
-### 1. Clone the repository
+
+## 🛠️ Installation locale
+
+### 1. Clone le repo
+
 \`\`\`bash
 git clone https://github.com/neoweb2212/Neosaas.git
 cd Neosaas
 \`\`\`
-### 2. Install dependencies
+
+### 2. Installe les dépendances
+
 \`\`\`bash
 npm install
 \`\`\`
-### 3. Configure environment variables
-Create a `.env.local` file from `.env.example`:
+
+### 3. Configure les variables d’environnement
+
+Crée un fichier `.env.local` à partir de `.env.example` :
+
 \`\`\`bash
 cp .env.example .env.local
 \`\`\`
-Fill in the following API keys:
+
+Renseigne les clés API suivantes :
 - `DATABASE_URL`
 - `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
 - `RESEND_API_KEY`, etc.
-### 4. Start the project
+
+### 4. Lance le projet
+
 \`\`\`bash
 npm run dev
 \`\`\`
-Access the application at: [http://localhost:3000](http://localhost:3000)
+
+Accède à l’application sur : [http://localhost:3000](http://localhost:3000)
 
 ---
-## 🧪 Development
-- API routes are located in `app/api/`
-- The dashboard is in `app/dashboard`
-- Documentation is generated in `/docs` with Astro + Starlight
-- Scheduled tasks are in `lib/cron.ts`
-- You can add your products in `/products`
 
-### Useful Commands
+## 🧪 Développement
+
+- Les routes API sont dans `app/api/`
+- Le dashboard exemple est dans `app/dashboard-exemple`
+- La documentation est générée dans `/docs` avec Astro + Starlight
+- Les tâches planifiées se trouvent dans `lib/cron.ts`
+- Tu peux ajouter tes produits dans `/products`
+
+### Commandes utiles
+
 \`\`\`bash
-npm run dev         # Start the dev server
-npm run build       # Build for production
-npm run start       # Run the app in production mode
+npm run dev         # Démarre le serveur de dev
+npm run build       # Build pour la prod
+npm run start       # Lance l'app en mode production
 \`\`\`
 
 ---
-## 🧭 Deployment
-Neosaas is designed for easy deployment on:
-- [Railway](https://railway.app/): Database, storage, and Node.js hosting
-- [Fly.io](https://fly.io/): High performance with minimal configuration
-You can also use **Vercel**, **Render**, or **Docker** as needed.
+
+## 🧭 Déploiement
+
+Neosaas est conçu pour être déployé facilement sur :
+
+- [Railway](https://railway.app/) : Base de données, storage, Node.js hosting
+- [Fly.io](https://fly.io/) : Haute performance avec configuration minimale
+
+Tu peux aussi utiliser **Vercel**, **Render** ou **Docker** selon tes besoins.
 
 ---
-## 📝 License
-This project is licensed under the **MIT License**. You are free to modify, use, and redistribute it as you wish.
-See [`LICENSE`](./LICENSE) for more information.
+
+## 📝 Licence
+
+Ce projet est sous licence **MIT**. Tu es libre de le modifier, l'utiliser, et le redistribuer à ta guise.
+
+Voir [`LICENSE`](./LICENSE) pour plus d’informations.
 
 ---
-## 🤝 Contributing
-Want to contribute? Fork the project, create a branch, and submit a **pull request** 🙌
+
+## 🤝 Contribuer
+
+Tu veux contribuer ? Fork le projet, crée une branche et propose un **pull request** 🙌
 
 ---
+
 ## 📫 Contact
-Project maintained by [@neoweb2212](https://github.com/neoweb2212)
+
+Projet maintenu par [@neoweb2212](https://github.com/neoweb2212)
 
 ---
-> Neosaas — Build your SaaS like a pro, without starting from scratch.
+
+> Neosaas — Crée ton SaaS comme un pro, sans repartir de zéro.
 \`\`\`
 
 ---
 
-### ✅ File: `LICENSE` (MIT)
+### ✅ Fichier `LICENSE` (MIT)
+
 \`\`\`text
 MIT License
+
 Copyright (c) 2025 Charles Van den driessche - NEOMNIA
 vandendriesschecharles@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
+of this software and associated documentation files (the “Software”), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -115,7 +147,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -125,3 +157,5 @@ THE SOFTWARE.
 \`\`\`
 
 ---
+
+Tu veux que je t’en fasse une version en français aussi ? Ou on pousse direct ça dans le dépôt GitHub ?

@@ -2,7 +2,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowRight, Book } from "lucide-react"
+import { ArrowRight, Book } from 'lucide-react'
+import Image from "next/image"
 
 export default function DocsPage() {
   return (
@@ -46,35 +47,132 @@ export default function DocsPage() {
         <div className="space-y-4">
           <h3 className="text-xl font-semibold">Built on Modern Technologies</h3>
           <p className="text-muted-foreground mb-6">
-            NeoSaaS uses Next.js, Prisma, and leading authentication and database solutions under the hood. This allows
+            NeoSaaS uses Next.js, Drizzle ORM, and leading authentication, database, payment, and email solutions under the hood. This allows
             you to focus on building features while NeoSaaS handles the infrastructure.
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <div className="text-2xl font-bold text-[#000000]">Next.js</div>
-              <div className="text-xs text-muted-foreground mt-1">React Framework</div>
-            </Card>
+            <div className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
+              <div className="relative w-24 h-24 flex items-center justify-center">
+                <Image
+                  src="/images/design-mode/OIP.mJ5m2pvYDrgXgQV26fLoDQHaGp.webp"
+                  alt="Next.js"
+                  width={96}
+                  height={96}
+                  className="object-contain"
+                />
+              </div>
+              <div className="text-center">
+                <h4 className="font-semibold">Next.js 16</h4>
+                <p className="text-xs text-muted-foreground">React Framework</p>
+              </div>
+            </div>
 
-            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <div className="text-2xl font-bold text-[#2D3748]">Prisma</div>
-              <div className="text-xs text-muted-foreground mt-1">Database ORM</div>
-            </Card>
+            <Link href="https://orm.drizzle.team" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
+              <div className="relative w-24 h-24 flex items-center justify-center">
+                <Image
+                  src="/images/drizzle-logo.webp"
+                  alt="Drizzle ORM"
+                  width={96}
+                  height={96}
+                  className="object-contain"
+                />
+              </div>
+              <div className="text-center">
+                <h4 className="font-semibold">Drizzle ORM</h4>
+                <p className="text-xs text-muted-foreground">Type-safe Database ORM</p>
+              </div>
+            </Link>
 
-            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <div className="text-2xl font-bold text-[#00E699]">Neon</div>
-              <div className="text-xs text-muted-foreground mt-1">Serverless Postgres</div>
-            </Card>
+            <div className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
+              <div className="relative w-24 h-24 flex items-center justify-center">
+                <Image
+                  src="/images/design-mode/OIP.rMNgqM_B76VzXugyzHZt0QHaEB.webp"
+                  alt="Neon"
+                  width={96}
+                  height={96}
+                  className="object-contain"
+                />
+              </div>
+              <div className="text-center">
+                <h4 className="font-semibold">Neon</h4>
+                <p className="text-xs text-muted-foreground">Serverless Postgres</p>
+              </div>
+            </div>
 
-            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <div className="text-2xl font-bold text-[#CD7F32]">Better Auth</div>
-              <div className="text-xs text-muted-foreground mt-1">Authentication</div>
-            </Card>
+            <Link href="https://auth0.com" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
+              <div className="relative w-24 h-24 flex items-center justify-center">
+                <svg viewBox="0 0 24 24" fill="none" className="w-20 h-20">
+                  <path d="M21.98 7.448L19.62 0H12.017l2.387 7.448h7.576zm-10.662 0L13.705 0H6.102L3.715 7.448h7.603zm7.173 2.544h-7.576l-2.387 7.448h7.576l2.387-7.448zm-10.662 0H.232l2.387 7.448h7.603l-2.387-7.448zm5.285 6.921l-2.387 7.087 6.102.001 2.387-7.088h-6.102z" fill="#EB5424"/>
+                </svg>
+              </div>
+              <div className="text-center">
+                <h4 className="font-semibold">Auth0</h4>
+                <p className="text-xs text-muted-foreground">Authentication</p>
+              </div>
+            </Link>
 
-            <Card className="flex flex-col items-center justify-center p-6 h-32 bg-background hover:shadow-lg transition-shadow">
-              <div className="text-2xl font-bold text-[#000000]">Resend</div>
-              <div className="text-xs text-muted-foreground mt-1">Transactional Emails</div>
-            </Card>
+            <Link href="https://resend.com" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
+              <div className="relative w-24 h-24 flex items-center justify-center">
+                <Image
+                  src="/images/design-mode/OIP.dVVJ2i1BrGFxU5GBBuzyPAHaHa.webp"
+                  alt="Resend"
+                  width={96}
+                  height={96}
+                  className="object-contain"
+                />
+              </div>
+              <div className="text-center">
+                <h4 className="font-semibold">Resend</h4>
+                <p className="text-xs text-muted-foreground">Email API</p>
+              </div>
+            </Link>
+
+            <Link href="https://aws.amazon.com/ses/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
+              <div className="relative w-24 h-24 flex items-center justify-center">
+                <Image
+                  src="/images/amazon-ses-logo.webp"
+                  alt="Amazon SES"
+                  width={96}
+                  height={96}
+                  className="object-contain"
+                />
+              </div>
+              <div className="text-center">
+                <h4 className="font-semibold">Amazon SES</h4>
+                <p className="text-xs text-muted-foreground">Transactional Emails</p>
+              </div>
+            </Link>
+
+            <div className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
+              <div className="relative w-24 h-24 flex items-center justify-center">
+                <Image
+                  src="/images/lago-logo.webp"
+                  alt="Lago"
+                  width={96}
+                  height={96}
+                  className="object-contain"
+                />
+              </div>
+              <div className="text-center">
+                <h4 className="font-semibold">Lago</h4>
+                <p className="text-xs text-muted-foreground">Embedded Billing</p>
+                <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
+                  <Badge variant="secondary" className="text-[10px] px-2 py-1 flex items-center gap-1">
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#003087">
+                      <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.121.768h4.605a.952.952 0 0 0 .943-.803l.03-.164 1.048-6.647.034-.184a.952.952 0 0 1 .943-.803h.593c3.853 0 6.867-1.565 7.747-6.09.036-.188.068-.372.096-.551z"/>
+                    </svg>
+                    PayPal
+                  </Badge>
+                  <Badge variant="secondary" className="text-[10px] px-2 py-1 flex items-center gap-1">
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#635BFF">
+                      <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
+                    </svg>
+                    Stripe
+                  </Badge>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -82,11 +180,12 @@ export default function DocsPage() {
           <h3 className="text-xl font-semibold">What's Included?</h3>
           <p className="text-muted-foreground">NeoSaaS comes with everything you need to launch your SaaS:</p>
           <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
-            <li>Authentication and authorization with Better Auth</li>
-            <li>Database integration with Prisma ORM and PostgreSQL</li>
+            <li>Authentication and authorization with Auth0</li>
+            <li>Database integration with Drizzle ORM and PostgreSQL</li>
             <li>Responsive UI components built with Tailwind CSS and shadcn/ui</li>
             <li>Admin dashboard with analytics and user management</li>
-            <li>Transactional emails with Resend API and Nodemailer for basic SMTP</li>
+            <li>Transactional emails with Resend or Amazon SES</li>
+            <li>Embedded billing and subscription management with Lago</li>
             <li>API routes and server actions for backend logic</li>
             <li>Type-safe development with TypeScript</li>
             <li>Modern styling with Tailwind CSS v4</li>
@@ -200,9 +299,9 @@ export default function DocsPage() {
                 </Link>
               </li>
               <li>
-                <a href="https://github.com/neosaastech/neosaas-website" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <Link href="/docs/download" className="text-muted-foreground hover:text-foreground">
                   Download from GitHub
-                </a>
+                </Link>
               </li>
               <li>
                 <Link href="/docs/architecture" className="text-muted-foreground hover:text-foreground">
@@ -227,9 +326,9 @@ export default function DocsPage() {
                 <Badge variant="outline">Beginner</Badge>
               </li>
               <li className="flex items-center justify-between">
-                <a href="https://github.com/neosaastech/neosaas-website" target="_blank" rel="noopener noreferrer" className="text-sm hover:underline">
+                <Link href="/docs/download" className="text-sm hover:underline">
                   Download Latest Version from GitHub
-                </a>
+                </Link>
                 <Badge variant="outline">Essential</Badge>
               </li>
               <li className="flex items-center justify-between">

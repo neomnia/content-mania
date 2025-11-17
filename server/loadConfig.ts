@@ -1,24 +1,12 @@
-import fs from "fs"
-import path from "path"
-
 export function loadNeosaasConfig() {
-  const configPath = path.join(process.cwd(), "main.neosaas")
-
-  if (!fs.existsSync(configPath)) {
-    console.error("❌ Fichier main.neosaas introuvable !")
-    throw new Error("Erreur 404 - Fichier main.neosaas non trouvé")
+  // Configuration basée sur les variables d'environnement
+  const config = {
+    domain: process.env.NEXT_PUBLIC_DOMAIN || process.env.VERCEL_URL || "localhost:3000",
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.NEXT_PUBLIC_DOMAIN || process.env.VERCEL_URL || "localhost:3000"}`,
+    siteName: process.env.NEXT_PUBLIC_SITE_NAME || "NeoSaaS",
+    siteDescription: process.env.NEXT_PUBLIC_SITE_DESCRIPTION || "Plateforme SaaS moderne",
   }
 
-  const rawConfig = fs.readFileSync(configPath, "utf-8")
-
-  try {
-    const config = JSON.parse(rawConfig)
-
-    console.log("✅ main.neosaas chargé avec succès (Status 200 OK)")
-    return config
-  } catch (error) {
-    console.error("❌ Erreur de parsing dans main.neosaas !")
-    throw new Error("Erreur 500 - Fichier main.neosaas invalide")
-  }
+  console.log("✅ Configuration chargée avec succès (Status 200 OK)")
+  return config
 }
-// export default loadNeosaasConfig;

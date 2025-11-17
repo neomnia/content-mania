@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft } from 'lucide-react'
 
 export default function RecoverPasswordPage() {
   return (
@@ -39,13 +39,105 @@ export default function RecoverPasswordPage() {
           </div>
         </div>
       </div>
-      <div className="hidden bg-muted md:block">
-        <div className="relative h-full w-full bg-[url('/tech-stack.png')] bg-cover bg-center">
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-background/20" />
-          <div className="absolute bottom-0 left-0 right-0 p-8">
-            <div className="mx-auto w-full max-w-md rounded-lg bg-background/90 p-4 backdrop-blur-sm">
-              <p className="text-xl font-semibold">"Password recovery made simple and secure."</p>
-              <p className="mt-2 text-sm text-muted-foreground">We prioritize your account security.</p>
+      <div className="hidden bg-muted md:flex items-center justify-center p-8">
+        <div className="relative w-full max-w-lg">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 rounded-3xl blur-3xl" />
+          <div className="relative rounded-2xl border bg-background/50 backdrop-blur-sm p-12">
+            <div className="flex flex-col items-center space-y-8">
+              <div className="relative">
+                <div className="h-32 w-32 rounded-full bg-primary/10 flex items-center justify-center">
+                  <svg
+                    className="h-16 w-16 text-primary"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                    />
+                  </svg>
+                </div>
+                <div className="absolute -right-2 -top-2 h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                  <svg
+                    className="h-5 w-5 text-primary-foreground"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+              <div className="text-center space-y-4">
+                <h2 className="text-2xl font-bold">Password Recovery</h2>
+                <p className="text-muted-foreground max-w-sm">
+                  We'll send you a secure link to reset your password and regain access to your account.
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-4 w-full pt-4">
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <svg
+                      className="h-6 w-6 text-primary"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium">Email Link</span>
+                </div>
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <svg
+                      className="h-6 w-6 text-primary"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium">Secure</span>
+                </div>
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <svg
+                      className="h-6 w-6 text-primary"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium">Fast</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

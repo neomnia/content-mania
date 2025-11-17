@@ -2,11 +2,11 @@ import Link from "next/link"
 
 export function SiteFooter() {
   return (
-    <footer className="w-full border-t bg-[#1A1A1A] text-white">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-10">
+    <footer className="border-t bg-[#1A1A1A] text-white">
+      <div className="container py-10">
         <div className="grid gap-8 md:grid-cols-3 text-center md:text-left">
-          <div className="space-y-4 flex flex-col items-center md:items-start">
-            <div className="flex items-center gap-2">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 justify-center md:justify-start">
               <div className="font-bold text-xl tracking-tight">
                 <span className="text-white">Neo</span>
                 <span className="text-[#CD7F32]">SaaS</span>
@@ -17,9 +17,9 @@ export function SiteFooter() {
             </p>
           </div>
 
-          <div className="flex flex-col items-center md:items-start">
+          <div>
             <h3 className="font-medium mb-4 text-[#CD7F32]">Product</h3>
-            <ul className="space-y-2">
+            <ul className="space-y-2 flex flex-col items-center md:items-start">
               <li>
                 <Link href="/features" className="text-sm text-white/70 hover:text-white">
                   Features
@@ -38,9 +38,9 @@ export function SiteFooter() {
             </ul>
           </div>
 
-          <div className="flex flex-col items-center md:items-start">
+          <div>
             <h3 className="font-medium mb-4 text-[#CD7F32]">Company</h3>
-            <ul className="space-y-2">
+            <ul className="space-y-2 flex flex-col items-center md:items-start">
               <li>
                 <Link href="/legacy/about" className="text-sm text-white/70 hover:text-white">
                   About
