@@ -42,10 +42,12 @@ cd content-mania
 ### 2. Installe les dépendances
 
 ```bash
-npm install
+npm install --legacy-peer-deps
 # ou
 pnpm install
 ```
+
+> **Note:** L'option `--legacy-peer-deps` est nécessaire avec npm pour résoudre les conflits de dépendances entre certains packages.
 
 ### 3. Configure les variables d'environnement
 
