@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info, ArrowLeft, Download, Github, ExternalLink, Terminal } from "lucide-react"
-import GitHubVersions from "@/components/github-versions"
+import GitHubVersions from "@/components/features/brand/github-versions"
 
 export default function DownloadPage() {
   return (

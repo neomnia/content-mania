@@ -1,16 +1,16 @@
-import { PrivateSidebar } from "@/components/private-dashboard/sidebar"
-import { PrivateHeader } from "@/components/private-dashboard/header"
+import type React from "react"
+import { requireAuth } from "@/lib/auth/server"
+import { PrivateLayoutClient } from "./layout-client"
 
-export default function PrivateLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex h-screen">
-      <PrivateSidebar />
-      <div className="flex flex-1 flex-col">
-        <PrivateHeader />
-        <main className="flex-1 overflow-y-auto bg-muted/30 p-6">
-          {children}
-        </main>
-      </div>
-    </div>
-  )
+/**
+ * Private Layout - Server Component
+ *
+ * This layout replaces middleware auth logic for Next.js 16.
+ * It verifies authentication server-side before rendering protected routes.
+ */
+export default async function PrivateLayout({ children }: { children: React.ReactNode }) {
+  // Verify authentication - redirects to login if not authenticated
+  await requireAuth()
+
+  return <PrivateLayoutClient>{children}</PrivateLayoutClient>
 }

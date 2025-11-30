@@ -1,0 +1,6 @@
+# This directory is reserved for unit and integration tests
+# Add your test files here following the naming convention:
+# - *.test.ts
+# - *.test.tsx
+# - *.spec.ts
+# - *.spec.tsx

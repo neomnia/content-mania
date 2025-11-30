@@ -1,4 +1,4 @@
-import { ErrorPageLayout } from '@/components/error-page-layout'
+import { ErrorPageLayout } from '@/components/common/error-page-layout'
 
 export default function Error500Page() {
   return (

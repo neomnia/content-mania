@@ -1,6 +1,6 @@
 import type React from "react"
-import { DocsSidebar } from "@/components/docs/sidebar"
-import { DocsMobileNav } from "@/components/docs/mobile-nav"
+import { DocsSidebar } from "@/components/layout/docs/sidebar"
+import { DocsMobileNav } from "@/components/layout/docs/mobile-nav"
 
 export default function DocsLayout({
   children,

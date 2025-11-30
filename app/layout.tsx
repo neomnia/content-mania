@@ -1,8 +1,9 @@
 import type React from "react"
 
-import { ThemeProvider } from "@/components/theme-provider"
-import { BackToTop } from "@/components/back-to-top"
-import "./globals.css"
+import { ThemeProvider } from "@/components/common/theme-provider"
+import { BackToTop } from "@/components/common/back-to-top"
+import { Toaster } from "@/components/ui/sonner"
+import "@/styles/globals.css"
 
 import { Inter, Geist_Mono as V0_Font_Geist_Mono } from 'next/font/google'
 
@@ -104,6 +105,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
           <BackToTop />
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

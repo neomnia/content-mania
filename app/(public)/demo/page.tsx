@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { ArrowRight, Users, CreditCard, BarChart4, ArrowUpRight, Settings } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
-import { DemoMobileNav } from "@/components/demo-mobile-nav"
+import { DemoMobileNav } from "@/components/layout/demo-mobile-nav"
 import {
   LineChart,
   Line,

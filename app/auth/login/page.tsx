@@ -1,9 +1,65 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || 'Login failed');
+        return;
+      }
+
+      const userName = data.user.firstName || 'User';
+      const userRoles = data.user.roles || [];
+
+      toast.success(`Welcome back, ${userName}!`, {
+        description: userRoles.length > 0 ? `Role: ${userRoles.join(', ')}` : 'Loading your dashboard...'
+      });
+
+      // Redirect to dashboard
+      router.push('/dashboard');
+    } catch (error) {
+      toast.error('An error occurred during login');
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.id]: e.target.value,
+    });
+  };
+
   return (
     <div className="grid min-h-screen grid-cols-1 md:grid-cols-2">
       <div className="flex items-center justify-center py-12">
@@ -15,11 +71,13 @@ export default function LoginPage() {
               </div>
               <h1 className="text-3xl font-bold">Welcome back</h1>
             </div>
-            <p className="text-balance text-muted-foreground">Enter your credentials to sign in to your account</p>
+            <p className="text-balance text-muted-foreground">
+              Enter your credentials to sign in to your account
+            </p>
           </div>
           <div className="grid gap-4">
             <div className="grid gap-4">
-              <Button variant="outline" className="w-full bg-transparent">
+              <Button variant="outline" className="w-full bg-transparent" type="button">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   height="24"
@@ -56,10 +114,19 @@ export default function LoginPage() {
                 <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
-            <form className="grid gap-4">
+            <form className="grid gap-4" onSubmit={handleSubmit}>
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" placeholder="name@example.com" type="email" autoComplete="email" required />
+                <Input
+                  id="email"
+                  placeholder="name@example.com"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                />
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
@@ -68,15 +135,23 @@ export default function LoginPage() {
                     Forgot password?
                   </Link>
                 </div>
-                <Input id="password" type="password" autoComplete="current-password" required />
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                />
               </div>
-              <Button type="submit" className="w-full">
-                Sign in
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>
           </div>
           <div className="mt-4 text-center text-sm">
-            Don&apos;t have an account?{" "}
+            Don&apos;t have an account?{' '}
             <Link href="/auth/register" className="font-medium underline underline-offset-4">
               Sign up
             </Link>
@@ -187,5 +262,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

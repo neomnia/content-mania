@@ -6,9 +6,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowRight, Check, ChevronRight, Globe, Shield, Zap } from 'lucide-react'
 import { Users, CreditCard, BarChart4, Star, Lock } from 'lucide-react'
-import { MobileMenu } from "@/components/mobile-menu"
-import { BrandIcon } from "@/components/brand-icon"
-import { NeoSaasArchitectureDiagram } from "@/components/neosaas-architecture-diagram"
+import { MobileMenu } from "@/components/layout/mobile-menu"
+import { BrandIcon } from "@/components/features/brand/brand-icon"
+import { NeoSaasArchitectureDiagram } from "@/components/features/brand/neosaas-architecture-diagram"
 
 export default function HomePage() {
 

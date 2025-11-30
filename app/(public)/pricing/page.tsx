@@ -1,10 +1,39 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Download, Info } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 export default function PricingPage() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState("")
+
+  const handlePurchase = (planId: string) => {
+    setIsLoading(planId)
+
+    // Check if user is logged in (simplified check via localStorage)
+    const isAuthenticated = localStorage.getItem("userProfile")
+
+    if (isAuthenticated) {
+      // User is logged in, go to checkout
+      router.push(`/dashboard/checkout?plan=${planId}`)
+    } else {
+      // User not logged in, redirect to register with return URL
+      router.push(`/auth/register?redirect=/dashboard/checkout?plan=${planId}`)
+    }
+  }
+
+  const plans = [
+    { id: "starter", name: "Starter", price: 199 },
+    { id: "pro", name: "Pro", price: 699 },
+    { id: "enterprise", name: "Enterprise", price: 2999 },
+    { id: "custom", name: "Custom", price: 120, isHourly: true },
+  ]
+
   return (
     <div className="container py-12 md:py-24">
       <div className="mx-auto max-w-3xl text-center">
@@ -53,6 +82,38 @@ export default function PricingPage() {
         {/* Starter Plan */}
         <Card className="flex flex-col border-2">
           <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-[#CD7F32]/20 flex items-center justify-center">
+                  <Download className="h-6 w-6 text-[#CD7F32]" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl">Starter</CardTitle>
+                  <CardDescription className="mt-1">Ideal for solo devs or small teams</CardDescription>
+                </div>
+              </div>
+              <Badge className="bg-[#CD7F32] text-white">FREE</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              NeoSaaS is open-source and available for free download. Deploy on your own infrastructure using Docker,
+              Node.js, or your preferred hosting provider.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Link href="/docs" className="w-full">
+              <Button size="lg" className="w-full bg-[#CD7F32] hover:bg-[#B26B27]">
+                <Download className="mr-2 h-5 w-5" />
+                Download & Documentation
+              </Button>
+            </Link>
+          </CardFooter>
+        </Card>
+
+        {/* Starter Plan */}
+        <Card className="flex flex-col border-2">
+          <CardHeader>
             <CardTitle className="text-2xl">Starter</CardTitle>
             <CardDescription className="mt-2">Ideal for solo devs or small teams</CardDescription>
             <div className="mt-6 flex items-baseline gap-1">
@@ -63,11 +124,14 @@ export default function PricingPage() {
             </div>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
-            <Link href="/legacy/contact" className="w-full">
-              <Button className="w-full bg-transparent" variant="outline">
-                Get started
-              </Button>
-            </Link>
+            <Button
+              className="w-full bg-transparent"
+              variant="outline"
+              onClick={() => handlePurchase("starter")}
+              disabled={isLoading === "starter"}
+            >
+              {isLoading === "starter" ? "Loading..." : "Get started"}
+            </Button>
 
             <div className="space-y-2">
               <p className="text-sm font-semibold">Possible focus areas:</p>
@@ -119,9 +183,13 @@ export default function PricingPage() {
             </div>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
-            <Link href="/legacy/contact" className="w-full">
-              <Button className="w-full bg-[#22C55E] hover:bg-[#22C55E]/90">Get started</Button>
-            </Link>
+            <Button
+              className="w-full bg-[#22C55E] hover:bg-[#22C55E]/90"
+              onClick={() => handlePurchase("pro")}
+              disabled={isLoading === "pro"}
+            >
+              {isLoading === "pro" ? "Loading..." : "Get started"}
+            </Button>
 
             <div className="space-y-2">
               <p className="text-sm font-semibold">Potential session topics:</p>
@@ -174,11 +242,14 @@ export default function PricingPage() {
             </div>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
-            <Link href="/legacy/contact" className="w-full">
-              <Button className="w-full bg-transparent" variant="outline">
-                Get started
-              </Button>
-            </Link>
+            <Button
+              className="w-full bg-transparent"
+              variant="outline"
+              onClick={() => handlePurchase("enterprise")}
+              disabled={isLoading === "enterprise"}
+            >
+              {isLoading === "enterprise" ? "Loading..." : "Get started"}
+            </Button>
 
             <div className="space-y-2">
               <p className="text-sm font-semibold">Areas we could address:</p>
@@ -233,11 +304,14 @@ export default function PricingPage() {
             </div>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
-            <Link href="/legacy/contact" className="w-full">
-              <Button className="w-full bg-transparent" variant="outline">
-                Contact us
-              </Button>
-            </Link>
+            <Button
+              className="w-full bg-transparent"
+              variant="outline"
+              onClick={() => handlePurchase("custom")}
+              disabled={isLoading === "custom"}
+            >
+              {isLoading === "custom" ? "Loading..." : "Contact us"}
+            </Button>
 
             <div className="space-y-2">
               <p className="text-sm font-semibold">We typically assist with:</p>

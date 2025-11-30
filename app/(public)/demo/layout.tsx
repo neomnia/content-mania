@@ -1,6 +1,6 @@
 import type React from "react"
-import { DemoSidebar } from "@/components/demo-sidebar"
-import { DemoMobileNav } from "@/components/demo-mobile-nav"
+import { DemoSidebar } from "@/components/layout/demo-sidebar"
+import { DemoMobileNav } from "@/components/layout/demo-mobile-nav"
 
 export default function DemoLayout({
   children,

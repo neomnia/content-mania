@@ -1,10 +1,90 @@
+"use client"
+
+import type React from "react"
+
+import { useState } from "react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { toast } from "sonner"
 
 export default function RegisterPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [isLoading, setIsLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    termsAccepted: false,
+  })
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsLoading(true)
+
+    try {
+      // Validate passwords match
+      if (formData.password !== formData.confirmPassword) {
+        toast.error("Passwords do not match")
+        setIsLoading(false)
+        return
+      }
+
+      // Validate terms accepted
+      if (!formData.termsAccepted) {
+        toast.error("You must accept the terms and conditions")
+        setIsLoading(false)
+        return
+      }
+
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error(data.error || "Registration failed")
+        return
+      }
+
+      toast.success("Account created successfully!", {
+        description: "Welcome! You can now complete your profile and company information.",
+      })
+
+      const redirectUrl = searchParams.get("redirect")
+      if (redirectUrl) {
+        router.push(redirectUrl)
+      } else {
+        router.push("/dashboard")
+      }
+    } catch (error) {
+      toast.error("An error occurred during registration")
+      console.error("Registration error:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.type === "checkbox" ? e.target.checked : e.target.value
+    setFormData({
+      ...formData,
+      [e.target.id]: value,
+    })
+  }
+
   return (
     <div className="grid min-h-screen grid-cols-1 md:grid-cols-2">
       <div className="flex items-center justify-center py-12">
@@ -14,13 +94,13 @@ export default function RegisterPage() {
               <div className="h-12 w-12 rounded-full bg-[#CD7F32]/10 flex items-center justify-center mb-2">
                 <span className="text-[#CD7F32] font-bold text-xl">NS</span>
               </div>
-              <h1 className="text-3xl font-bold">Create an account</h1>
+              <h1 className="text-3xl font-bold">Create your account</h1>
             </div>
-            <p className="text-balance text-muted-foreground">Enter your information to create an account</p>
+            <p className="text-balance text-muted-foreground">Get started with just your email and password</p>
           </div>
           <div className="grid gap-4">
             <div className="grid gap-4">
-              <Button variant="outline" className="w-full bg-transparent">
+              <Button variant="outline" className="w-full bg-transparent" type="button">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   height="24"
@@ -57,45 +137,69 @@ export default function RegisterPage() {
                 <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
-            <form className="grid gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="first-name">First name</Label>
-                  <Input id="first-name" placeholder="John" required />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="last-name">Last name</Label>
-                  <Input id="last-name" placeholder="Smith" required />
-                </div>
-              </div>
+            <form className="grid gap-4" onSubmit={handleSubmit}>
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" placeholder="name@example.com" type="email" autoComplete="email" required />
+                <Input
+                  id="email"
+                  placeholder="name@example.com"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                />
               </div>
               <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <Link href="/auth/recover-password" className="text-sm font-medium underline underline-offset-4">
-                    Forgot password?
-                  </Link>
-                </div>
-                <Input id="password" type="password" autoComplete="new-password" required />
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                  placeholder="Create a secure password"
+                />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                <Input id="confirm-password" type="password" autoComplete="new-password" required />
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                  placeholder="Confirm your password"
+                />
               </div>
+
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs text-muted-foreground">
+                  After registration, complete your profile to personalize your account.
+                </p>
+              </div>
+
               <div className="flex items-center space-x-2">
-                <Checkbox id="terms" />
-                <label htmlFor="terms" className="text-sm font-medium leading-none">
+                <Checkbox
+                  id="termsAccepted"
+                  checked={formData.termsAccepted}
+                  onCheckedChange={(checked) => setFormData({ ...formData, termsAccepted: checked as boolean })}
+                  disabled={isLoading}
+                />
+                <label htmlFor="termsAccepted" className="text-sm font-medium leading-none">
                   I agree to the{" "}
                   <Link href="#" className="underline underline-offset-4">
                     terms and conditions
                   </Link>
                 </label>
               </div>
-              <Button type="submit" className="w-full">
-                Create account
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Creating account..." : "Create account"}
               </Button>
             </form>
           </div>
@@ -121,12 +225,7 @@ export default function RegisterPage() {
                     viewBox="0 0 24 24"
                     xmlns="http://www.w3.org/2000/svg"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
                 <div className="absolute -right-2 -top-2 h-8 w-8 rounded-full bg-primary flex items-center justify-center">
@@ -137,14 +236,14 @@ export default function RegisterPage() {
                     viewBox="0 0 24 24"
                     xmlns="http://www.w3.org/2000/svg"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
               </div>
               <div className="text-center space-y-4">
-                <h2 className="text-2xl font-bold">Join Our Community</h2>
+                <h2 className="text-2xl font-bold">Quick & Simple</h2>
                 <p className="text-muted-foreground max-w-sm">
-                  Join thousands of businesses already growing with NeoSaaS. Start your journey today.
+                  Create your account in seconds. Complete your profile and invite your team later.
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-4 w-full pt-4">
@@ -161,11 +260,11 @@ export default function RegisterPage() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
                       />
                     </svg>
                   </div>
-                  <span className="text-xs font-medium">Quick Setup</span>
+                  <span className="text-xs font-medium">Fast</span>
                 </div>
                 <div className="flex flex-col items-center space-y-2">
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -180,11 +279,11 @@ export default function RegisterPage() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                       />
                     </svg>
                   </div>
-                  <span className="text-xs font-medium">Verified</span>
+                  <span className="text-xs font-medium">Secure</span>
                 </div>
                 <div className="flex flex-col items-center space-y-2">
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -195,15 +294,10 @@ export default function RegisterPage() {
                       viewBox="0 0 24 24"
                       xmlns="http://www.w3.org/2000/svg"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                   </div>
-                  <span className="text-xs font-medium">Trusted</span>
+                  <span className="text-xs font-medium">Flexible</span>
                 </div>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next/metadata"
-import { DashboardHeader } from "@/components/dashboard/header"
-import { DashboardSidebar } from "@/components/dashboard/sidebar"
+import { DashboardHeader } from "@/components/layout/dashboard/header"
+import { DashboardSidebar } from "@/components/layout/dashboard/sidebar"
 
 export const metadata: Metadata = {
   title: "Dashboard Exemple - NeoSaaS",
