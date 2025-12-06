@@ -3,9 +3,6 @@ import { db, validateDatabaseUrl } from '@/db';
 import { users } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
 import { eq } from 'drizzle-orm';
-import { writeFile, unlink } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
 
 /**
  * POST /api/profile/image
@@ -42,42 +39,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Validate file size (max 2MB for Base64 storage)
+    const maxSize = 2 * 1024 * 1024; // 2MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File size exceeds 5MB limit' },
+        { error: 'File size exceeds 2MB limit' },
         { status: 400 }
       );
     }
 
-    // Generate unique filename
-    const extension = file.name.split('.').pop();
-    const filename = `${currentUser.userId}-${Date.now()}.${extension}`;
-    const filepath = join(process.cwd(), 'public', 'profiles', filename);
-
-    // Convert file to buffer and save
+    // Convert file to buffer then to base64
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
+    const base64Image = `data:${file.type};base64,${buffer.toString('base64')}`;
 
-    // Get current user to check for old image
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, currentUser.userId),
-    });
+    // Create an SVG container that crops the image to a square (512x512)
+    // This ensures the profile picture is always square without needing heavy image processing libraries
+    const svgContent = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <image href="${base64Image}" width="512" height="512" preserveAspectRatio="xMidYMid slice" />
+</svg>`.trim();
 
-    // Delete old profile image if exists
-    if (user?.profileImage) {
-      const oldImagePath = join(process.cwd(), 'public', user.profileImage);
-      if (existsSync(oldImagePath)) {
-        await unlink(oldImagePath).catch(err =>
-          console.error('Error deleting old image:', err)
-        );
-      }
-    }
+    const svgBuffer = Buffer.from(svgContent);
+    const imagePath = `data:image/svg+xml;base64,${svgBuffer.toString('base64')}`;
 
-    // Update user with new image path
-    const imagePath = `/profiles/${filename}`;
+    // Update user with new image path (SVG Base64)
     const [updatedUser] = await db
       .update(users)
       .set({
@@ -127,14 +113,6 @@ export async function DELETE() {
       return NextResponse.json(
         { error: 'No profile image to delete' },
         { status: 400 }
-      );
-    }
-
-    // Delete image file
-    const imagePath = join(process.cwd(), 'public', user.profileImage);
-    if (existsSync(imagePath)) {
-      await unlink(imagePath).catch(err =>
-        console.error('Error deleting image:', err)
       );
     }
 

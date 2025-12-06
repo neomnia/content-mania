@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Mail, Settings, Edit3, Copy, Check, Cloud, Send, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
+import { AdminPageGuard } from "@/components/admin/admin-page-guard"
 
 function ScalewayIcon({ className }: { className?: string }) {
   return (
@@ -22,10 +23,10 @@ function ScalewayIcon({ className }: { className?: string }) {
 }
 
 const emailTypes = [
-  { id: "register", name: "Welcome / Registration", description: "Sent when a new user signs up" },
-  { id: "invite", name: "Team Invitation", description: "Sent when inviting a member to a team" },
+  { id: "registration", name: "Welcome / Registration", description: "Sent when a new user signs up" },
+  { id: "user_invitation", name: "Team Invitation", description: "Sent when inviting a member to a team" },
   { id: "delete", name: "Account Deletion", description: "Sent when a user requests account deletion" },
-  { id: "order", name: "Build & Order", description: "Order validation with invoice attached" },
+  { id: "order_confirmation", name: "Build & Order", description: "Order validation with invoice attached" },
 ]
 
 const variables = [
@@ -42,13 +43,13 @@ export default function MailPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState("html")
   const [copiedVar, setCopiedVar] = useState<string | null>(null)
-  const [selectedProvider, setSelectedProvider] = useState("resend")
+  const [selectedProvider, setSelectedProvider] = useState("scaleway")
   const [isSaving, setIsSaving] = useState(false)
   const [isSending, setIsSending] = useState(false)
 
   // Form state
   const [fromName, setFromName] = useState("NeoSaaS Team")
-  const [fromEmail, setFromEmail] = useState("noreply@neosaas.com")
+  const [fromEmail, setFromEmail] = useState("no-reply@neosaas.tech")
   const [subject, setSubject] = useState("Welcome to NeoSaaS!")
   const [htmlContent, setHtmlContent] = useState("<h1>Welcome {{firstName}}!</h1><p>Thanks for joining us.</p>")
   const [textContent, setTextContent] = useState("Welcome {{firstName}}! Thanks for joining us.")
@@ -146,7 +147,7 @@ export default function MailPage() {
         const template = data.templates.find((t: any) => t.type === selectedType)
         if (template) {
           setFromName(template.fromName || 'NeoSaaS Team')
-          setFromEmail(template.fromEmail || 'noreply@neosaas.com')
+          setFromEmail(template.fromEmail || 'no-reply@neosaas.tech')
           setSubject(template.subject || '')
           setHtmlContent(template.htmlContent || '')
           setTextContent(template.textContent || '')
@@ -154,6 +155,15 @@ export default function MailPage() {
           if (template.provider) {
             setSelectedProvider(template.provider === 'scaleway-tem' ? 'scaleway' : template.provider === 'aws-ses' ? 'aws' : template.provider)
           }
+        } else {
+          // Reset to defaults if no template found
+          setFromName('NeoSaaS Team')
+          setFromEmail('no-reply@neosaas.tech')
+          setSubject('')
+          setHtmlContent('')
+          setTextContent('')
+          setIsActive(true)
+          setSelectedProvider('scaleway')
         }
       }
     } catch (error) {
@@ -243,6 +253,12 @@ export default function MailPage() {
               <div className="space-y-2">
                 <Label>From Email</Label>
                 <Input value={fromEmail} onChange={(e) => setFromEmail(e.target.value)} type="email" />
+                {selectedProvider === 'scaleway' && (
+                  <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                    ⚠️ Scaleway TEM: The email domain must be verified in your Scaleway console.
+                    See <a href="/docs/guides/SCALEWAY-EMAIL-SETUP.md" className="underline" target="_blank">setup guide</a> for details.
+                  </p>
+                )}
               </div>
             </div>
 

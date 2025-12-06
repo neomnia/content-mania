@@ -3,6 +3,7 @@ import { db, validateDatabaseUrl } from '@/db';
 import { users, userRoles, roles, rolePermissions, permissions } from '@/db/schema';
 import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
 import { eq } from 'drizzle-orm';
+import { logSystemEvent } from '@/app/actions/logs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,14 +25,29 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
+      await logSystemEvent({
+        category: 'auth',
+        level: 'warning',
+        message: `Failed login attempt for email: ${email} (User not found)`,
+        metadata: { email, ip: request.headers.get('x-forwarded-for') || 'unknown' }
+      });
+
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Email not found' },
         { status: 401 }
       );
     }
 
     // Check if user is active
     if (!user.isActive) {
+      await logSystemEvent({
+        category: 'auth',
+        level: 'warning',
+        message: `Failed login attempt for user: ${email} (Account deactivated)`,
+        userId: user.id,
+        metadata: { email, ip: request.headers.get('x-forwarded-for') || 'unknown' }
+      });
+
       return NextResponse.json(
         { error: 'Your account has been deactivated. Please contact your company administrator.' },
         { status: 403 }
@@ -42,8 +58,16 @@ export async function POST(request: NextRequest) {
     const isPasswordValid = await verifyPassword(password, user.password);
 
     if (!isPasswordValid) {
+      await logSystemEvent({
+        category: 'auth',
+        level: 'warning',
+        message: `Failed login attempt for user: ${email} (Invalid password)`,
+        userId: user.id,
+        metadata: { email, ip: request.headers.get('x-forwarded-for') || 'unknown' }
+      });
+
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Invalid password' },
         { status: 401 }
       );
     }
@@ -82,6 +106,18 @@ export async function POST(request: NextRequest) {
 
     // Set auth cookie
     await setAuthCookie(token);
+
+    await logSystemEvent({
+      category: 'auth',
+      level: 'info',
+      message: `User logged in: ${email}`,
+      userId: user.id,
+      metadata: { 
+        email, 
+        roles: userRoleNames,
+        ip: request.headers.get('x-forwarded-for') || 'unknown' 
+      }
+    });
 
     // Return user data (without password)
     const { password: _, ...userWithoutPassword } = user;

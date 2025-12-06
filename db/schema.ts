@@ -14,6 +14,8 @@ export const companies = pgTable("companies", {
   email: text("email").notNull().unique(),
   city: text("city"),
   address: text("address"),
+  zipCode: text("zip_code"),
+  siret: text("siret"),
   vatNumber: text("vat_number"),
   phone: text("phone"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -37,6 +39,7 @@ export const users = pgTable("users", {
   city: text("city"),
   postalCode: text("postal_code"),
   country: text("country"),
+  position: text("position"),
   profileImage: text("profile_image"), // Path to profile image in public/profiles
   companyId: uuid("company_id").references(() => companies.id), // Nullable - platform admins don't belong to a company
   isActive: boolean("is_active").default(true).notNull(), // Can be deactivated
@@ -517,6 +520,63 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 }))
 
 // =============================================================================
+// SYSTEM LOGS - Generic System-wide Logging
+// =============================================================================
+
+/**
+ * System Logs - Generic system-wide logging for all events
+ * Categories: 'auth', 'email', 'payment', 'system', 'user', 'admin', etc.
+ * Levels: 'info', 'warning', 'error', 'critical'
+ */
+export const systemLogs = pgTable("system_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  category: text("category").notNull(),
+  level: text("level").notNull().default("info"),
+  message: text("message").notNull(),
+  metadata: jsonb("metadata"), // Additional context (JSON)
+  userId: uuid("user_id").references(() => users.id), // Optional: who triggered the event
+  resourceId: text("resource_id"), // Optional: ID of the related resource (e.g., order ID, email ID)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+export const systemLogsRelations = relations(systemLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [systemLogs.userId],
+    references: [users.id],
+  }),
+}))
+
+// =============================================================================
+// PAGE PERMISSIONS - Dynamic Page Access Control
+// =============================================================================
+
+/**
+ * Page Permissions - Dynamic page access control
+ */
+export const pagePermissions = pgTable("page_permissions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  path: text("path").notNull().unique(), // e.g., "/dashboard", "/admin"
+  name: text("name").notNull(), // Display name
+  access: text("access").notNull().default("public"), // 'public', 'user', 'admin', 'super_admin'
+  group: text("group").notNull(), // Grouping for UI
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+// =============================================================================
+// PLATFORM CONFIGURATION
+// =============================================================================
+
+/**
+ * Platform Configuration - Key-value store for system settings
+ */
+export const platformConfig = pgTable("platform_config", {
+  key: text("key").primaryKey(), // e.g., 'site_name', 'logo', 'auth_enabled'
+  value: text("value"), // Stored value (can be JSON)
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+// =============================================================================
 // TYPES
 // =============================================================================
 
@@ -573,3 +633,13 @@ export type NewOrder = typeof orders.$inferInsert
 
 export type OrderItem = typeof orderItems.$inferSelect
 export type NewOrderItem = typeof orderItems.$inferInsert
+
+export type SystemLog = typeof systemLogs.$inferSelect
+export type NewSystemLog = typeof systemLogs.$inferInsert
+
+export type PagePermission = typeof pagePermissions.$inferSelect
+export type NewPagePermission = typeof pagePermissions.$inferInsert
+
+export type PlatformConfig = typeof platformConfig.$inferSelect
+export type NewPlatformConfig = typeof platformConfig.$inferInsert
+

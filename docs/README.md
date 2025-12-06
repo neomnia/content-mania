@@ -17,6 +17,7 @@ Guides pratiques pour démarrer et utiliser NeoSaaS :
 Documentation technique sur l'architecture et les décisions de conception :
 
 - **[Roles & Permissions System](./architecture/ROLES_PERMISSIONS_SYSTEM.md)** - Système de rôles et permissions
+- **[Data Model](./architecture/DATA_MODEL.md)** - Modèle de données (Tables & Champs)
 
 ### 🔄 [Workflows](./workflows/)
 Processus de développement et de déploiement :

@@ -37,6 +37,12 @@ npm install
 # Lancer en mode développement
 npm run dev
 
+# Initialiser les templates d'emails
+npx tsx scripts/seed-email-templates.ts
+
+# Initialiser les permissions de pages
+npx tsx scripts/sync-pages.ts
+
 # Tester le cryptage
 npx tsx scripts/test-api-encryption.ts
 
@@ -81,8 +87,40 @@ git push origin main
 - [ ] Variables d'environnement configurées sur Vercel
 - [ ] Tests locaux passent (`npm run test` si configuré)
 - [ ] Build local réussit (`npm run build`)
-- [ ] Migrations de base de données appliquées
+- [ ] Migrations de base de données appliquées (`npm run db:push` ou `drizzle-kit migrate`)
 - [ ] Pas d'erreurs TypeScript (`npx tsc --noEmit`)
+
+## Mises à jour de la Base de Données
+
+Lors de l'ajout de nouveaux composants nécessitant des changements de schéma (ex: système d'emails, logs, etc.), il est impératif de mettre à jour la base de données.
+
+### Option 1 : Push direct (Développement / Test)
+Attention : Cette commande peut réinitialiser les données si le schéma a changé de manière incompatible.
+
+```bash
+npm run db:push
+# ou
+npx tsx db/push-schema.ts
+```
+
+### Option 2 : Migrations (Production)
+Utilisez `drizzle-kit` pour générer et appliquer des migrations sans perte de données.
+
+```bash
+npm run db:generate
+# Appliquer les migrations (commande à configurer selon l'environnement)
+```
+
+### Initialisation des données
+Après une mise à jour du schéma, pensez à réinitialiser les données de référence :
+
+```bash
+# Templates d'emails
+npx tsx scripts/seed-email-templates.ts
+
+# Permissions
+npx tsx scripts/sync-pages.ts
+```
 
 ## Monitoring
 

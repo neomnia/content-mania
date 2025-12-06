@@ -3,6 +3,7 @@ import { db, validateDatabaseUrl } from "@/db"
 import { users, companies, roles, userRoles } from "@/db/schema"
 import { hashPassword, createToken, setAuthCookie } from "@/lib/auth"
 import { eq } from "drizzle-orm"
+import { emailRouter, emailTemplateRepository } from "@/lib/email"
 
 export async function POST(request: NextRequest) {
   try {
@@ -139,6 +140,46 @@ export async function POST(request: NextRequest) {
     // Set auth cookie
     await setAuthCookie(token)
     console.log("[v0] Auth cookie set")
+
+    // Send welcome/registration email
+    try {
+      const template = await emailTemplateRepository.getTemplate("registration")
+      if (template && template.isActive) {
+        const actionUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard`
+
+        let htmlContent = template.htmlContent || ""
+        let textContent = template.textContent || ""
+        const subject = template.subject.replace("{{siteName}}", "NeoSaaS")
+
+        // Replace variables
+        const variables = {
+          firstName: newUser.firstName,
+          siteName: "NeoSaaS",
+          actionUrl,
+        }
+
+        Object.entries(variables).forEach(([key, value]) => {
+          const regex = new RegExp(`{{${key}}}`, "g")
+          htmlContent = htmlContent.replace(regex, value)
+          textContent = textContent.replace(regex, value)
+        })
+
+        await emailRouter.sendEmail({
+          to: [newUser.email],
+          from: { name: template.fromName, email: template.fromEmail },
+          subject: subject,
+          html: htmlContent,
+          text: textContent,
+          templateId: template.type,
+        })
+        console.log(`[v0] Welcome email sent to ${newUser.email}`)
+      } else {
+        console.warn("[v0] registration template not found or inactive, account created but email not sent")
+      }
+    } catch (emailError) {
+      console.error("[v0] Failed to send welcome email:", emailError)
+      // Don't fail the registration if email fails
+    }
 
     // Return user data (without password)
     const { password: _, ...userWithoutPassword } = newUser

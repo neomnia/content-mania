@@ -8,7 +8,7 @@ import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
-const ADMIN_EMAIL = 'contact@example.com';
+const ADMIN_EMAIL = 'contact@exemple.com';
 const ADMIN_PASSWORD = 'admin';
 
 async function resetAdminPassword() {

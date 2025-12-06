@@ -73,8 +73,10 @@ export interface ResendConfig {
 export interface ScalewayTemConfig {
   projectId: string;
   secretKey: string;
+  region?: string; // fr-par, nl-ams, pl-waw
   apiUrl?: string;
   plan?: 'essential' | 'scale';
+  verifiedDomains?: string[]; // Domains verified in Scaleway TEM
 }
 
 export interface EmailProviderConfig {

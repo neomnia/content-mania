@@ -15,6 +15,9 @@ import {
   X,
   PanelLeftClose,
   PanelLeft,
+  ArrowLeft,
+  Users,
+  FileText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -22,19 +25,23 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useState } from "react"
 import { ChevronDown } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { toast } from "sonner"
+import { useUser } from "@/lib/contexts/user-context"
 
 const navItems = [
   { name: "Overview", href: "/dashboard", icon: Home },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
-  { name: "Enterprise", href: "/dashboard/enterprise", icon: Building2 },
+  { name: "Company Management", href: "/dashboard/company-management", icon: Building2 },
   { name: "Profile", href: "/dashboard/profile", icon: User },
 ]
 
 const adminItems = [
   { name: "Dashboard", href: "/admin", icon: Shield },
+  { name: "Users", href: "/admin/users", icon: Users },
   { name: "API Management", href: "/admin/api", icon: Key },
   { name: "Pages ACL", href: "/admin/pages", icon: Settings },
   { name: "Mail Management", href: "/admin/mail", icon: Mail },
+  { name: "Logs", href: "/admin/logs", icon: FileText },
 ]
 
 interface PrivateSidebarProps {
@@ -44,6 +51,7 @@ interface PrivateSidebarProps {
 
 export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps) {
   const pathname = usePathname()
+  const { isAdmin, isLoading } = useUser()
   const [isAdminOpen, setIsAdminOpen] = useState(
     pathname.startsWith("/admin") || pathname.startsWith("/dashboard/admin"),
   )
@@ -51,6 +59,19 @@ export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps)
 
   const handleLinkClick = () => {
     if (onClose) onClose()
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } catch (error) {
+      console.error("Logout failed", error)
+    }
+    localStorage.removeItem("user")
+    localStorage.removeItem("authToken")
+    toast.success("Logged out successfully")
+    // Force full page reload to ensure cookies are cleared and auth state is reset
+    window.location.href = "/auth/login"
   }
 
   return (
@@ -115,66 +136,70 @@ export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps)
             return linkContent
           })}
 
-          {isCollapsed ? (
-            // Collapsed: show admin items directly with tooltips
-            <div className="pt-2 border-t mt-2 space-y-1">
-              {adminItems.map((item) => {
-                const Icon = item.icon
-                const isActive = pathname === item.href
-                return (
-                  <Tooltip key={item.href}>
-                    <TooltipTrigger asChild>
-                      <Link
-                        href={item.href}
-                        onClick={handleLinkClick}
-                        className={cn(
-                          "flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                          isActive
-                            ? "bg-[#CD7F32] text-white"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                        )}
-                      >
-                        <Icon className="h-4 w-4" />
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">{item.name}</TooltipContent>
-                  </Tooltip>
-                )
-              })}
-            </div>
-          ) : (
-            // Expanded: keep collapsible admin section
-            <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
-              <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                <div className="flex items-center gap-3">
-                  <Shield className="h-5 w-5" />
-                  <span>Admin</span>
+          {!isLoading && isAdmin && (
+            <>
+              {isCollapsed ? (
+                // Collapsed: show admin items directly with tooltips
+                <div className="pt-2 border-t mt-2 space-y-1">
+                  {adminItems.map((item) => {
+                    const Icon = item.icon
+                    const isActive = pathname === item.href
+                    return (
+                      <Tooltip key={item.href}>
+                        <TooltipTrigger asChild>
+                          <Link
+                            href={item.href}
+                            onClick={handleLinkClick}
+                            className={cn(
+                              "flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                              isActive
+                                ? "bg-[#CD7F32] text-white"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{item.name}</TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
                 </div>
-                <ChevronDown className={cn("h-4 w-4 transition-transform", isAdminOpen && "rotate-180")} />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-1 space-y-1 pl-6">
-                {adminItems.map((item) => {
-                  const Icon = item.icon
-                  const isActive = pathname === item.href
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={handleLinkClick}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-[#CD7F32] text-white"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {item.name}
-                    </Link>
-                  )
-                })}
-              </CollapsibleContent>
-            </Collapsible>
+              ) : (
+                // Expanded: keep collapsible admin section
+                <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
+                  <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Shield className="h-5 w-5" />
+                      <span>Admin</span>
+                    </div>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", isAdminOpen && "rotate-180")} />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-1 space-y-1 pl-6">
+                    {adminItems.map((item) => {
+                      const Icon = item.icon
+                      const isActive = pathname === item.href
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={handleLinkClick}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                            isActive
+                              ? "bg-[#CD7F32] text-white"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                          {item.name}
+                        </Link>
+                      )
+                    })}
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </>
           )}
         </nav>
 
@@ -199,32 +224,59 @@ export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps)
           </Button>
 
           {isCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="icon"
-                  className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                >
-                  <Link href="/auth/login" onClick={handleLinkClick}>
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="icon"
+                    className="w-full mb-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <Link href="/" onClick={handleLinkClick}>
+                      <ArrowLeft className="h-5 w-5" />
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Back to Home</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    onClick={handleLogout}
+                  >
                     <LogOut className="h-5 w-5" />
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Log out</TooltipContent>
-            </Tooltip>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Log out</TooltipContent>
+              </Tooltip>
+            </>
           ) : (
-            <Button
-              asChild
-              variant="ghost"
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-            >
-              <Link href="/auth/login" className="flex items-center gap-3" onClick={handleLinkClick}>
-                <LogOut className="h-5 w-5" />
+            <>
+              <Button
+                asChild
+                variant="ghost"
+                className="w-full justify-start mb-2 text-muted-foreground hover:text-foreground"
+              >
+                <Link href="/" className="flex items-center gap-3" onClick={handleLinkClick}>
+                  <ArrowLeft className="h-5 w-5" />
+                  Back to Home
+                </Link>
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-5 w-5 mr-3" />
                 Log out
-              </Link>
-            </Button>
+              </Button>
+            </>
           )}
         </div>
       </aside>

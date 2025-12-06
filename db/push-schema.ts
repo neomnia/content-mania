@@ -19,6 +19,9 @@ async function pushSchema() {
     console.log('🧹 Cleaning up old schema (if exists)...');
 
     // Drop old tables in correct order (respecting foreign keys)
+    await sql`DROP TABLE IF EXISTS page_permissions CASCADE;`;
+    await sql`DROP TABLE IF EXISTS platform_config CASCADE;`;
+    await sql`DROP TABLE IF EXISTS system_logs CASCADE;`;
     await sql`DROP TABLE IF EXISTS order_items CASCADE;`;
     await sql`DROP TABLE IF EXISTS orders CASCADE;`;
     await sql`DROP TABLE IF EXISTS user_api_key_usage CASCADE;`;
@@ -55,6 +58,8 @@ async function pushSchema() {
         email TEXT NOT NULL UNIQUE,
         city TEXT,
         address TEXT,
+        zip_code TEXT,
+        siret TEXT,
         vat_number TEXT,
         phone TEXT,
         created_at TIMESTAMP DEFAULT NOW() NOT NULL,
@@ -81,6 +86,7 @@ async function pushSchema() {
         city TEXT,
         postal_code TEXT,
         country TEXT,
+        position TEXT,
         profile_image TEXT,
         company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
         is_active BOOLEAN DEFAULT TRUE NOT NULL,
@@ -295,7 +301,7 @@ async function pushSchema() {
 
     console.log('\n👤 Creating provisory super admin...');
 
-    const existingSuperAdmin = await sql`SELECT COUNT(*) as count FROM users WHERE email = 'contact@example.com';`;
+    const existingSuperAdmin = await sql`SELECT COUNT(*) as count FROM users WHERE email = 'admin@exemple.com';`;
 
     if (existingSuperAdmin[0].count === '0' || existingSuperAdmin[0].count === 0) {
       const hashedPassword = await bcrypt.hash('admin', 10);
@@ -303,7 +309,7 @@ async function pushSchema() {
       // Create super admin user (no company_id - platform admin)
       await sql`
         INSERT INTO users (email, password, first_name, last_name, company_id, is_active)
-        VALUES ('contact@example.com', ${hashedPassword}, 'Super', 'Admin', NULL, true)
+        VALUES ('admin@exemple.com', ${hashedPassword}, 'Super', 'Admin', NULL, true)
         ON CONFLICT (email) DO NOTHING;
       `;
 
@@ -313,12 +319,12 @@ async function pushSchema() {
         SELECT u.id, r.id
         FROM users u
         CROSS JOIN roles r
-        WHERE u.email = 'contact@example.com' AND r.name = 'super_admin'
+        WHERE u.email = 'admin@exemple.com' AND r.name = 'super_admin'
         ON CONFLICT DO NOTHING;
       `;
 
       console.log('  ✓ Provisory super admin created');
-      console.log('  📧 Email: contact@example.com');
+      console.log('  📧 Email: admin@exemple.com');
       console.log('  🔑 Password: admin');
       console.log('  👑 Role: super_admin (platform scope)');
       console.log('  ⚠️  IMPORTANT: Change this password after first login!');
@@ -446,6 +452,30 @@ async function pushSchema() {
       );
     `;
     console.log('  ✓ email_statistics table created');
+
+    // =============================================================================
+    // SYSTEM LOGS
+    // =============================================================================
+
+    console.log('\n📜 Creating system logs table...');
+
+    await sql`
+      CREATE TABLE system_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        category TEXT NOT NULL,
+        level TEXT NOT NULL DEFAULT 'info',
+        message TEXT NOT NULL,
+        metadata JSONB,
+        user_id UUID REFERENCES users(id),
+        resource_id TEXT,
+        created_at TIMESTAMP DEFAULT NOW() NOT NULL
+      );
+    `;
+    console.log('  ✓ system_logs table created');
+
+    await sql`CREATE INDEX idx_system_logs_category ON system_logs(category);`;
+    await sql`CREATE INDEX idx_system_logs_level ON system_logs(level);`;
+    await sql`CREATE INDEX idx_system_logs_created_at ON system_logs(created_at);`;
 
     // =============================================================================
     // 12. CREATE USER API KEYS TABLES
@@ -598,7 +628,44 @@ async function pushSchema() {
     await sql`CREATE INDEX IF NOT EXISTS idx_service_api_usage_created_at ON service_api_usage(created_at);`;
 
     // =============================================================================
-    // 15. VERIFICATION
+    // 16. CREATE PAGE PERMISSIONS TABLE
+    // =============================================================================
+
+    console.log('\n📄 Creating page permissions table...');
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS page_permissions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        path TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        access TEXT NOT NULL DEFAULT 'public',
+        "group" TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+      );
+    `;
+    console.log('  ✓ page_permissions table created');
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_page_permissions_path ON page_permissions(path);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_page_permissions_access ON page_permissions(access);`;
+
+    // =============================================================================
+    // 17. CREATE PLATFORM CONFIG TABLE
+    // =============================================================================
+
+    console.log('\n⚙️ Creating platform config table...');
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS platform_config (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+      );
+    `;
+    console.log('  ✓ platform_config table created');
+
+    // =============================================================================
+    // 18. VERIFICATION
     // =============================================================================
 
     console.log('\n✅ Schema pushed successfully!');

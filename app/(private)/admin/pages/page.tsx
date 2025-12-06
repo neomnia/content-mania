@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Shield, Globe, Users } from "lucide-react"
 import { useState, useEffect } from "react"
-
-type AccessLevel = "public" | "user" | "admin" | "super-admin"
+import { getPages, updatePageAccess, syncPages, type AccessLevel } from "@/app/actions/pages"
+import { toast } from "sonner"
 
 interface Page {
   path: string
@@ -17,7 +17,7 @@ interface Page {
   group: string
 }
 
-const allPages: Page[] = [
+const defaultPages: Page[] = [
   { path: "/", name: "Home Page", access: "public", group: "Public" },
   { path: "/features", name: "Features", access: "public", group: "Public" },
   { path: "/pricing", name: "Pricing", access: "public", group: "Public" },
@@ -27,7 +27,7 @@ const allPages: Page[] = [
   { path: "/dashboard", name: "Dashboard Overview", access: "user", group: "Dashboard" },
   { path: "/dashboard/profile", name: "User Profile", access: "user", group: "Dashboard" },
   { path: "/dashboard/payments", name: "Payments", access: "user", group: "Dashboard" },
-  { path: "/dashboard/enterprise", name: "Enterprise", access: "user", group: "Dashboard" },
+  { path: "/dashboard/company-management", name: "Company Management", access: "user", group: "Dashboard" },
   { path: "/dashboard/checkout", name: "Checkout", access: "user", group: "Dashboard" },
   { path: "/admin", name: "Admin Dashboard", access: "admin", group: "Admin" },
   { path: "/admin/api", name: "API Management", access: "admin", group: "Admin" },
@@ -37,15 +37,40 @@ const allPages: Page[] = [
 
 export default function PagesPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [pages, setPages] = useState<Page[]>(allPages)
-  const [filteredPages, setFilteredPages] = useState<Page[]>(allPages)
+  const [pages, setPages] = useState<Page[]>([])
+  const [filteredPages, setFilteredPages] = useState<Page[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchPages = async () => {
+      setIsLoading(true)
+      const result = await getPages()
+      if (result.success && result.data && result.data.length > 0) {
+        // Map DB result to Page interface
+        const dbPages = result.data.map(p => ({
+          path: p.path,
+          name: p.name,
+          access: p.access as AccessLevel,
+          group: p.group
+        }))
+        setPages(dbPages)
+        setFilteredPages(dbPages)
+      } else {
+        // If no pages in DB, sync default pages
+        await syncPages(defaultPages)
+        setPages(defaultPages)
+        setFilteredPages(defaultPages)
+      }
+      setIsLoading(false)
+    }
+    fetchPages()
+  }, [])
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (searchTerm) {
         setIsSearching(true)
-        // Simulate API call - in production this would call /api/pages/search
         const filtered = pages.filter(
           (page) =>
             page.path.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -91,9 +116,16 @@ export default function PagesPage() {
     }
   }
 
-  const handleAccessChange = (path: string, newAccess: AccessLevel) => {
+  const handleAccessChange = async (path: string, newAccess: AccessLevel) => {
     setPages((prev) => prev.map((page) => (page.path === path ? { ...page, access: newAccess } : page)))
-    console.log(`[v0] Changed access for ${path} to ${newAccess}`)
+    
+    const result = await updatePageAccess(path, newAccess)
+    if (result.success) {
+      toast.success(`Access for ${path} updated to ${newAccess}`)
+    } else {
+      toast.error("Failed to update access")
+      // Revert on failure (could fetch again)
+    }
   }
 
   return (
@@ -168,7 +200,13 @@ export default function PagesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPages.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    Loading pages...
+                  </TableCell>
+                </TableRow>
+              ) : filteredPages.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     No pages found matching "{searchTerm}"

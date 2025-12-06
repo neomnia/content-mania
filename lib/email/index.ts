@@ -7,8 +7,6 @@ export * from './types';
 
 // Providers
 export { IEmailProvider, BaseEmailProvider } from './providers/base/interface';
-export { AwsSesProvider } from './providers/aws-ses/provider';
-export { ResendProvider } from './providers/resend/provider';
 export { ScalewayTemProvider } from './providers/scaleway/provider';
 
 // Services

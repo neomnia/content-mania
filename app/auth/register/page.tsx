@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
+import { CheckCircle, XCircle } from "lucide-react"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -21,6 +22,12 @@ export default function RegisterPage() {
     confirmPassword: "",
     termsAccepted: false,
   })
+  const [isEmailValid, setIsEmailValid] = useState<boolean | null>(null)
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -83,6 +90,10 @@ export default function RegisterPage() {
       ...formData,
       [e.target.id]: value,
     })
+
+    if (e.target.id === "email") {
+      setIsEmailValid(value ? validateEmail(value as string) : null)
+    }
   }
 
   return (
@@ -140,16 +151,28 @@ export default function RegisterPage() {
             <form className="grid gap-4" onSubmit={handleSubmit}>
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  placeholder="name@example.com"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <Input
+                    id="email"
+                    placeholder="name@example.com"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    disabled={isLoading}
+                    className={isEmailValid === false ? "border-red-500 focus-visible:ring-red-500" : isEmailValid === true ? "border-green-500 focus-visible:ring-green-500" : ""}
+                  />
+                  {formData.email && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      {isEmailValid ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password">Password</Label>
@@ -176,12 +199,6 @@ export default function RegisterPage() {
                   disabled={isLoading}
                   placeholder="Confirm your password"
                 />
-              </div>
-
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-                <p className="text-xs text-muted-foreground">
-                  After registration, complete your profile to personalize your account.
-                </p>
               </div>
 
               <div className="flex items-center space-x-2">

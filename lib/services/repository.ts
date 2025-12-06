@@ -97,6 +97,7 @@ export class ServiceApiRepository {
     const decryptedConfig = await decrypt(config.config as string);
 
     return {
+      id: config.id, // Include ID for logging purposes
       serviceName: config.serviceName as ServiceName,
       serviceType: config.serviceType as ServiceType,
       environment: config.environment as ServiceEnvironment,
@@ -104,7 +105,7 @@ export class ServiceApiRepository {
       isDefault: config.isDefault,
       config: JSON.parse(decryptedConfig),
       metadata: config.metadata as Record<string, any> | undefined,
-    } as ServiceConfig;
+    } as ServiceConfig & { id: string };
   }
 
   /**
@@ -131,6 +132,7 @@ export class ServiceApiRepository {
     const decryptedConfig = await decrypt(config.config as string);
 
     return {
+      id: config.id, // Include ID for logging purposes
       serviceName: config.serviceName as ServiceName,
       serviceType: config.serviceType as ServiceType,
       environment: config.environment as ServiceEnvironment,
@@ -138,7 +140,7 @@ export class ServiceApiRepository {
       isDefault: config.isDefault,
       config: JSON.parse(decryptedConfig),
       metadata: config.metadata as Record<string, any> | undefined,
-    } as ServiceConfig;
+    } as ServiceConfig & { id: string };
   }
 
   /**

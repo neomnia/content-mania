@@ -1,153 +1,81 @@
-# 🚀 Configuration Vercel - NEXTAUTH_SECRET
+# 🚀 Configuration Vercel & Déploiement
 
-## ❌ Problème rencontré
+Ce guide détaille la configuration nécessaire pour déployer l'application sur Vercel.
 
+## 1. Variables d'Environnement
+
+Pour que l'application fonctionne correctement, vous devez configurer les variables suivantes dans les paramètres de votre projet Vercel (**Settings** > **Environment Variables**).
+
+### Variables Obligatoires
+
+| Variable | Description | Environnements |
+|----------|-------------|----------------|
+| `DATABASE_URL` | URL de connexion PostgreSQL (Neon DB). Doit inclure `?sslmode=require`. | Production, Preview, Development |
+| `NEXTAUTH_SECRET` | Clé de chiffrement pour l'authentification. **Doit faire au moins 32 caractères.** | Production, Preview, Development |
+| `NEXTAUTH_URL` | URL canonique de l'application (ex: `https://votre-projet.vercel.app`). | Production |
+
+### Variables Optionnelles
+
+| Variable | Description | Environnements |
+|----------|-------------|----------------|
+| `ADMIN_SECRET_KEY` | Clé secrète pour les opérations d'administration. | Production, Preview, Development |
+| `CRON_SECRET` | Pour sécuriser les routes API appelées par des Cron Jobs. | Production, Preview |
+
+---
+
+## 2. Initialisation de la Base de Données
+
+Le processus de déploiement a été automatisé pour gérer la base de données.
+
+### Script de Build Personnalisé
+Le fichier `package.json` utilise un script de build personnalisé :
+```json
+"build": "bash scripts/build-with-db.sh"
+```
+
+Ce script effectue automatiquement les actions suivantes lors du déploiement sur Vercel :
+1. **Synchronisation du Schéma** (`pnpm db:push`) : Met à jour la structure de la base de données.
+2. **Initialisation des Templates** (`pnpm seed:email-templates`) : Crée ou met à jour les modèles d'emails.
+3. **Initialisation des Permissions** (`pnpm seed:pages`) : Configure les permissions par défaut des pages (ACL).
+4. **Compilation** (`next build`) : Construit l'application Next.js.
+
+### ⚠️ Important
+Pour que ce processus fonctionne, la variable `DATABASE_URL` **doit être définie** dans l'environnement Vercel. Si elle est absente, la synchronisation sera ignorée.
+
+---
+
+## 3. Dépannage (Troubleshooting)
+
+### Erreur : `NEXTAUTH_SECRET` trop court
 ```
 Error: NEXTAUTH_SECRET doit faire au moins 32 caractères
 ```
-
-**Cause :** La clé actuelle fait seulement 28 caractères.
-
----
-
-## ✅ Solution
-
-### 1. Nouvelle clé générée (44 caractères)
-
-```
-fZTfNSS0oGYOjKAoG5870CEOAKALXjWYFSjDJ2vh7qA=
-```
-
-### 2. Configuration Vercel
-
-#### Étape A : Accéder aux variables d'environnement
-
-1. Aller sur [Vercel Dashboard](https://vercel.com/dashboard)
-2. Sélectionner votre projet **neosaas-website**
-3. Cliquer sur **Settings** (menu de gauche)
-4. Cliquer sur **Environment Variables** (menu de gauche)
-
-#### Étape B : Modifier/Ajouter NEXTAUTH_SECRET
-
-**Si la variable existe déjà :**
-1. Trouver `NEXTAUTH_SECRET` dans la liste
-2. Cliquer sur les **trois points (...)** → **Edit**
-3. Remplacer la valeur par : `fZTfNSS0oGYOjKAoG5870CEOAKALXjWYFSjDJ2vh7qA=`
-4. **IMPORTANT** : Cocher TOUS les environnements :
-   - ✅ Production
-   - ✅ Preview
-   - ✅ Development
-5. Cliquer sur **Save**
-
-**Si la variable n'existe pas :**
-1. Cliquer sur **Add New**
-2. Remplir :
-   - **Name:** `NEXTAUTH_SECRET`
-   - **Value:** `fZTfNSS0oGYOjKAoG5870CEOAKALXjWYFSjDJ2vh7qA=`
-   - **Environments:** Cocher ✅ Production, ✅ Preview, ✅ Development
-3. Cliquer sur **Save**
-
-#### Étape C : Redéployer
-
-**Option 1 : Redéploiement automatique**
+**Solution :** Générez une nouvelle clé plus longue.
 ```bash
-git add .
-git commit -m "fix: Update NEXTAUTH_SECRET configuration"
-git push
+openssl rand -base64 32
 ```
+Mettez à jour la variable dans Vercel et redéployez.
 
-**Option 2 : Redéploiement manuel**
-1. Aller dans **Deployments**
-2. Trouver le dernier déploiement
-3. Cliquer sur **...** (trois points)
-4. Sélectionner **Redeploy**
-5. Cliquer sur **Redeploy** pour confirmer
+### Erreur : `DATABASE_URL environment variable is not set`
+**Solution :** Vérifiez que vous avez bien ajouté `DATABASE_URL` dans les variables d'environnement Vercel et coché les cases pour **Production** et **Preview**.
 
----
-
-## ✅ Vérification
-
-Après le redéploiement :
-
-1. Aller sur votre application déployée
-2. Se connecter
-3. Aller sur `/admin/api`
-4. Essayer d'ajouter une clé API (Scaleway, Resend, etc.)
-
-**Résultat attendu :**
-- ✅ Pas d'erreur de cryptage
-- ✅ Message "Configuration saved"
-- ✅ Clé cryptée en base de données
-
----
-
-## 🔍 Diagnostic
-
-### Vérifier localement
-
-```bash
-# Vérifier la longueur de votre clé
-npx tsx scripts/check-nextauth-secret.ts
-```
-
-**Résultat attendu :**
-```
-✅ NEXTAUTH_SECRET est défini
-   Longueur: 44 caractères
-✅ Longueur valide (>= 32 caractères)
-```
-
-### Vérifier sur Vercel
-
-1. Vercel → Settings → Environment Variables
-2. Vérifier que `NEXTAUTH_SECRET` est défini pour **tous les environnements**
-3. Vérifier qu'il n'y a **pas d'espaces** avant/après la valeur
-
----
-
-## 🚨 Troubleshooting
-
-### Erreur persiste après redéploiement
-
-**Cause possible :** Cache Vercel
+### Les tables n'existent pas après le déploiement
+**Cause :** Le script de synchronisation a peut-être échoué ou a été ignoré.
 **Solution :**
-1. Settings → General
-2. Descendre jusqu'à "Clear Cache"
-3. Cliquer sur "Clear Cache"
-4. Redéployer
+1. Vérifiez les logs de build dans Vercel.
+2. Assurez-vous que `DATABASE_URL` est correcte.
+3. Vous pouvez forcer une synchronisation locale avec `pnpm db:push` si vous avez accès à la base de production depuis votre machine.
 
-### Variables non chargées
-
-**Cause possible :** Environnement non coché
-**Solution :**
-1. Vérifier que TOUS les environnements sont cochés :
-   - Production ✅
-   - Preview ✅
-   - Development ✅
-
-### Ancienne clé toujours utilisée
-
-**Cause possible :** Déploiement non redémarré
-**Solution :**
-1. Aller dans Deployments
-2. Trouver le déploiement actif
-3. Cliquer sur "Redeploy"
-4. Attendre la fin du build
+### Problèmes de Cache
+Si des modifications de configuration ne semblent pas prises en compte :
+1. Allez dans **Settings** > **Data Cache**.
+2. Cliquez sur **Purge Everything**.
+3. Redéployez l'application.
 
 ---
 
-## 📚 Références
+## 4. Sécurité
 
-- [Vercel Environment Variables](https://vercel.com/docs/concepts/projects/environment-variables)
-- [Next.js Environment Variables](https://nextjs.org/docs/app/building-your-application/configuring/environment-variables)
-- [NEXTAUTH_SECRET Documentation](https://next-auth.js.org/configuration/options#secret)
-
----
-
-## 🔐 Sécurité
-
-⚠️ **Ne JAMAIS commiter `.env.local` dans Git**
-
-✅ Le fichier est déjà dans `.gitignore`
-
-✅ Seul `.env.example` doit être versionné (sans vraies valeurs)
+- **Ne jamais commiter `.env.local`**.
+- Utilisez des secrets différents pour **Development**, **Preview** et **Production**.
+- La clé `NEXTAUTH_SECRET` est critique pour la sécurité des sessions.

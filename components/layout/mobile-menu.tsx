@@ -2,9 +2,14 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu } from "lucide-react"
+import { Menu, Lock } from "lucide-react"
+import { type JWTPayload } from "@/lib/auth"
 
-export function MobileMenu() {
+interface MobileMenuProps {
+  user?: JWTPayload | null
+}
+
+export function MobileMenu({ user }: MobileMenuProps) {
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -46,14 +51,25 @@ export function MobileMenu() {
           </nav>
 
           <div className="flex flex-col gap-2 mt-4">
-            <Link href="/auth/login">
-              <Button variant="outline" className="w-full">
-                Login
-              </Button>
-            </Link>
-            <Link href="/auth/register">
-              <Button className="w-full bg-[#CD7F32] hover:bg-[#B26B27] text-white border-none">Sign Up</Button>
-            </Link>
+            {user ? (
+              <Link href="/dashboard">
+                <Button className="w-full gap-2">
+                  <Lock className="h-4 w-4" />
+                  Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/auth/login">
+                  <Button variant="outline" className="w-full">
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/auth/register">
+                  <Button className="w-full bg-[#CD7F32] hover:bg-[#B26B27] text-white border-none">Sign Up</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </SheetContent>

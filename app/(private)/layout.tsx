@@ -10,7 +10,7 @@ import { PrivateLayoutClient } from "./layout-client"
  */
 export default async function PrivateLayout({ children }: { children: React.ReactNode }) {
   // Verify authentication - redirects to login if not authenticated
-  await requireAuth()
+  const user = await requireAuth()
 
-  return <PrivateLayoutClient>{children}</PrivateLayoutClient>
+  return <PrivateLayoutClient user={user}>{children}</PrivateLayoutClient>
 }

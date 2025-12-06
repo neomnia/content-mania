@@ -13,7 +13,9 @@ function validateDatabaseUrl() {
 }
 
 // Create the database client
-const sql = neon(DATABASE_URL);
+// Remove unsupported query parameters for HTTP driver
+const connectionString = DATABASE_URL.replace('&channel_binding=require', '').replace('channel_binding=require&', '').replace('?channel_binding=require', '');
+const sql = neon(connectionString);
 export const db = drizzle(sql, { schema });
 
 // Export validation function to be called before database operations

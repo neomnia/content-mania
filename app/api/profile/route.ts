@@ -5,10 +5,10 @@ import { getCurrentUser } from '@/lib/auth';
 import { eq } from 'drizzle-orm';
 
 /**
- * PUT /api/profile
+ * POST /api/profile
  * Update current user's profile information
  */
-export async function PUT(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     validateDatabaseUrl();
     const currentUser = await getCurrentUser();
@@ -21,7 +21,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { firstName, lastName, phone, address, city, postalCode, country } = body;
+    const { firstName, lastName, phone, address, city, postalCode, country, position } = body;
 
     // Validate required fields
     if (!firstName || !lastName) {
@@ -42,6 +42,7 @@ export async function PUT(request: NextRequest) {
         city: city || null,
         postalCode: postalCode || null,
         country: country || null,
+        position: position || null,
         updatedAt: new Date(),
       })
       .where(eq(users.id, currentUser.userId))

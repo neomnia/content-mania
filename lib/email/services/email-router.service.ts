@@ -1,5 +1,6 @@
 /**
  * Service de routage des emails vers le bon provider
+ * Configuration centralisée via service_api_configs
  */
 
 import type {
@@ -8,12 +9,12 @@ import type {
   EmailSendResult,
   ProviderConnectionStatus,
 } from '../types';
-import { AwsSesProvider } from '../providers/aws-ses/provider';
-import { ResendProvider } from '../providers/resend/provider';
 import { ScalewayTemProvider } from '../providers/scaleway/provider';
 import { emailConfigRepository } from '../repositories/config.repository';
 import { emailLogger } from '../utils/logger';
+import { serviceApiRepository } from '@/lib/services/repository';
 import type { IEmailProvider } from '../providers/base/interface';
+import { logSystemEvent } from '@/app/actions/logs';
 
 export class EmailRouterService {
   private providers: Map<EmailProvider, IEmailProvider> = new Map();
@@ -21,9 +22,11 @@ export class EmailRouterService {
 
   /**
    * Initialiser tous les providers configurés
+   * NOTE: Seul Scaleway TEM est supporté actuellement
    */
   async initialize(): Promise<void> {
-    if (this.initialized) {
+    // Si déjà initialisé avec des providers, on ne fait rien
+    if (this.initialized && this.providers.size > 0) {
       return;
     }
 
@@ -38,26 +41,18 @@ export class EmailRouterService {
         let provider: IEmailProvider | null = null;
 
         switch (config.provider) {
-          case 'aws-ses':
-            if (config.awsSes) {
-              provider = new AwsSesProvider();
-              await provider.initialize(config.awsSes);
-            }
-            break;
-
-          case 'resend':
-            if (config.resend) {
-              provider = new ResendProvider();
-              await provider.initialize(config.resend);
-            }
-            break;
-
           case 'scaleway-tem':
             if (config.scalewayTem) {
               provider = new ScalewayTemProvider();
               await provider.initialize(config.scalewayTem);
+
+              // Logger l'utilisation API dans service_api_usage
+              await this.logProviderInitialization('scaleway', 'production');
             }
             break;
+
+          default:
+            emailLogger.warn(`Unsupported provider: ${config.provider}. Only Scaleway TEM is supported.`);
         }
 
         if (provider) {
@@ -67,10 +62,35 @@ export class EmailRouterService {
       }
 
       this.initialized = true;
-      emailLogger.info(`Email router initialized with ${this.providers.size} providers`);
+      emailLogger.info(`Email router initialized with ${this.providers.size} provider(s)`);
+
+      if (this.providers.size === 0) {
+        emailLogger.warn('No email providers configured. Please configure Scaleway TEM via /admin/api');
+      }
     } catch (error: any) {
       emailLogger.error('Failed to initialize email router', error);
       throw error;
+    }
+  }
+
+  /**
+   * Logger l'initialisation d'un provider dans service_api_usage
+   */
+  private async logProviderInitialization(serviceName: string, environment: string): Promise<void> {
+    try {
+      const config = await serviceApiRepository.getConfig(serviceName as any, environment as any);
+      if (config && (config as any).id) {
+        await serviceApiRepository.trackUsage({
+          configId: (config as any).id,
+          serviceName: serviceName as any,
+          operation: 'email_provider_init',
+          status: 'success',
+          responseTime: 0,
+        });
+      }
+    } catch (error) {
+      // Silent fail, logging ne doit pas bloquer l'initialisation
+      console.error('Failed to log provider initialization:', error);
     }
   }
 
@@ -105,24 +125,66 @@ export class EmailRouterService {
       }
 
       if (!provider) {
-        throw new Error('No email provider available');
+        throw new Error('No email provider available. Please configure Scaleway TEM via /admin/api');
       }
     }
 
     emailLogger.info(`Sending email via ${provider.providerName}`, provider.providerName);
 
-    return await provider.sendEmail(message);
+    const result = await provider.sendEmail(message);
+
+    // Logger l'envoi dans service_api_usage
+    await this.logEmailSend(provider.providerName, result);
+
+    return result;
+  }
+
+  /**
+   * Logger un envoi d'email dans service_api_usage
+   */
+  private async logEmailSend(providerName: EmailProvider, result: EmailSendResult): Promise<void> {
+    try {
+      const config = await serviceApiRepository.getConfig('scaleway', 'production');
+      if (config && (config as any).id) {
+        await serviceApiRepository.trackUsage({
+          configId: (config as any).id,
+          serviceName: 'scaleway',
+          operation: 'send_email',
+          status: result.success ? 'success' : 'failed',
+          errorMessage: result.error,
+          responseTime: 0, // À améliorer avec un timestamp
+        });
+      }
+
+      // Log to system_logs
+      await logSystemEvent({
+        category: 'email',
+        level: result.success ? 'info' : 'error',
+        message: result.success 
+          ? `Email sent successfully via ${providerName}` 
+          : `Failed to send email via ${providerName}: ${result.error}`,
+        metadata: {
+          provider: providerName,
+          messageId: result.messageId,
+          error: result.error
+        }
+      });
+    } catch (error) {
+      // Silent fail
+      console.error('Failed to log email send:', error);
+    }
   }
 
   /**
    * Envoyer un email avec fallback automatique
+   * NOTE: Actuellement, seul Scaleway TEM est configuré, pas de fallback
    */
   async sendWithFallback(message: EmailMessage): Promise<EmailSendResult> {
     await this.initialize();
 
     const providers = Array.from(this.providers.values());
     if (providers.length === 0) {
-      throw new Error('No email providers available');
+      throw new Error('No email providers available. Please configure Scaleway TEM via /admin/api');
     }
 
     // Trier les providers pour mettre le provider par défaut en premier
@@ -146,6 +208,7 @@ export class EmailRouterService {
 
         if (result.success) {
           emailLogger.info(`Email sent successfully via ${provider.providerName}`, provider.providerName);
+          await this.logEmailSend(provider.providerName, result);
           return result;
         }
 
@@ -161,7 +224,7 @@ export class EmailRouterService {
 
     return {
       success: false,
-      provider: providers[0]?.providerName || ('resend' as EmailProvider),
+      provider: providers[0]?.providerName || ('scaleway-tem' as EmailProvider),
       error: lastError?.message || 'All providers failed',
     };
   }

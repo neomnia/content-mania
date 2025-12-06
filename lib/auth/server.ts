@@ -7,7 +7,8 @@ const JWT_SECRET = process.env.NEXTAUTH_SECRET || "your-secret-key-here-change-i
 export interface AuthUser {
   userId: string
   email: string
-  role?: string
+  roles?: string[]
+  permissions?: string[]
   [key: string]: any
 }
 
@@ -44,6 +45,74 @@ export async function requireAuth(): Promise<AuthUser> {
     redirect("/auth/login")
   }
   
+  return user
+}
+
+/**
+ * Get user roles from database
+ * Returns the list of role names for the authenticated user
+ */
+export async function getUserRoles(userId: string): Promise<string[]> {
+  try {
+    const { db } = await import("@/db")
+    const { userRoles, roles } = await import("@/db/schema")
+    const { eq } = await import("drizzle-orm")
+
+    console.log("[AUTH] Fetching roles for user:", userId)
+
+    const userRolesData = await db
+      .select({ roleName: roles.name })
+      .from(userRoles)
+      .innerJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(eq(userRoles.userId, userId))
+
+    const roleNames = userRolesData.map((r) => r.roleName)
+    console.log("[AUTH] User roles found:", roleNames)
+
+    return roleNames
+  } catch (error) {
+    console.error("Error fetching user roles:", error)
+    return []
+  }
+}
+
+/**
+ * Check if user has any of the specified roles
+ */
+export async function hasRole(userId: string, allowedRoles: string[]): Promise<boolean> {
+  const userRoles = await getUserRoles(userId)
+  const hasAccess = userRoles.some((role) => allowedRoles.includes(role))
+  console.log("[AUTH] Checking if user has roles", allowedRoles, "- Result:", hasAccess)
+  return hasAccess
+}
+
+/**
+ * Check if user is admin or super_admin
+ */
+export async function isAdmin(userId: string): Promise<boolean> {
+  return await hasRole(userId, ["admin", "super_admin"])
+}
+
+/**
+ * Require admin access - redirects to dashboard if not admin
+ * Checks roles from database for accurate, real-time verification
+ */
+export async function requireAdmin(): Promise<AuthUser> {
+  const user = await requireAuth()
+
+  console.log("[AUTH] Checking admin access for user:", user.userId, user.email)
+
+  // Check roles from database (not from JWT token which may be outdated)
+  const admin = await isAdmin(user.userId)
+
+  console.log("[AUTH] Is admin?", admin)
+
+  if (!admin) {
+    console.log("[AUTH] Access denied - redirecting to /dashboard")
+    redirect("/dashboard")
+  }
+
+  console.log("[AUTH] Access granted to admin area")
   return user
 }
 

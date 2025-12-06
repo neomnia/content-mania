@@ -1,3 +1,5 @@
+# ⚠️ DEPRECATED - SEE VERCEL-SETUP.md
+
 # Configuration Vercel - Variables d'Environnement
 
 ## ⚠️ IMPORTANT : 3 Étapes Obligatoires

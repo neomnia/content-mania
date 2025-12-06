@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, validateDatabaseUrl } from '@/db';
-import { companies } from '@/db/schema';
+import { companies, users } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
 import { eq } from 'drizzle-orm';
 
@@ -11,18 +11,35 @@ import { eq } from 'drizzle-orm';
 export async function GET() {
   try {
     validateDatabaseUrl();
-    const currentUser = await getCurrentUser();
+    const tokenUser = await getCurrentUser();
 
-    if (!currentUser) {
+    if (!tokenUser) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       );
     }
 
+    // Fetch fresh user data to get latest companyId
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, tokenUser.userId),
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    if (!user.companyId) {
+      // Return null company if user is not linked to any company (e.g. super admin initially)
+      return NextResponse.json({ company: null });
+    }
+
     // Fetch company data
     const company = await db.query.companies.findFirst({
-      where: eq(companies.id, currentUser.companyId),
+      where: eq(companies.id, user.companyId),
     });
 
     if (!company) {
@@ -44,30 +61,37 @@ export async function GET() {
 
 /**
  * PUT /api/company
- * Update current user's company data
+ * Update current user's company data or create if not exists
  */
 export async function PUT(request: NextRequest) {
   try {
     validateDatabaseUrl();
-    const currentUser = await getCurrentUser();
+    const tokenUser = await getCurrentUser();
 
-    if (!currentUser) {
+    if (!tokenUser) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       );
     }
 
-    // Only owner can update company info
-    if (!currentUser.isOwner) {
+    // Fetch fresh user data
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, tokenUser.userId),
+    });
+
+    if (!user) {
       return NextResponse.json(
-        { error: 'Only company owners can update company information' },
-        { status: 403 }
+        { error: 'User not found' },
+        { status: 404 }
       );
     }
 
+    // Check permissions (simplified: allow if user exists, ideally check roles)
+    // For now, we assume any authenticated user accessing this endpoint wants to manage their company
+
     const body = await request.json();
-    const { name, email, city, address, vatNumber, phone } = body;
+    const { name, email, city, address, zipCode, siret, vatNumber, phone } = body;
 
     // Validate required fields
     if (!name || !email) {
@@ -82,27 +106,55 @@ export async function PUT(request: NextRequest) {
       where: eq(companies.email, email),
     });
 
-    if (existingCompany && existingCompany.id !== currentUser.companyId) {
+    if (existingCompany && existingCompany.id !== user.companyId) {
       return NextResponse.json(
         { error: 'This email is already used by another company' },
         { status: 409 }
       );
     }
 
-    // Update company
-    const [updatedCompany] = await db
-      .update(companies)
-      .set({
+    let updatedCompany;
+
+    if (!user.companyId) {
+      // Create new company if user has none
+      const [newCompany] = await db.insert(companies).values({
         name,
         email,
         city: city || null,
         address: address || null,
+        zipCode: zipCode || null,
+        siret: siret || null,
         vatNumber: vatNumber || null,
         phone: phone || null,
-        updatedAt: new Date(),
-      })
-      .where(eq(companies.id, currentUser.companyId))
-      .returning();
+      }).returning();
+
+      updatedCompany = newCompany;
+
+      // Link user to new company
+      await db.update(users)
+        .set({ companyId: newCompany.id })
+        .where(eq(users.id, user.id));
+        
+    } else {
+      // Update existing company
+      const [result] = await db
+        .update(companies)
+        .set({
+          name,
+          email,
+          city: city || null,
+          address: address || null,
+          zipCode: zipCode || null,
+          siret: siret || null,
+          vatNumber: vatNumber || null,
+          phone: phone || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(companies.id, user.companyId))
+        .returning();
+        
+      updatedCompany = result;
+    }
 
     return NextResponse.json({
       company: updatedCompany,

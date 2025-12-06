@@ -22,6 +22,7 @@ interface UserData {
   lastName: string
   email: string
   role: string
+  position?: string
   profileImage: string | null
 }
 
@@ -47,6 +48,7 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
         lastName: "Chowdhury",
         email: "randomuser@pimjo.com",
         role: "Team Manager",
+        position: "Team Manager",
         profileImage: null,
       })
     }
@@ -99,11 +101,17 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
     return `${firstName[0]}${lastName[0]}`.toUpperCase()
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } catch (error) {
+      console.error("Logout failed", error)
+    }
     localStorage.removeItem("user")
     localStorage.removeItem("authToken")
     toast.success("Logged out successfully")
-    router.push("/auth/login")
+    // Force full page reload to ensure cookies are cleared and auth state is reset
+    window.location.href = "/auth/login"
   }
 
   return (
@@ -176,7 +184,7 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-semibold">{user ? `${user.firstName} ${user.lastName}` : "User"}</p>
                 <p className="text-xs text-muted-foreground">{user?.email || "user@neosaas.com"}</p>
-                <p className="text-xs text-[#CD7F32] font-medium">{user?.role || "Member"}</p>
+                <p className="text-xs text-[#CD7F32] font-medium">{user?.position || user?.role || "Member"}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

@@ -3,8 +3,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, Lock, Mail, Calendar, CheckCircle2, Zap, Shield, TrendingUp } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { CreditCard, Lock, Mail, Calendar, CheckCircle2, Zap, Shield, TrendingUp, Info } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
 const modules = [
   {
@@ -61,8 +63,38 @@ const modules = [
 ]
 
 export default function DashboardPage() {
+  const [showProfileAlert, setShowProfileAlert] = useState(false)
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("user")
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr)
+        // Check if profile is incomplete (default lastName is 'User')
+        if (user.lastName === "User") {
+          setShowProfileAlert(true)
+        }
+      } catch (e) {
+        console.error("Error parsing user data", e)
+      }
+    }
+  }, [])
+
   return (
     <div className="space-y-8">
+      {showProfileAlert && (
+        <Alert className="border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Complete your profile</AlertTitle>
+          <AlertDescription>
+            Please complete your profile to personalize your account.{" "}
+            <Link href="/dashboard/profile" className="underline font-medium hover:text-blue-600 dark:hover:text-blue-100">
+              Go to Profile
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Hero Section - NeoSaaS Bronze theme */}
       <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-[#1A1A1A] to-[#CD7F32] p-8 text-white">
         <div className="relative z-10">

@@ -12,6 +12,7 @@ import { Building2, Users, Mail, Phone, MapPin, FileText, UserPlus, Pencil, Chec
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
+import { useUser } from "@/lib/contexts/user-context"
 
 interface Company {
   id: string
@@ -37,6 +38,9 @@ interface TeamMember {
 }
 
 export default function EnterprisePage() {
+  const { hasRole, isLoading } = useUser()
+  const canEdit = hasRole(["writer", "admin", "super_admin"])
+
   const [company, setCompany] = useState<Company | null>(null)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [isEditingCompany, setIsEditingCompany] = useState(false)
@@ -54,7 +58,7 @@ export default function EnterprisePage() {
 
   const [inviteForm, setInviteForm] = useState({
     email: "",
-    role: "viewer" as "owner" | "editor" | "viewer",
+    role: "reader" as "reader" | "writer",
   })
 
   // Load company and team data
@@ -69,14 +73,20 @@ export default function EnterprisePage() {
       if (response.ok) {
         const data = await response.json()
         setCompany(data.company)
-        setCompanyForm({
-          name: data.company.name || "",
-          email: data.company.email || "",
-          city: data.company.city || "",
-          address: data.company.address || "",
-          vatNumber: data.company.vatNumber || "",
-          phone: data.company.phone || "",
-        })
+        
+        if (data.company) {
+          setCompanyForm({
+            name: data.company.name || "",
+            email: data.company.email || "",
+            city: data.company.city || "",
+            address: data.company.address || "",
+            vatNumber: data.company.vatNumber || "",
+            phone: data.company.phone || "",
+          })
+        } else {
+          // No company found, enable editing mode to create one
+          setIsEditingCompany(true)
+        }
       }
     } catch (error) {
       console.error("Error loading company:", error)
@@ -124,15 +134,7 @@ export default function EnterprisePage() {
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    const mailSettings = localStorage.getItem("mailSettings")
-    const hasInviteTemplate = mailSettings ? JSON.parse(mailSettings).invite?.enabled : false
-
-    if (!hasInviteTemplate) {
-      toast.error("Please configure the invitation email template in Admin > Mail Management first")
-      return
-    }
-
+    // Force update
     setIsInviting(true)
     try {
       const response = await fetch("/api/users/invite", {
@@ -143,7 +145,7 @@ export default function EnterprisePage() {
 
       if (response.ok) {
         toast.success("Invitation sent successfully. The user will appear as pending until they accept.")
-        setInviteForm({ email: "", role: "viewer" })
+        setInviteForm({ email: "", role: "reader" })
         loadTeamMembers() // Refresh team list
       } else {
         const error = await response.json()
@@ -216,7 +218,7 @@ export default function EnterprisePage() {
                 <CardDescription>Manage your organization settings</CardDescription>
               </div>
             </div>
-            {!isEditingCompany && (
+            {!isEditingCompany && canEdit && (
               <Button variant="outline" onClick={() => setIsEditingCompany(true)}>
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
@@ -297,27 +299,29 @@ export default function EnterprisePage() {
                   className="bg-[#CD7F32] hover:bg-[#B86F28] text-white"
                 >
                   <Check className="h-4 w-4 mr-2" />
-                  {isSaving ? "Saving..." : "Save Changes"}
+                  {isSaving ? "Saving..." : (company ? "Save Changes" : "Create Company")}
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditingCompany(false)
-                    if (company) {
-                      setCompanyForm({
-                        name: company.name || "",
-                        email: company.email || "",
-                        city: company.city || "",
-                        address: company.address || "",
-                        vatNumber: company.vatNumber || "",
-                        phone: company.phone || "",
-                      })
-                    }
-                  }}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel
-                </Button>
+                {company && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditingCompany(false)
+                      if (company) {
+                        setCompanyForm({
+                          name: company.name || "",
+                          email: company.email || "",
+                          city: company.city || "",
+                          address: company.address || "",
+                          vatNumber: company.vatNumber || "",
+                          phone: company.phone || "",
+                        })
+                      }
+                    }}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
@@ -377,162 +381,169 @@ export default function EnterprisePage() {
       </Card>
 
       {/* Team Management Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Users className="h-8 w-8 text-[#CD7F32]" />
-              <div>
-                <CardTitle>Team Members</CardTitle>
-                <CardDescription>Manage your team and send invitations</CardDescription>
+      {company && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Users className="h-8 w-8 text-[#CD7F32]" />
+                <div>
+                  <CardTitle>Team Members</CardTitle>
+                  <CardDescription>Manage your team and send invitations</CardDescription>
+                </div>
               </div>
+              <Badge variant="secondary">
+                {teamMembers.length} {teamMembers.length === 1 ? "Member" : "Members"}
+              </Badge>
             </div>
-            <Badge variant="secondary">
-              {teamMembers.length} {teamMembers.length === 1 ? "Member" : "Members"}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Invite Form */}
-          <form onSubmit={handleInviteUser} className="rounded-lg border bg-muted/50 p-4 space-y-4">
-            <h3 className="font-medium flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-[#CD7F32]" />
-              Invite New Member
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="inviteEmail">Email Address</Label>
-                <Input
-                  id="inviteEmail"
-                  type="email"
-                  placeholder="colleague@example.com"
-                  value={inviteForm.email}
-                  onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="inviteRole">Role</Label>
-                <Select
-                  value={inviteForm.role}
-                  onValueChange={(value: "owner" | "editor" | "viewer") =>
-                    setInviteForm({ ...inviteForm, role: value })
-                  }
-                >
-                  <SelectTrigger id="inviteRole">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="owner">Owner - Full access</SelectItem>
-                    <SelectItem value="editor">Editor - Read & Write</SelectItem>
-                    <SelectItem value="viewer">Viewer - Read only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Invite Form - Only visible to users with write permissions */}
+            {canEdit && (
+              <form onSubmit={handleInviteUser} className="rounded-lg border bg-muted/50 p-4 space-y-4">
+                <h3 className="font-medium flex items-center gap-2">
+                  <UserPlus className="h-5 w-5 text-[#CD7F32]" />
+                  Invite New Member
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2 space-y-2">
+                    <Label htmlFor="inviteEmail">Email Address</Label>
+                    <Input
+                      id="inviteEmail"
+                      type="email"
+                      placeholder="colleague@example.com"
+                      value={inviteForm.email}
+                      onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inviteRole">Role</Label>
+                    <Select
+                      value={inviteForm.role}
+                      onValueChange={(value: "reader" | "writer") =>
+                        setInviteForm({ ...inviteForm, role: value })
+                      }
+                    >
+                      <SelectTrigger id="inviteRole">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="writer">Writer - Read & Write access</SelectItem>
+                        <SelectItem value="reader">Reader - Read only access</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button type="submit" disabled={isInviting} className="bg-[#CD7F32] hover:bg-[#B86F28] text-white">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  {isInviting ? "Sending..." : "Send Invitation"}
+                </Button>
+              </form>
+            )}
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search team members by name, email, or role..."
+                value={teamSearchQuery}
+                onChange={(e) => setTeamSearchQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
-            <Button type="submit" disabled={isInviting} className="bg-[#CD7F32] hover:bg-[#B86F28] text-white">
-              <UserPlus className="h-4 w-4 mr-2" />
-              {isInviting ? "Sending..." : "Send Invitation"}
-            </Button>
-          </form>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search team members by name, email, or role..."
-              value={teamSearchQuery}
-              onChange={(e) => setTeamSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-
-          {/* Team Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Member</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTeamMembers.length === 0 ? (
+            {/* Team Table */}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      {teamSearchQuery
-                        ? "No team members found matching your search."
-                        : "No team members yet. Invite your first member above."}
-                    </TableCell>
+                    <TableHead>Member</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  filteredTeamMembers.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell className="font-medium">
-                        {member.firstName} {member.lastName}
-                        {member.isOwner && (
-                          <Badge variant="secondary" className="ml-2 bg-[#CD7F32] text-white hover:bg-[#B86F28]">
-                            Owner
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>{member.email}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {member.roles.map((role) => (
-                            <Badge key={role} variant="outline">
-                              {role}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {member.status === "pending" ? (
-                          <Badge variant="outline" className="border-yellow-500 text-yellow-600">
-                            Pending Invitation
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant={member.isActive ? "secondary" : "outline"}
-                            className={member.isActive ? "bg-[#CD7F32]/10 text-[#CD7F32]" : ""}
-                          >
-                            {member.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {member.status === "pending" ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              // TODO: Implement resend/cancel invitation
-                              toast.info("Invitation management coming soon")
-                            }}
-                          >
-                            Resend
-                          </Button>
-                        ) : !member.isOwner ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleUserStatus(member.id, member.isActive)}
-                          >
-                            {member.isActive ? "Deactivate" : "Activate"}
-                          </Button>
-                        ) : null}
+                </TableHeader>
+                <TableBody>
+                  {filteredTeamMembers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        {teamSearchQuery
+                          ? "No team members found matching your search."
+                          : "No team members yet. Invite your first member above."}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  ) : (
+                    filteredTeamMembers.map((member) => (
+                      <TableRow key={member.id}>
+                        <TableCell className="font-medium">
+                          {member.firstName} {member.lastName}
+                          {member.isOwner && (
+                            <Badge variant="secondary" className="ml-2 bg-[#CD7F32] text-white hover:bg-[#B86F28]">
+                              Owner
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>{member.email}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            {member.roles.map((role) => (
+                              <Badge key={role} variant="outline">
+                                {role}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {member.status === "pending" ? (
+                            <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                              Pending Invitation
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant={member.isActive ? "secondary" : "outline"}
+                              className={member.isActive ? "bg-[#CD7F32]/10 text-[#CD7F32]" : ""}
+                            >
+                              {member.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {canEdit ? (
+                            member.status === "pending" ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  // TODO: Implement resend/cancel invitation
+                                  toast.info("Invitation management coming soon")
+                                }}
+                              >
+                                Resend
+                              </Button>
+                            ) : !member.isOwner ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleToggleUserStatus(member.id, member.isActive)}
+                              >
+                                {member.isActive ? "Deactivate" : "Activate"}
+                              </Button>
+                            ) : null
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

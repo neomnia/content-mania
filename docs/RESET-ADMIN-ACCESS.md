@@ -2,7 +2,7 @@
 
 ## Problème
 Impossible de se connecter avec :
-- **Email:** `contact@example.com`
+- **Email:** `contact@exemple.com`
 - **Password:** `admin`
 
 ## Solution 1 : Utiliser le script de réinitialisation (Recommandé)
@@ -24,7 +24,7 @@ npx tsx scripts/reset-admin-password.ts
 🎉 Connexion admin réinitialisée !
 
 📝 Informations de connexion:
-   Email: contact@example.com
+   Email: contact@exemple.com
    Password: admin
 
 ⚠️  IMPORTANT: Changez ce mot de passe après la première connexion !
@@ -33,7 +33,7 @@ npx tsx scripts/reset-admin-password.ts
 ### Étape 3 : Se connecter
 
 1. Aller sur `http://localhost:3000/auth/login`
-2. Email: `contact@example.com`
+2. Email: `contact@exemple.com`
 3. Password: `admin`
 4. Cliquer sur "Login"
 
@@ -70,7 +70,7 @@ SET
   password = '$2a$10$VOTRE_HASH_BCRYPT_ICI',
   is_active = true,
   updated_at = NOW()
-WHERE email = 'contact@example.com';
+WHERE email = 'contact@exemple.com';
 
 -- Vérifier que la mise à jour a fonctionné
 SELECT
@@ -81,7 +81,7 @@ SELECT
   created_at,
   updated_at
 FROM users
-WHERE email = 'contact@example.com';
+WHERE email = 'contact@exemple.com';
 ```
 
 **Important:** Remplacez `$2a$10$VOTRE_HASH_BCRYPT_ICI` par le hash généré à l'étape 1.
@@ -93,7 +93,7 @@ WHERE email = 'contact@example.com';
 ### Étape 1 : Vérifier si l'utilisateur existe
 
 ```sql
-SELECT * FROM users WHERE email = 'contact@example.com';
+SELECT * FROM users WHERE email = 'contact@exemple.com';
 ```
 
 Si aucun résultat, l'utilisateur n'existe pas.
@@ -108,7 +108,7 @@ Ce script crée automatiquement :
 - Toutes les tables
 - Les rôles et permissions
 - **Un utilisateur super admin provisoire** :
-  - Email: `contact@example.com`
+  - Email: `contact@exemple.com`
   - Password: `admin`
   - Rôle: `super_admin`
 
@@ -130,7 +130,7 @@ Ce script crée automatiquement :
 
 ### Informations de connexion
 
-- **Email:** `contact@example.com`
+- **Email:** `contact@exemple.com`
 - **Password:** `admin`
 
 ### Après connexion réussie
@@ -154,7 +154,7 @@ Ce script crée automatiquement :
 **Solutions :**
 1. Vérifier que l'utilisateur existe :
    ```sql
-   SELECT * FROM users WHERE email = 'contact@example.com';
+   SELECT * FROM users WHERE email = 'contact@exemple.com';
    ```
 
 2. Si l'utilisateur n'existe pas, exécuter :
@@ -172,7 +172,7 @@ Ce script crée automatiquement :
 ```sql
 UPDATE users
 SET is_active = true
-WHERE email = 'contact@example.com';
+WHERE email = 'contact@exemple.com';
 ```
 
 ### ❌ "An error occurred during login"
@@ -201,7 +201,7 @@ npm install
 
 1. **Changer le mot de passe** immédiatement
 2. **Créer un nouvel utilisateur admin** avec des identifiants sécurisés
-3. **Désactiver ou supprimer** le compte `contact@example.com` si vous n'en avez plus besoin
+3. **Désactiver ou supprimer** le compte `contact@exemple.com` si vous n'en avez plus besoin
 
 ### Bonnes pratiques
 
