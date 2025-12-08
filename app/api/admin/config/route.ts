@@ -13,7 +13,8 @@ export async function GET() {
     validateDatabaseUrl();
     const currentUser = await getCurrentUser();
 
-    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
+    const isAdmin = currentUser?.roles?.some(role => role === 'admin' || role === 'super_admin');
+    if (!currentUser || !isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -52,7 +53,8 @@ export async function POST(request: NextRequest) {
     validateDatabaseUrl();
     const currentUser = await getCurrentUser();
 
-    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
+    const isAdmin = currentUser?.roles?.some(role => role === 'admin' || role === 'super_admin');
+    if (!currentUser || !isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -107,8 +109,35 @@ export async function POST(request: NextRequest) {
     const gtmCode = formData.get('gtmCode');
     if (gtmCode !== null) updates['gtm_code'] = gtmCode.toString();
 
-    const seoSettings = formData.get('seoSettings');
-    if (seoSettings !== null) updates['seo_settings'] = seoSettings.toString();
+    let seoSettingsStr = formData.get('seoSettings') as string;
+
+    // Handle OG Image upload
+    const ogImageFile = formData.get('ogImage') as File;
+    if (ogImageFile && ogImageFile.size > 0) {
+      if (ogImageFile.size > 2 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: 'OG Image size exceeds 2MB limit' },
+          { status: 400 }
+        );
+      }
+
+      const bytes = await ogImageFile.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const base64Image = `data:${ogImageFile.type};base64,${buffer.toString('base64')}`;
+
+      // Update seoSettings with the new image
+      let seoSettingsObj: any = {};
+      try {
+        seoSettingsObj = seoSettingsStr ? JSON.parse(seoSettingsStr) : {};
+      } catch (e) {
+        console.error('Failed to parse seoSettings', e);
+      }
+
+      seoSettingsObj.ogImage = base64Image;
+      seoSettingsStr = JSON.stringify(seoSettingsObj);
+    }
+
+    if (seoSettingsStr !== null) updates['seo_settings'] = seoSettingsStr;
 
     const socialLinks = formData.get('socialLinks');
     if (socialLinks !== null) updates['social_links'] = socialLinks.toString();

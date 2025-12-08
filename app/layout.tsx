@@ -1,45 +1,101 @@
 import type React from "react"
+import Script from "next/script"
 
 import { ThemeProvider } from "@/components/common/theme-provider"
 import { BackToTop } from "@/components/common/back-to-top"
 import { Toaster } from "@/components/ui/sonner"
 import "@/styles/globals.css"
 
-import { Inter, Geist_Mono as V0_Font_Geist_Mono } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
 import { getPlatformConfig } from "@/lib/config"
 
-// Initialize fonts
-const _geistMono = V0_Font_Geist_Mono({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"] })
-
-const inter = Inter({ subsets: ["latin"] })
-
 export async function generateMetadata() {
-  const config = await getPlatformConfig()
+  try {
+    const config = await getPlatformConfig()
+    const seo = config.seoSettings || {}
 
-  return {
-    title: {
-      default: config.siteName,
-      template: `%s | ${config.siteName}`,
-    },
-    description: "NeoSaaS provides all the tools you need to build, launch, and scale your SaaS business.",
-    generator: 'v0.app',
-    icons: config.logo ? [{ rel: "icon", url: config.logo }] : [{ rel: "icon", url: "/favicon.ico" }],
+    return {
+      title: {
+        default: config.siteName,
+        template: seo.titleTemplate || `%s | ${config.siteName}`,
+      },
+      description: seo.description || `${config.siteName} provides all the tools you need to build, launch, and scale your SaaS business.`,
+      generator: 'v0.app',
+      icons: config.logo ? [{ rel: "icon", url: config.logo }] : [{ rel: "icon", url: "/favicon.ico" }],
+      openGraph: {
+        title: seo.ogTitle || config.siteName,
+        description: seo.ogDescription || seo.description,
+        images: seo.ogImage ? [{ url: seo.ogImage }] : undefined,
+        url: seo.baseUrl,
+        siteName: config.siteName,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: seo.ogTitle || config.siteName,
+        description: seo.ogDescription || seo.description,
+        images: seo.ogImage ? [seo.ogImage] : undefined,
+      }
+    }
+  } catch (error) {
+    // Fallback metadata if config fails to load
+    return {
+      title: {
+        default: 'NeoSaaS',
+        template: '%s | NeoSaaS',
+      },
+      description: 'NeoSaaS provides all the tools you need to build, launch, and scale your SaaS business.',
+      generator: 'v0.app',
+    }
   }
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const config = await getPlatformConfig()
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <head>
+        {config.customHeaderCode && (
+          <div dangerouslySetInnerHTML={{ __html: config.customHeaderCode }} />
+        )}
+      </head>
+      <body className={GeistSans.className}>
+        {config.gtmCode && (
+          <noscript>
+            <iframe
+              src={`https://www.googletagmanager.com/ns.html?id=${config.gtmCode}`}
+              height="0"
+              width="0"
+              style={{ display: "none", visibility: "hidden" }}
+            />
+          </noscript>
+        )}
+        
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
           <BackToTop />
           <Toaster />
         </ThemeProvider>
+
+        {config.customFooterCode && (
+          <div dangerouslySetInnerHTML={{ __html: config.customFooterCode }} />
+        )}
+
+        {config.gtmCode && (
+          <Script id="google-tag-manager" strategy="afterInteractive">
+            {`
+              (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+              new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+              j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+              'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+              })(window,document,'script','dataLayer','${config.gtmCode}');
+            `}
+          </Script>
+        )}
       </body>
     </html>
   )

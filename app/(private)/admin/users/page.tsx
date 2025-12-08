@@ -1,8 +1,12 @@
 import { getUsers } from "@/app/actions/users"
 import { UsersTable } from "@/components/admin/users-table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { requireSuperAdmin } from "@/lib/auth/server"
 
 export default async function UsersPage() {
+  // Only super_admin can access user management
+  await requireSuperAdmin()
+
   const { data: users, success } = await getUsers()
 
   if (!success || !users) {

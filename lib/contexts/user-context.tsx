@@ -30,6 +30,7 @@ interface UserContextType {
   hasRole: (roleName: string | string[]) => boolean
   hasPermission: (permissionName: string | string[]) => boolean
   isAdmin: boolean
+  isSuperAdmin: boolean
   refetch: () => Promise<void>
 }
 
@@ -73,6 +74,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }
 
   const isAdmin = hasRole(["admin", "super_admin"])
+  const isSuperAdmin = hasRole(["super_admin"])
 
   return (
     <UserContext.Provider
@@ -82,6 +84,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         hasRole,
         hasPermission,
         isAdmin,
+        isSuperAdmin,
         refetch: fetchUser,
       }}
     >

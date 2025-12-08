@@ -7,10 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { usePlatformConfig } from "@/contexts/platform-config-context"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function LoginPage() {
   const router = useRouter();
+  const { maintenanceMode } = usePlatformConfig()
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -95,6 +98,17 @@ export default function LoginPage() {
               Enter your credentials to sign in to your account
             </p>
           </div>
+
+          {maintenanceMode && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Maintenance Mode Active</AlertTitle>
+              <AlertDescription>
+                Only administrators can log in at this time.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid gap-4">
             <div className="grid gap-4">
               <Button variant="outline" className="w-full bg-transparent" type="button">

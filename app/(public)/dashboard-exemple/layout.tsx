@@ -1,11 +1,15 @@
 import type React from "react"
-import type { Metadata } from "next/metadata"
+import type { Metadata } from "next"
 import { DashboardHeader } from "@/components/layout/dashboard/header"
 import { DashboardSidebar } from "@/components/layout/dashboard/sidebar"
+import { getPlatformConfig } from "@/lib/config"
 
-export const metadata: Metadata = {
-  title: "Dashboard Exemple - NeoSaaS",
-  description: "Example Dashboard for NeoSaaS - Public Demo",
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await getPlatformConfig()
+  return {
+    title: `Dashboard Exemple - ${config.siteName}`,
+    description: `Example Dashboard for ${config.siteName} - Public Demo`,
+  }
 }
 
 export default function DashboardExempleLayout({

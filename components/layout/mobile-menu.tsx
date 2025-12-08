@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu, Lock } from "lucide-react"
 import { type JWTPayload } from "@/lib/auth"
+import { usePlatformConfig } from "@/contexts/platform-config-context"
 
 interface MobileMenuProps {
   user?: JWTPayload | null
 }
 
 export function MobileMenu({ user }: MobileMenuProps) {
+  const { siteName } = usePlatformConfig()
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -21,8 +24,8 @@ export function MobileMenu({ user }: MobileMenuProps) {
       <SheetContent side="right" className="w-[75vw] sm:max-w-sm">
         <div className="flex items-center mb-8 mt-2">
           <div className="font-bold text-2xl tracking-tight">
-            <span className="text-foreground">Neo</span>
-            <span className="text-[#CD7F32]">SaaS</span>
+            <span className="text-foreground">{siteName.substring(0, 3)}</span>
+            <span className="text-[#CD7F32]">{siteName.substring(3)}</span>
           </div>
         </div>
         <div className="flex flex-col gap-6 px-2 py-6">

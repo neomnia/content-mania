@@ -1,6 +1,11 @@
+"use client"
+
 import Link from "next/link"
+import { usePlatformConfig } from "@/contexts/platform-config-context"
 
 export function SiteFooter() {
+  const { siteName } = usePlatformConfig()
+
   return (
     <footer className="border-t bg-[#1A1A1A] text-white">
       <div className="container py-10">
@@ -8,8 +13,8 @@ export function SiteFooter() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 justify-center md:justify-start">
               <div className="font-bold text-xl tracking-tight">
-                <span className="text-white">Neo</span>
-                <span className="text-[#CD7F32]">SaaS</span>
+                <span className="text-white">{siteName.substring(0, 3)}</span>
+                <span className="text-[#CD7F32]">{siteName.substring(3)}</span>
               </div>
             </div>
             <p className="text-sm text-white/70">
@@ -62,7 +67,7 @@ export function SiteFooter() {
 
         <div className="border-t border-white/10 mt-8 pt-8">
           <p className="text-sm text-white/70 text-center">
-            &copy; {new Date().getFullYear()} NeoSaaS. All rights reserved.
+            &copy; {new Date().getFullYear()} {siteName}. All rights reserved.
           </p>
         </div>
       </div>

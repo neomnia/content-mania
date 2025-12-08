@@ -27,6 +27,7 @@ import { ChevronDown } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "sonner"
 import { useUser } from "@/lib/contexts/user-context"
+import { usePlatformConfig } from "@/contexts/platform-config-context"
 
 const navItems = [
   { name: "Overview", href: "/dashboard", icon: Home },
@@ -36,12 +37,12 @@ const navItems = [
 ]
 
 const adminItems = [
-  { name: "Dashboard", href: "/admin", icon: Shield },
-  { name: "Users", href: "/admin/users", icon: Users },
-  { name: "API Management", href: "/admin/api", icon: Key },
-  { name: "Pages ACL", href: "/admin/pages", icon: Settings },
-  { name: "Mail Management", href: "/admin/mail", icon: Mail },
-  { name: "Logs", href: "/admin/logs", icon: FileText },
+  { name: "Dashboard", href: "/admin", icon: Shield, superAdminOnly: false },
+  { name: "Users", href: "/admin/users", icon: Users, superAdminOnly: true },
+  { name: "API Management", href: "/admin/api", icon: Key, superAdminOnly: false },
+  { name: "Pages ACL", href: "/admin/pages", icon: Settings, superAdminOnly: false },
+  { name: "Mail Management", href: "/admin/mail", icon: Mail, superAdminOnly: false },
+  { name: "Logs", href: "/admin/logs", icon: FileText, superAdminOnly: false },
 ]
 
 interface PrivateSidebarProps {
@@ -51,11 +52,18 @@ interface PrivateSidebarProps {
 
 export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps) {
   const pathname = usePathname()
-  const { isAdmin, isLoading } = useUser()
+  const { isAdmin, isSuperAdmin, isLoading } = useUser()
+  const { siteName } = usePlatformConfig()
   const [isAdminOpen, setIsAdminOpen] = useState(
     pathname.startsWith("/admin") || pathname.startsWith("/dashboard/admin"),
   )
   const [isCollapsed, setIsCollapsed] = useState(false)
+
+  // Get initials for collapsed logo (first 2 letters)
+  const logoInitials = siteName.substring(0, 2).toUpperCase()
+
+  // Filter admin items based on user role
+  const visibleAdminItems = adminItems.filter(item => !item.superAdminOnly || isSuperAdmin)
 
   const handleLinkClick = () => {
     if (onClose) onClose()
@@ -88,12 +96,12 @@ export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps)
         <div className={cn("flex h-16 items-center border-b", isCollapsed ? "px-3 justify-center" : "px-6")}>
           <Link href="/dashboard" className="flex items-center gap-2" onClick={handleLinkClick}>
             <div className="h-8 w-8 rounded-lg bg-[#CD7F32] flex items-center justify-center flex-shrink-0">
-              <span className="font-bold text-white text-sm">NS</span>
+              <span className="font-bold text-white text-sm">{logoInitials}</span>
             </div>
             {!isCollapsed && (
               <span className="font-bold text-lg">
-                <span className="text-foreground">Neo</span>
-                <span className="text-[#CD7F32]">SaaS</span>
+                <span className="text-foreground">{siteName.substring(0, 3)}</span>
+                <span className="text-[#CD7F32]">{siteName.substring(3)}</span>
               </span>
             )}
           </Link>
@@ -141,7 +149,7 @@ export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps)
               {isCollapsed ? (
                 // Collapsed: show admin items directly with tooltips
                 <div className="pt-2 border-t mt-2 space-y-1">
-                  {adminItems.map((item) => {
+                  {visibleAdminItems.map((item) => {
                     const Icon = item.icon
                     const isActive = pathname === item.href
                     return (
@@ -176,7 +184,7 @@ export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps)
                     <ChevronDown className={cn("h-4 w-4 transition-transform", isAdminOpen && "rotate-180")} />
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-1 space-y-1 pl-6">
-                    {adminItems.map((item) => {
+                    {visibleAdminItems.map((item) => {
                       const Icon = item.icon
                       const isActive = pathname === item.href
                       return (

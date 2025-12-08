@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
 import {
   Upload,
-  Save,
   Settings,
   Globe,
   Share2,
@@ -21,32 +20,38 @@ import {
   Github,
   Instagram,
   Wrench,
-  X,
   Shield,
+  Check,
+  Loader2,
+  Cloud,
 } from "lucide-react"
 import { useRequireAdmin } from "@/lib/hooks/use-require-admin"
 
+type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
+
 export default function AdminPage() {
-  // Client-side admin guard - second layer of protection
   const { isChecking, isAdmin } = useRequireAdmin()
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
   const [siteName, setSiteName] = useState("NeoSaaS")
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string>("/placeholder.svg?height=100&width=100")
-  const [authEnabled, setAuthEnabled] = useState(true)
+  const [ogImageFile, setOgImageFile] = useState<File | null>(null)
+  const [ogImagePreview, setOgImagePreview] = useState<string>("")
   const [maintenanceMode, setMaintenanceMode] = useState(false)
-  const [maintenanceMessage, setMaintenanceMessage] = useState("")
+  const [gtmCode, setGtmCode] = useState("")
   const [customHeaderCode, setCustomHeaderCode] = useState("")
   const [customFooterCode, setCustomFooterCode] = useState("")
-  const [gtmCode, setGtmCode] = useState("")
-  
+
   const [seoSettings, setSeoSettings] = useState({
     titleTemplate: "%s | NeoSaaS",
     baseUrl: "https://neosaas.com",
     description: "",
-    keywords: "",
     ogTitle: "NeoSaaS - Modern Admin Dashboard",
     ogDescription: "The ultimate solution for your SaaS application.",
+    ogImage: "",
   })
 
   const [socialLinks, setSocialLinks] = useState({
@@ -57,6 +62,102 @@ export default function AdminPage() {
     github: "",
   })
 
+  // Save function
+  const saveConfig = useCallback(async (immediate = false) => {
+    setSaveStatus('saving')
+    try {
+      const formData = new FormData()
+      formData.append('siteName', siteName)
+      formData.append('maintenanceMode', maintenanceMode.toString())
+      formData.append('gtmCode', gtmCode)
+      formData.append('customHeaderCode', customHeaderCode)
+      formData.append('customFooterCode', customFooterCode)
+      formData.append('seoSettings', JSON.stringify(seoSettings))
+      formData.append('socialLinks', JSON.stringify(socialLinks))
+
+      if (logoFile) {
+        formData.append('logo', logoFile)
+      }
+
+      if (ogImageFile) {
+        formData.append('ogImage', ogImageFile)
+      }
+
+      const res = await fetch('/api/admin/config', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to save')
+      }
+
+      setSaveStatus('saved')
+      if (immediate) {
+        toast.success('Configuration saved')
+      }
+    } catch (error) {
+      console.error('[ADMIN] Save error:', error)
+      setSaveStatus('error')
+      toast.error(error instanceof Error ? error.message : 'Failed to save')
+    }
+  }, [siteName, maintenanceMode, gtmCode, customHeaderCode, customFooterCode, seoSettings, socialLinks, logoFile])
+
+  // Debounced auto-save
+  const triggerAutoSave = useCallback(() => {
+    if (isInitialLoad) return
+
+    setSaveStatus('unsaved')
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
+
+    debounceRef.current = setTimeout(() => {
+      saveConfig()
+    }, 1500) // 1.5 second debounce
+  }, [saveConfig, isInitialLoad])
+
+  // Load config on mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch('/api/admin/config')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.site_name) setSiteName(data.site_name)
+          if (data.logo) setLogoPreview(data.logo)
+          if (data.maintenance_mode !== undefined) {
+            setMaintenanceMode(data.maintenance_mode === 'true' || data.maintenance_mode === true)
+          }
+          if (data.gtm_code) setGtmCode(data.gtm_code)
+          if (data.custom_header_code) setCustomHeaderCode(data.custom_header_code)
+          if (data.custom_footer_code) setCustomFooterCode(data.custom_footer_code)
+          if (data.seo_settings) {
+            setSeoSettings(prev => ({ ...prev, ...data.seo_settings }))
+            if (data.seo_settings.ogImage) {
+              setOgImagePreview(data.seo_settings.ogImage)
+            }
+          }
+          if (data.social_links) setSocialLinks(prev => ({ ...prev, ...data.social_links }))
+        }
+      } catch (error) {
+        console.error('[ADMIN] Failed to fetch config', error)
+        toast.error('Failed to load configuration')
+      } finally {
+        setIsInitialLoad(false)
+      }
+    }
+    if (isAdmin) fetchConfig()
+  }, [isAdmin])
+
+  // Trigger auto-save on changes
+  useEffect(() => {
+    triggerAutoSave()
+  }, [siteName, gtmCode, customHeaderCode, customFooterCode, seoSettings, socialLinks])
+
+  // Handle logo change - save immediately
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -66,64 +167,91 @@ export default function AdminPage() {
         setLogoPreview(reader.result as string)
       }
       reader.readAsDataURL(file)
+      // Save immediately after logo selection
+      setTimeout(() => saveConfig(true), 100)
     }
   }
 
-  useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const res = await fetch('/api/admin/config');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.site_name) setSiteName(data.site_name);
-          if (data.logo) setLogoPreview(data.logo);
-          if (data.auth_enabled !== undefined) setAuthEnabled(data.auth_enabled === 'true');
-          if (data.maintenance_mode !== undefined) setMaintenanceMode(data.maintenance_mode === 'true');
-          if (data.maintenance_message) setMaintenanceMessage(data.maintenance_message);
-          if (data.custom_header_code) setCustomHeaderCode(data.custom_header_code);
-          if (data.custom_footer_code) setCustomFooterCode(data.custom_footer_code);
-          if (data.gtm_code) setGtmCode(data.gtm_code);
-          if (data.seo_settings) setSeoSettings(prev => ({ ...prev, ...data.seo_settings }));
-          if (data.social_links) setSocialLinks(prev => ({ ...prev, ...data.social_links }));
-        }
-      } catch (error) {
-        console.error('Failed to fetch config', error);
+  // Handle OG Image change - save immediately
+  const handleOgImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setOgImageFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setOgImagePreview(reader.result as string)
       }
-    };
-    if (isAdmin) fetchConfig();
-  }, [isAdmin]);
+      reader.readAsDataURL(file)
+      // Save immediately after selection
+      setTimeout(() => saveConfig(true), 100)
+    }
+  }
 
-  const handleSaveConfig = async () => {
+  // Handle maintenance toggle - save immediately
+  const handleMaintenanceToggle = async () => {
+    const newMode = !maintenanceMode
+    setMaintenanceMode(newMode)
+    setSaveStatus('saving')
+
     try {
-      const formData = new FormData();
-      formData.append('siteName', siteName);
-      formData.append('authEnabled', authEnabled.toString());
-      formData.append('maintenanceMode', maintenanceMode.toString());
-      formData.append('maintenanceMessage', maintenanceMessage);
-      formData.append('customHeaderCode', customHeaderCode);
-      formData.append('customFooterCode', customFooterCode);
-      formData.append('gtmCode', gtmCode);
-      formData.append('seoSettings', JSON.stringify(seoSettings));
-      formData.append('socialLinks', JSON.stringify(socialLinks));
-      
-      if (logoFile) {
-        formData.append('logo', logoFile);
-      }
+      const formData = new FormData()
+      formData.append('maintenanceMode', newMode.toString())
 
       const res = await fetch('/api/admin/config', {
         method: 'POST',
         body: formData,
-      });
+      })
 
-      if (!res.ok) throw new Error('Failed to save config');
-      
-      toast.success('Configuration saved successfully');
+      if (!res.ok) throw new Error('Failed to update maintenance mode')
+
+      setSaveStatus('saved')
+      toast.success(newMode ? 'Maintenance mode enabled' : 'Site is now live')
     } catch (error) {
-      toast.error('Failed to save configuration');
+      setMaintenanceMode(!newMode) // Revert
+      setSaveStatus('error')
+      toast.error('Failed to update maintenance mode')
     }
-  };
+  }
 
-  // Show loading state while checking admin access
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+    }
+  }, [])
+
+  // Save status indicator component
+  const SaveStatusIndicator = () => (
+    <div className="flex items-center gap-2 text-sm">
+      {saveStatus === 'saving' && (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground">Saving...</span>
+        </>
+      )}
+      {saveStatus === 'saved' && (
+        <>
+          <Cloud className="h-4 w-4 text-green-500" />
+          <span className="text-green-600">Saved</span>
+        </>
+      )}
+      {saveStatus === 'unsaved' && (
+        <>
+          <Cloud className="h-4 w-4 text-orange-500" />
+          <span className="text-orange-600">Unsaved changes</span>
+        </>
+      )}
+      {saveStatus === 'error' && (
+        <>
+          <Cloud className="h-4 w-4 text-red-500" />
+          <span className="text-red-600">Save failed</span>
+        </>
+      )}
+    </div>
+  )
+
   if (isChecking) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -135,16 +263,18 @@ export default function AdminPage() {
     )
   }
 
-  // Don't render anything if not admin (will be redirected)
   if (!isAdmin) {
     return null
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-[#1A1A1A]">Admin Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Manage your site configuration, SEO, and administrators</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-[#1A1A1A]">Admin Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Manage your site configuration, SEO, and settings</p>
+        </div>
+        <SaveStatusIndicator />
       </div>
 
       <Tabs defaultValue="general" className="space-y-4">
@@ -157,7 +287,6 @@ export default function AdminPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* General Settings Tab */}
         <TabsContent value="general">
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
@@ -203,16 +332,11 @@ export default function AdminPage() {
                         className="cursor-pointer"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        SVG, PNG recommended. Used for favicon generation.
+                        SVG, PNG recommended. Saved automatically.
                       </p>
                     </div>
                   </div>
                 </div>
-
-                <Button onClick={handleSaveConfig} className="w-full bg-[#CD7F32] hover:bg-[#B8691C]">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Configuration
-                </Button>
               </CardContent>
             </Card>
 
@@ -220,9 +344,9 @@ export default function AdminPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Wrench className="h-5 w-5 text-[#CD7F32]" />
-                  Technical Settings
+                  Site Status
                 </CardTitle>
-                <CardDescription>Manage maintenance mode and technical configurations</CardDescription>
+                <CardDescription>Control site availability</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between p-6 bg-muted rounded-lg">
@@ -237,80 +361,19 @@ export default function AdminPage() {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {maintenanceMode
-                        ? "Your site is currently in maintenance mode. Visitors will see the maintenance page."
-                        : "Your site is live and accessible to all visitors."}
+                        ? "Visitors will see the maintenance page."
+                        : "Your site is accessible to all visitors."}
                     </p>
                   </div>
                   <Button
                     variant={maintenanceMode ? "destructive" : "default"}
                     size="sm"
                     className={maintenanceMode ? "" : "bg-[#CD7F32] hover:bg-[#B8691C]"}
-                    onClick={() => setMaintenanceMode(!maintenanceMode)}
+                    onClick={handleMaintenanceToggle}
+                    disabled={saveStatus === 'saving'}
                   >
                     {maintenanceMode ? "Go Live" : "Enable Maintenance"}
                   </Button>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Maintenance Message (Optional)</Label>
-                  <Textarea
-                    value={maintenanceMessage}
-                    onChange={(e) => setMaintenanceMessage(e.target.value)}
-                    placeholder="We're currently performing scheduled maintenance. We'll be back shortly!"
-                    rows={3}
-                  />
-                  <p className="text-xs text-muted-foreground">Custom message displayed on the maintenance page</p>
-                </div>
-
-                <Button onClick={handleSaveConfig} className="w-full bg-[#CD7F32] hover:bg-[#B8691C]">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Technical Settings
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Custom Code Injection section */}
-          <div className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5 text-[#CD7F32]" />
-                  Custom Code Injection
-                </CardTitle>
-                <CardDescription>
-                  Add custom HTML or JavaScript to all pages (inserted in head or before closing body tag)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customHeaderCode">Header Code (in {"<head>"})</Label>
-                  <Textarea
-                    id="customHeaderCode"
-                    value={customHeaderCode}
-                    onChange={(e) => setCustomHeaderCode(e.target.value)}
-                    placeholder={`<!-- Example: Google Analytics -->\n<script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>\n<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag('js', new Date());\n  gtag('config', 'GA_MEASUREMENT_ID');\n</script>`}
-                    rows={8}
-                    className="font-mono text-xs"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    This code will be injected in the {"<head>"} section of all pages (analytics, meta tags, etc.)
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="customFooterCode">Footer Code (before {"</body>"})</Label>
-                  <Textarea
-                    id="customFooterCode"
-                    value={customFooterCode}
-                    onChange={(e) => setCustomFooterCode(e.target.value)}
-                    placeholder={`<!-- Example: Chat widget -->\n<script>\n  (function() {\n    // Your custom script here\n  })();\n</script>`}
-                    rows={8}
-                    className="font-mono text-xs"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    This code will be injected before the closing {"</body>"} tag (chat widgets, tracking pixels, etc.)
-                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -323,36 +386,59 @@ export default function AdminPage() {
                     onChange={(e) => setGtmCode(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Enter your GTM container ID (e.g., GTM-XXXXXXX). The GTM script will be automatically injected in
-                    the header.
+                    Auto-saved. GTM script will be automatically injected.
                   </p>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
 
-                <div className="p-4 border rounded-lg space-y-2 bg-yellow-50 dark:bg-yellow-950/20">
-                  <div className="flex items-start gap-2">
-                    <div className="h-5 w-5 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-white text-xs font-bold">!</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">Security Warning</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Only add code from trusted sources. Malicious scripts can compromise your site security. Test in
-                        a development environment first.
-                      </p>
-                    </div>
-                  </div>
+          <div className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-[#CD7F32]" />
+                  Custom Code Injection
+                </CardTitle>
+                <CardDescription>
+                  Add custom HTML or JavaScript to all pages (auto-saved)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="customHeaderCode">Header Code (in {"<head>"})</Label>
+                  <Textarea
+                    id="customHeaderCode"
+                    value={customHeaderCode}
+                    onChange={(e) => setCustomHeaderCode(e.target.value)}
+                    placeholder={`<!-- Example: Google Analytics -->\n<script async src="..."></script>`}
+                    rows={6}
+                    className="font-mono text-xs"
+                  />
                 </div>
 
-                <Button onClick={handleSaveConfig} className="w-full bg-[#CD7F32] hover:bg-[#B8691C]">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Custom Code
-                </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="customFooterCode">Footer Code (before {"</body>"})</Label>
+                  <Textarea
+                    id="customFooterCode"
+                    value={customFooterCode}
+                    onChange={(e) => setCustomFooterCode(e.target.value)}
+                    placeholder={`<!-- Example: Chat widget -->\n<script>...</script>`}
+                    rows={6}
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                <div className="p-4 border rounded-lg bg-yellow-50 dark:bg-yellow-950/20">
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Security:</strong> Only add code from trusted sources.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        {/* SEO Management Tab */}
         <TabsContent value="seo">
           <div className="space-y-6">
             <Card>
@@ -361,47 +447,37 @@ export default function AdminPage() {
                   <Globe className="h-5 w-5 text-[#CD7F32]" />
                   SEO & Metadata
                 </CardTitle>
-                <CardDescription>Configure search engine optimization</CardDescription>
+                <CardDescription>Configure search engine optimization (auto-saved)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Site Title Template</Label>
-                    <Input 
+                    <Input
                       value={seoSettings.titleTemplate}
                       onChange={(e) => setSeoSettings({...seoSettings, titleTemplate: e.target.value})}
-                      placeholder="%s | NeoSaaS" 
+                      placeholder="%s | NeoSaaS"
                     />
                     <p className="text-xs text-muted-foreground">Use %s for the page title</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Base URL</Label>
-                    <Input 
+                    <Input
                       value={seoSettings.baseUrl}
                       onChange={(e) => setSeoSettings({...seoSettings, baseUrl: e.target.value})}
-                      placeholder="https://neosaas.com" 
+                      placeholder="https://neosaas.com"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Default Meta Description</Label>
-                  <Textarea 
+                  <Textarea
                     value={seoSettings.description}
                     onChange={(e) => setSeoSettings({...seoSettings, description: e.target.value})}
-                    placeholder="Enter a brief description of your site..." 
-                    rows={3} 
+                    placeholder="Enter a brief description of your site..."
+                    rows={3}
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Keywords</Label>
-                  <Input 
-                    value={seoSettings.keywords}
-                    onChange={(e) => setSeoSettings({...seoSettings, keywords: e.target.value})}
-                    placeholder="saas, dashboard, admin, nextjs..." 
-                  />
-                  <p className="text-xs text-muted-foreground">Comma separated keywords</p>
                 </div>
               </CardContent>
             </Card>
@@ -412,36 +488,57 @@ export default function AdminPage() {
                   <Share2 className="h-5 w-5 text-[#CD7F32]" />
                   Social Sharing (Open Graph)
                 </CardTitle>
-                <CardDescription>Customize how your site appears when shared on social media</CardDescription>
+                <CardDescription>Customize how your site appears when shared</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-6">
-                  <div className="flex-1 space-y-4">
-                    <div className="space-y-2">
-                      <Label>OG Title</Label>
-                      <Input 
-                        value={seoSettings.ogTitle}
-                        onChange={(e) => setSeoSettings({...seoSettings, ogTitle: e.target.value})}
-                        placeholder="NeoSaaS - Modern Admin Dashboard" 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>OG Description</Label>
-                      <Textarea 
-                        value={seoSettings.ogDescription}
-                        onChange={(e) => setSeoSettings({...seoSettings, ogDescription: e.target.value})}
-                        rows={3} 
-                        placeholder="The ultimate solution for your SaaS application." 
-                      />
-                    </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>OG Title</Label>
+                    <Input
+                      value={seoSettings.ogTitle}
+                      onChange={(e) => setSeoSettings({...seoSettings, ogTitle: e.target.value})}
+                      placeholder="NeoSaaS - Modern Admin Dashboard"
+                    />
                   </div>
-                  <div className="w-1/3 space-y-2">
-                    <Label>OG Image</Label>
-                    <div className="aspect-video bg-muted rounded-lg border-2 border-dashed flex items-center justify-center relative overflow-hidden group cursor-pointer">
-                      <div className="text-center p-4">
-                        <p className="text-sm font-medium">Click to upload</p>
-                        <p className="text-xs text-muted-foreground">1200x630px recommended</p>
-                      </div>
+                  <div className="space-y-2">
+                    <Label>OG Description</Label>
+                    <Textarea
+                      value={seoSettings.ogDescription}
+                      onChange={(e) => setSeoSettings({...seoSettings, ogDescription: e.target.value})}
+                      rows={2}
+                      placeholder="The ultimate solution for your SaaS application."
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ogImage">OG Image</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="h-32 w-64 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-white relative">
+                      {ogImagePreview ? (
+                        <img
+                          src={ogImagePreview}
+                          alt="OG Image preview"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center text-gray-400">
+                          <Upload className="h-8 w-8 mb-2" />
+                          <span className="text-xs">1200x630 recommended</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        id="ogImage"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={handleOgImageChange}
+                        className="cursor-pointer"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Recommended size: 1200x630px. Max 2MB.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -456,62 +553,59 @@ export default function AdminPage() {
                 </CardTitle>
                 <CardDescription>Connect your social profiles (used in public footer)</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <Twitter className="h-4 w-4" /> Twitter / X
                     </Label>
-                    <Input 
+                    <Input
                       value={socialLinks.twitter}
                       onChange={(e) => setSocialLinks({...socialLinks, twitter: e.target.value})}
-                      placeholder="https://x.com/username" 
+                      placeholder="https://x.com/username"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <Facebook className="h-4 w-4" /> Facebook
                     </Label>
-                    <Input 
+                    <Input
                       value={socialLinks.facebook}
                       onChange={(e) => setSocialLinks({...socialLinks, facebook: e.target.value})}
-                      placeholder="https://facebook.com/page" 
+                      placeholder="https://facebook.com/page"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <Linkedin className="h-4 w-4" /> LinkedIn
                     </Label>
-                    <Input 
+                    <Input
                       value={socialLinks.linkedin}
                       onChange={(e) => setSocialLinks({...socialLinks, linkedin: e.target.value})}
-                      placeholder="https://linkedin.com/company/..." 
+                      placeholder="https://linkedin.com/company/..."
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <Instagram className="h-4 w-4" /> Instagram
                     </Label>
-                    <Input 
+                    <Input
                       value={socialLinks.instagram}
                       onChange={(e) => setSocialLinks({...socialLinks, instagram: e.target.value})}
-                      placeholder="https://instagram.com/username" 
+                      placeholder="https://instagram.com/username"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <Github className="h-4 w-4" /> GitHub
                     </Label>
-                    <Input 
+                    <Input
                       value={socialLinks.github}
                       onChange={(e) => setSocialLinks({...socialLinks, github: e.target.value})}
-                      placeholder="https://github.com/username" 
+                      placeholder="https://github.com/username"
                     />
                   </div>
                 </div>
-                <Button onClick={handleSaveConfig} className="bg-[#CD7F32] hover:bg-[#B8691C]">
-                  <Save className="h-4 w-4 mr-2" /> Save All SEO Settings
-                </Button>
               </CardContent>
             </Card>
           </div>

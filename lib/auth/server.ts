@@ -94,6 +94,13 @@ export async function isAdmin(userId: string): Promise<boolean> {
 }
 
 /**
+ * Check if user is super_admin only
+ */
+export async function isSuperAdmin(userId: string): Promise<boolean> {
+  return await hasRole(userId, ["super_admin"])
+}
+
+/**
  * Require admin access - redirects to dashboard if not admin
  * Checks roles from database for accurate, real-time verification
  */
@@ -113,6 +120,29 @@ export async function requireAdmin(): Promise<AuthUser> {
   }
 
   console.log("[AUTH] Access granted to admin area")
+  return user
+}
+
+/**
+ * Require super_admin access - redirects to dashboard if not super_admin
+ * Use this for sensitive operations like user management
+ */
+export async function requireSuperAdmin(): Promise<AuthUser> {
+  const user = await requireAuth()
+
+  console.log("[AUTH] Checking super_admin access for user:", user.userId, user.email)
+
+  // Check roles from database (not from JWT token which may be outdated)
+  const superAdmin = await isSuperAdmin(user.userId)
+
+  console.log("[AUTH] Is super_admin?", superAdmin)
+
+  if (!superAdmin) {
+    console.log("[AUTH] Super admin access denied - redirecting to /dashboard")
+    redirect("/dashboard")
+  }
+
+  console.log("[AUTH] Access granted to super_admin area")
   return user
 }
 
