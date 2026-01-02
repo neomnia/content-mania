@@ -33,13 +33,17 @@ export async function POST(
         // Test actual API connections with provided credentials
         switch (service) {
           case 'scaleway':
-            if (!testConfig.config?.accessKey || !testConfig.config?.secretKey) {
-              throw new Error('Clés Scaleway manquantes (Access Key et Secret Key requis)');
+            // Pour TEM, seuls Secret Key et Project ID sont requis
+            if (!testConfig.config?.secretKey || !testConfig.config?.projectId) {
+              throw new Error('Clés Scaleway manquantes (Secret Key et Project ID requis pour TEM)');
             }
 
-            // Test Scaleway API - Using Instance API to list zones (simple and reliable)
+            // Test Scaleway TEM API - List domains for the project
             try {
-              const scalewayResponse = await fetch('https://api.scaleway.com/instance/v1/zones', {
+              const region = 'fr-par';
+              const temUrl = `https://api.scaleway.com/transactional-email/v1alpha1/regions/${region}/domains?project_id=${testConfig.config.projectId}`;
+
+              const scalewayResponse = await fetch(temUrl, {
                 method: 'GET',
                 headers: {
                   'X-Auth-Token': testConfig.config.secretKey,
@@ -58,26 +62,30 @@ export async function POST(
                 }
 
                 if (scalewayResponse.status === 403) {
-                  throw new Error(`Clé Scaleway invalide ou sans permissions (403). Vérifiez votre Secret Key.`);
+                  throw new Error(`Clé Scaleway invalide ou sans permissions TEM (403). Vérifiez votre Secret Key et les permissions.`);
                 } else if (scalewayResponse.status === 401) {
                   throw new Error(`Authentification Scaleway échouée (401). Vérifiez votre Secret Key.`);
+                } else if (scalewayResponse.status === 404) {
+                  throw new Error(`Project ID invalide ou TEM non activé pour ce projet (404).`);
                 } else {
-                  throw new Error(`Erreur Scaleway ${scalewayResponse.status}: ${errorMsg || 'Erreur inconnue'}`);
+                  throw new Error(`Erreur Scaleway TEM ${scalewayResponse.status}: ${errorMsg || 'Erreur inconnue'}`);
                 }
               }
 
-              // Verify response is valid JSON with zones array
+              // Verify response and count domains
               const data = await scalewayResponse.json();
-              if (!data || !Array.isArray(data.zones)) {
-                throw new Error('Réponse Scaleway invalide - structure de données inattendue');
-              }
+              const domainCount = data.domains?.length || 0;
+              const verifiedCount = data.domains?.filter((d: any) => d.status === 'checked').length || 0;
 
-              result = { success: true, message: `Connexion Scaleway réussie ✓ (${data.zones.length} zones disponibles)` };
+              result = {
+                success: true,
+                message: `Connexion Scaleway TEM réussie ✓ (${verifiedCount}/${domainCount} domaines vérifiés)`
+              };
             } catch (error) {
               if (error instanceof Error) {
                 throw error;
               }
-              throw new Error('Erreur réseau lors de la connexion à Scaleway');
+              throw new Error('Erreur réseau lors de la connexion à Scaleway TEM');
             }
             break;
 
@@ -106,6 +114,35 @@ export async function POST(
             // For AWS, we just validate the format for now
             // Real AWS testing would require AWS SDK
             result = { success: true, message: 'AWS credentials format is valid' };
+            break;
+
+          case 'lago':
+            if (!testConfig.config?.apiKey) {
+              throw new Error('Missing required Lago API key');
+            }
+            const apiUrl = testConfig.config.apiUrl || "https://api.lago.com/api/v1";
+            
+            // Test Lago API - Get current organization
+            const lagoResponse = await fetch(`${apiUrl}/organizations/current`, {
+              headers: {
+                'Authorization': `Bearer ${testConfig.config.apiKey}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (!lagoResponse.ok) {
+              if (lagoResponse.status === 401) {
+                throw new Error('Invalid Lago API key (401)');
+              }
+              const errorText = await lagoResponse.text();
+              throw new Error(`Lago API error ${lagoResponse.status}: ${errorText}`);
+            }
+            
+            const lagoData = await lagoResponse.json();
+            result = { 
+              success: true, 
+              message: `Connected to Lago: ${lagoData.organization?.name || 'Unknown Organization'}` 
+            };
             break;
 
           default:

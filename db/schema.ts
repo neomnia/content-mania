@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, boolean, primaryKey, integer, jsonb, varchar } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, uuid, boolean, primaryKey, integer, jsonb, varchar, json } from "drizzle-orm/pg-core"
 import { relations } from "drizzle-orm"
 
 // =============================================================================
@@ -18,6 +18,21 @@ export const companies = pgTable("companies", {
   siret: text("siret"),
   vatNumber: text("vat_number"),
   phone: text("phone"),
+  lagoId: text("lago_id"), // Lago Customer ID
+  isActive: boolean("is_active").default(true).notNull(), // Can be deactivated (revoked)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+/**
+ * Subscriptions - Lago subscriptions linked to companies
+ */
+export const subscriptions = pgTable("subscriptions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  lagoId: text("lago_id").notNull().unique(),
+  customerId: uuid("customer_id").references(() => companies.id).notNull(),
+  planCode: text("plan_code").notNull(),
+  status: text("status").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -30,6 +45,7 @@ export const companies = pgTable("companies", {
  */
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
+  username: text("username").unique(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(), // Hashed with bcrypt
   firstName: text("first_name").notNull(),
@@ -42,10 +58,28 @@ export const users = pgTable("users", {
   position: text("position"),
   profileImage: text("profile_image"), // Path to profile image in public/profiles
   companyId: uuid("company_id").references(() => companies.id), // Nullable - platform admins don't belong to a company
+  emailVerified: timestamp("email_verified", { mode: "date" }),
   isActive: boolean("is_active").default(true).notNull(), // Can be deactivated
+  isSiteManager: boolean("is_site_manager").default(false).notNull(), // Designated site manager for legal purposes
+  isDpo: boolean("is_dpo").default(false).notNull(), // Data Protection Officer (Responsable RGPD)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
+
+/**
+ * Verification Tokens - For email verification and password reset
+ */
+export const verificationTokens = pgTable(
+  "verification_tokens",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+  },
+  (vt) => ({
+    compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
+  })
+)
 
 // =============================================================================
 // ROLES & PERMISSIONS SYSTEM
@@ -455,8 +489,9 @@ export const userApiKeyUsageRelations = relations(userApiKeyUsage, ({ one }) => 
 export const orders = pgTable("orders", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "set null" }),
+  companyId: uuid("company_id")
+    .references(() => companies.id, { onDelete: "cascade" }),
   orderNumber: varchar("order_number", { length: 50 }).notNull().unique(), // e.g., "ORD-2024-001234"
   status: text("status").notNull().default("pending"), // pending, processing, completed, cancelled, refunded
   totalAmount: integer("total_amount").notNull(), // Amount in cents (e.g., 29900 for $299.00)
@@ -500,6 +535,10 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.userId],
     references: [users.id],
   }),
+  company: one(companies, {
+    fields: [orders.companyId],
+    references: [companies.id],
+  }),
   items: many(orderItems),
 }))
 
@@ -517,6 +556,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   userRoles: many(userRoles),
   orders: many(orders), // User's purchase history
+  tosAcceptances: many(userTosAcceptance),
 }))
 
 // =============================================================================
@@ -575,6 +615,212 @@ export const platformConfig = pgTable("platform_config", {
   value: text("value"), // Stored value (can be JSON)
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
+
+// =============================================================================
+// LEGAL & COMPLIANCE (DSA/GDPR)
+// =============================================================================
+
+/**
+ * Terms of Service Versions
+ */
+export const termsOfService = pgTable("terms_of_service", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  version: text("version").notNull(), // e.g. "1.0", "2023-10-27"
+  content: text("content").notNull(), // HTML or Markdown content
+  isActive: boolean("is_active").default(false).notNull(),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: uuid("created_by").references(() => users.id),
+})
+
+/**
+ * User ToS Acceptance Records
+ */
+export const userTosAcceptance = pgTable("user_tos_acceptance", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  tosId: uuid("tos_id").references(() => termsOfService.id).notNull(),
+  acceptedAt: timestamp("accepted_at").defaultNow().notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+})
+
+export const termsOfServiceRelations = relations(termsOfService, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [termsOfService.createdBy],
+    references: [users.id],
+  }),
+  acceptances: many(userTosAcceptance),
+}))
+
+export const userTosAcceptanceRelations = relations(userTosAcceptance, ({ one }) => ({
+  user: one(users, {
+    fields: [userTosAcceptance.userId],
+    references: [users.id],
+  }),
+  tos: one(termsOfService, {
+    fields: [userTosAcceptance.tosId],
+    references: [termsOfService.id],
+  }),
+}))
+
+/**
+ * Cookie Consents (GDPR)
+ */
+export const cookieConsents = pgTable("cookie_consents", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ipAddress: text("ip_address").notNull(),
+  userAgent: text("user_agent"),
+  consentStatus: text("consent_status").notNull(), // 'accepted' | 'declined'
+  consentedAt: timestamp("consented_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+// =============================================================================
+// E-COMMERCE & BOOKING MODULE
+// =============================================================================
+
+/**
+ * VAT Rates - Customizable tax rates by country/region
+ */
+export const vatRates = pgTable("vat_rates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(), // e.g., "France Standard", "UK Reduced"
+  country: text("country").notNull(), // ISO country code or "ALL"
+  rate: integer("rate").notNull(), // Rate in basis points (20% = 2000)
+  description: text("description"), // Optional description
+  isDefault: boolean("is_default").default(false).notNull(), // Default rate for the country
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const products = pgTable("products", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  subtitle: text("subtitle"),
+  description: text("description"),
+  features: json("features"), // Array of strings for checkmarks
+  price: integer("price").notNull().default(0), // in cents (0 for free/appointment types)
+  hourlyRate: integer("hourly_rate"), // Optional: hourly rate in cents (for appointment display only)
+  type: text("type").notNull().default("standard"), // 'standard' | 'free' | 'appointment'
+  fileUrl: text("file_url"), // S3 URL for digital/free products
+  icon: text("icon"), // Lucide icon name
+  imageUrl: text("image_url"), // Custom product image URL
+  vatRateId: uuid("vat_rate_id").references(() => vatRates.id), // Reference to VAT rate (not applicable for free/appointment)
+  currency: text("currency").default("EUR").notNull(),
+  outlookEventTypeId: text("outlook_event_type_id"), // Optional: for appointment booking
+  isPublished: boolean("is_published").default(false).notNull(),
+  isFeatured: boolean("is_featured").default(false).notNull(), // "Most Popular" badge
+  upsellProductId: uuid("upsell_product_id"), // Self-reference for upsell
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const vatRatesRelations = relations(vatRates, ({ many }) => ({
+  products: many(products),
+}))
+
+export const productsRelations = relations(products, ({ one, many }) => ({
+  cartItems: many(cartItems),
+  vatRate: one(vatRates, {
+    fields: [products.vatRateId],
+    references: [vatRates.id],
+  }),
+  upsellProduct: one(products, {
+    fields: [products.upsellProductId],
+    references: [products.id],
+    relationName: "upsell"
+  })
+}))
+
+export const carts = pgTable("carts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }), // Nullable for guest carts
+  status: text("status").notNull().default("active"), // active, abandoned, converted
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const cartItems = pgTable("cart_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  cartId: uuid("cart_id").references(() => carts.id, { onDelete: "cascade" }).notNull(),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+export const outlookIntegrations = pgTable("outlook_integrations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull().unique(),
+  accessToken: text("access_token").notNull(), // Encrypted
+  refreshToken: text("refresh_token"), // Encrypted
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+/**
+ * Product Leads - Track appointment/consultation product interactions
+ * Used for 'appointment' type products where no payment is required
+ * but we want to track user interest and conversion
+ */
+export const productLeads = pgTable("product_leads", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }), // Nullable for anonymous
+  userEmail: text("user_email").notNull(), // Always capture email
+  userName: text("user_name"), // Optional user name
+  userPhone: text("user_phone"), // Optional phone number
+  status: text("status").notNull().default("new"), // 'new', 'contacted', 'qualified', 'converted', 'lost'
+  source: text("source").default("website"), // 'website', 'email', 'direct'
+  notes: text("notes"), // Admin notes about the lead
+  scheduledAt: timestamp("scheduled_at"), // If appointment was scheduled
+  convertedAt: timestamp("converted_at"), // If lead was converted to customer
+  metadata: jsonb("metadata"), // Additional data (form responses, etc.)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+// Relations
+// productsRelations is defined above with upsellProduct
+
+export const cartsRelations = relations(carts, ({ one, many }) => ({
+  user: one(users, {
+    fields: [carts.userId],
+    references: [users.id],
+  }),
+  items: many(cartItems),
+}))
+
+export const cartItemsRelations = relations(cartItems, ({ one }) => ({
+  cart: one(carts, {
+    fields: [cartItems.cartId],
+    references: [carts.id],
+  }),
+  product: one(products, {
+    fields: [cartItems.productId],
+    references: [products.id],
+  }),
+}))
+
+export const outlookIntegrationsRelations = relations(outlookIntegrations, ({ one }) => ({
+  user: one(users, {
+    fields: [outlookIntegrations.userId],
+    references: [users.id],
+  }),
+}))
+
+export const productLeadsRelations = relations(productLeads, ({ one }) => ({
+  product: one(products, {
+    fields: [productLeads.productId],
+    references: [products.id],
+  }),
+  user: one(users, {
+    fields: [productLeads.userId],
+    references: [users.id],
+  }),
+}))
 
 // =============================================================================
 // TYPES
@@ -642,4 +888,28 @@ export type NewPagePermission = typeof pagePermissions.$inferInsert
 
 export type PlatformConfig = typeof platformConfig.$inferSelect
 export type NewPlatformConfig = typeof platformConfig.$inferInsert
+
+export type TermsOfService = typeof termsOfService.$inferSelect
+export type NewTermsOfService = typeof termsOfService.$inferInsert
+
+export type UserTosAcceptance = typeof userTosAcceptance.$inferSelect
+export type NewUserTosAcceptance = typeof userTosAcceptance.$inferInsert
+
+export type Product = typeof products.$inferSelect
+export type NewProduct = typeof products.$inferInsert
+
+export type ProductLead = typeof productLeads.$inferSelect
+export type NewProductLead = typeof productLeads.$inferInsert
+
+export type Cart = typeof carts.$inferSelect
+export type NewCart = typeof carts.$inferInsert
+
+export type CartItem = typeof cartItems.$inferSelect
+export type NewCartItem = typeof cartItems.$inferInsert
+
+export type OutlookIntegration = typeof outlookIntegrations.$inferSelect
+export type NewOutlookIntegration = typeof outlookIntegrations.$inferInsert
+
+export type VatRate = typeof vatRates.$inferSelect
+export type NewVatRate = typeof vatRates.$inferInsert
 

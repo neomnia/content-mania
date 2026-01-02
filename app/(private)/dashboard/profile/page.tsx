@@ -11,6 +11,9 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Camera, Save, Pencil, Trash2, Loader2, Lock } from "lucide-react"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { getUserRoleConfig } from "@/lib/status-configs"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +30,7 @@ import { deleteUser } from "@/app/actions/users"
 // Mock data for initial display (simulating DB data)
 const INITIAL_USER = {
   id: "",
+  username: "",
   firstName: "Musharof",
   lastName: "Chowdhury",
   role: "Team Manager",
@@ -63,6 +67,7 @@ export default function ProfilePage() {
           const data = await response.json()
           setUser({
             id: data.user.id,
+            username: data.user.username || "",
             firstName: data.user.firstName || "",
             lastName: data.user.lastName || "",
             email: data.user.email || "",
@@ -138,8 +143,10 @@ export default function ProfilePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          username: user.username,
           firstName: user.firstName,
           lastName: user.lastName,
+          email: user.email,
           phone: user.phone,
           address: user.address,
           city: user.city,
@@ -160,6 +167,9 @@ export default function ProfilePage() {
             localStorage.setItem("user", JSON.stringify({ ...parsedUser, ...data.user }))
             window.dispatchEvent(new Event("storage"))
         }
+
+        // Trigger admin alerts refresh
+        window.dispatchEvent(new Event("refreshAdminAlerts"))
 
         setIsEditing(false)
         toast.success("Profile updated successfully")
@@ -261,12 +271,16 @@ export default function ProfilePage() {
               <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
             </div>
 
-            <div className="flex-1 text-center md:text-left space-y-1">
+            <div className="flex-1 text-center md:text-left space-y-2">
               <h2 className="text-2xl font-bold text-foreground">
                 {user.firstName} {user.lastName}
               </h2>
-              <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground">
+              <div className="flex flex-col items-center md:items-start gap-2">
                 <span className="font-medium text-[#CD7F32]">{user.position}</span>
+                <StatusBadge 
+                  config={getUserRoleConfig(user.role)}
+                  size="md"
+                />
               </div>
             </div>
           </div>
@@ -287,6 +301,15 @@ export default function ProfilePage() {
           </Button>
         </CardHeader>
         <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label className="text-muted-foreground font-normal">Username</Label>
+            {isEditing ? (
+              <Input value={user.username} onChange={(e) => setUser({ ...user, username: e.target.value })} />
+            ) : (
+              <div className="font-medium">{user.username || "-"}</div>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label className="text-muted-foreground font-normal">First Name</Label>
             {isEditing ? (

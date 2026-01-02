@@ -1,38 +1,19 @@
-"use client"
-
+import { getProducts } from "@/app/actions/ecommerce"
+import { PricingGrid } from "./pricing-grid"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Check, Download, Info } from "lucide-react"
+import { Download } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
 
-export default function PricingPage() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState("")
+export const metadata = {
+  title: "Pricing",
+  description: "Choose the plan that fits your needs. Download NeoSaaS for free or let our experts help you with professional services.",
+  keywords: ["pricing", "plans", "subscription", "free", "download"],
+}
 
-  const handlePurchase = (planId: string) => {
-    setIsLoading(planId)
-
-    // Check if user is logged in (simplified check via localStorage)
-    const isAuthenticated = localStorage.getItem("userProfile")
-
-    if (isAuthenticated) {
-      // User is logged in, go to checkout
-      router.push(`/dashboard/checkout?plan=${planId}`)
-    } else {
-      // User not logged in, redirect to register with return URL
-      router.push(`/auth/register?redirect=/dashboard/checkout?plan=${planId}`)
-    }
-  }
-
-  const plans = [
-    { id: "starter", name: "Starter", price: 199 },
-    { id: "pro", name: "Pro", price: 699 },
-    { id: "enterprise", name: "Enterprise", price: 2999 },
-    { id: "custom", name: "Custom", price: 120, isHourly: true },
-  ]
+export default async function PricingPage() {
+  const { data: products } = await getProducts({ isPublished: true })
 
   return (
     <div className="container py-12 md:py-24">
@@ -79,38 +60,6 @@ export default function PricingPage() {
       </div>
 
       <div className="mx-auto mt-16 grid max-w-6xl gap-8 md:grid-cols-2 lg:grid-cols-4">
-        {/* Starter Plan */}
-        <Card className="flex flex-col border-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-[#CD7F32]/20 flex items-center justify-center">
-                  <Download className="h-6 w-6 text-[#CD7F32]" />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl">Starter</CardTitle>
-                  <CardDescription className="mt-1">Ideal for solo devs or small teams</CardDescription>
-                </div>
-              </div>
-              <Badge className="bg-[#CD7F32] text-white">FREE</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              NeoSaaS is open-source and available for free download. Deploy on your own infrastructure using Docker,
-              Node.js, or your preferred hosting provider.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Link href="/docs" className="w-full">
-              <Button size="lg" className="w-full bg-[#CD7F32] hover:bg-[#B26B27]">
-                <Download className="mr-2 h-5 w-5" />
-                Download & Documentation
-              </Button>
-            </Link>
-          </CardFooter>
-        </Card>
-
         {/* Starter Plan */}
         <Card className="flex flex-col border-2">
           <CardHeader>

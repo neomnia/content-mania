@@ -1,10 +1,40 @@
+'use client'
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
+import { recoverPassword } from "@/app/actions/auth"
+import { useState, useTransition } from "react"
+import { useToast } from "@/hooks/use-toast"
 
 export default function RecoverPasswordPage() {
+  const [isPending, startTransition] = useTransition()
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const { toast } = useToast()
+
+  async function handleSubmit(formData: FormData) {
+    setSuccessMessage(null)
+    startTransition(async () => {
+      const result = await recoverPassword(formData)
+      
+      if (result.error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: result.error,
+        })
+      } else if (result.success && result.message) {
+        setSuccessMessage(result.message)
+        toast({
+          title: "Email sent",
+          description: result.message,
+        })
+      }
+    })
+  }
+
   return (
     <div className="grid min-h-screen grid-cols-1 md:grid-cols-2">
       <div className="flex items-center justify-center py-12">
@@ -21,15 +51,36 @@ export default function RecoverPasswordPage() {
             </p>
           </div>
           <div className="grid gap-4">
-            <form className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" placeholder="name@example.com" type="email" autoComplete="email" required />
+            {successMessage ? (
+              <div className="bg-green-50 text-green-700 p-4 rounded-md text-sm text-center">
+                {successMessage}
               </div>
-              <Button type="submit" className="w-full">
-                Send reset link
-              </Button>
-            </form>
+            ) : (
+              <form action={handleSubmit} className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email" 
+                    name="email" 
+                    placeholder="name@example.com" 
+                    type="email" 
+                    autoComplete="email" 
+                    required 
+                    disabled={isPending}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isPending}>
+                  {isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send reset link"
+                  )}
+                </Button>
+              </form>
+            )}
           </div>
           <div className="mt-4 text-center text-sm">
             <Link href="/auth/login" className="inline-flex items-center font-medium text-sm">

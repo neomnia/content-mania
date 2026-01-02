@@ -2,6 +2,12 @@ import type React from "react"
 import { DemoSidebar } from "@/components/layout/demo-sidebar"
 import { DemoMobileNav } from "@/components/layout/demo-mobile-nav"
 
+export const metadata = {
+  title: "Demo",
+  description: "Try the NeoSaaS dashboard demo. Explore features like user management, analytics, payments, and more in an interactive demo environment.",
+  keywords: ["demo", "dashboard", "preview", "try", "interactive"],
+}
+
 export default function DemoLayout({
   children,
 }: {

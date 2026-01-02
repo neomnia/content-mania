@@ -77,6 +77,7 @@ async function pushSchema() {
     await sql`
       CREATE TABLE users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        username TEXT UNIQUE,
         email TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
         first_name TEXT NOT NULL,
@@ -89,7 +90,10 @@ async function pushSchema() {
         position TEXT,
         profile_image TEXT,
         company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+        email_verified TIMESTAMP,
         is_active BOOLEAN DEFAULT TRUE NOT NULL,
+        is_site_manager BOOLEAN DEFAULT FALSE NOT NULL,
+        is_dpo BOOLEAN DEFAULT FALSE NOT NULL,
         created_at TIMESTAMP DEFAULT NOW() NOT NULL,
         updated_at TIMESTAMP DEFAULT NOW() NOT NULL
       );

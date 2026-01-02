@@ -19,8 +19,25 @@ Documentation technique sur l'architecture et les décisions de conception :
 - **[Roles & Permissions System](./architecture/ROLES_PERMISSIONS_SYSTEM.md)** - Système de rôles et permissions
 - **[Data Model](./architecture/DATA_MODEL.md)** - Modèle de données (Tables & Champs)
 
+### � [E-Commerce & Admin](./admin/)
+Système d'administration et e-commerce :
+
+#### Gestion des Produits (v2.0 - Panneau Unifié) 🆕
+- **[Products Summary](./PRODUCTS_SUMMARY.md)** - 📋 Résumé exécutif des modifications
+- **[Products Unified Panel](./PRODUCTS_UNIFIED_PANEL.md)** - ⭐ Documentation complète du panneau unifié
+- **[Products Unified Panel - Guide](./PRODUCTS_UNIFIED_PANEL_GUIDE.md)** - Guide visuel rapide du panneau
+- **[Products Migration Guide](./PRODUCTS_MIGRATION_GUIDE.md)** - Guide technique de migration
+- **[Products Changelog](./PRODUCTS_CHANGELOG.md)** - Changelog détaillé v2.0
+
+#### Autres Fonctionnalités
+- **[Status Badges System](./STATUS_BADGES_SYSTEM.md)** - Système de badges de statut réutilisables
+- **[Products Table Improvements](./PRODUCTS_TABLE_IMPROVEMENTS.md)** - Améliorations du tableau (v1.0)
+- **[Products Details Panel System](./PRODUCTS_DETAILS_PANEL_SYSTEM.md)** - Panel de détails (ancien - v1.0)
+- **[Debugging & Logging System](./DEBUGGING_LOGGING_SYSTEM.md)** - Système de logs détaillés
+- **[Checkout Flow](./CHECKOUT_FLOW.md)** - Documentation du tunnel d'achat avec Lago
+- **[Checkout Testing System](./CHECKOUT_TESTING_SYSTEM.md)** - Système de test du tunnel d'achat
+
 ### 🔄 [Workflows](./workflows/)
-Processus de développement et de déploiement :
 
 - **[Deployment Status](./workflows/DEPLOYMENT_STATUS.md)** - Statut des déploiements
 

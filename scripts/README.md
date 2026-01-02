@@ -10,11 +10,55 @@ scripts/
 ├── build-with-db.sh                    # Build avec sync DB
 ├── setup-vercel-env.sh                 # Setup variables d'environnement Vercel
 ├── vercel-api-setup.sh                 # Configuration API Vercel
+├── test-checkout-flow.ts               # Test complet du tunnel d'achat
 └── deployment/
     └── configure-vercel-preview.sh     # Configuration Vercel Preview
 ```
 
 ## 📜 Scripts Disponibles
+
+### Tests E-Commerce
+
+#### `test-checkout-flow.ts`
+**Description:** Script complet pour tester le tunnel d'achat avec intégration Lago.
+
+**Usage:**
+```bash
+# Test complet avec Lago (mode production)
+pnpm tsx scripts/test-checkout-flow.ts
+
+# Test avec Lago en mode test
+pnpm tsx scripts/test-checkout-flow.ts --mode=test
+
+# Test sans Lago (uniquement DB)
+pnpm tsx scripts/test-checkout-flow.ts --skip-lago
+
+# Test sans nettoyage (garder les données)
+pnpm tsx scripts/test-checkout-flow.ts --no-cleanup
+```
+
+**Ce que le script teste:**
+- ✅ Création/Recherche utilisateur de test
+- ✅ Récupération/Création de produits de test
+- ✅ Création du panier avec produits
+- ✅ Intégration Lago (customer, add-ons, invoice)
+- ✅ Création de la commande en DB
+- ✅ Nettoyage automatique (optionnel)
+
+**Options:**
+- `--mode=test` : Utilise les credentials Lago de test
+- `--skip-lago` : Ignore l'intégration Lago
+- `--no-cleanup` : Garde les données de test
+
+**Code de sortie:**
+- `0` : Test réussi
+- `1` : Test échoué
+
+**Voir aussi:**
+- 📖 Documentation: [docs/CHECKOUT_FLOW.md](../docs/CHECKOUT_FLOW.md)
+- 🖥️ Page de test UI: `/admin/test-checkout`
+
+---
 
 ### Build & Database
 

@@ -48,9 +48,55 @@ npx tsx scripts/test-api-encryption.ts
 
 # Tester l'API
 bash scripts/test-api-flow.sh
+
+### 2. Déploiement Automatisé (Vercel)
+
+Le processus de déploiement sur Vercel est entièrement automatisé via le script `scripts/build-with-db.sh`. Ce script orchestre l'exécution de toutes les fonctions nécessaires à la mise en production :
+
+1.  **Vérification de l'environnement** : Détection du mode Vercel et des variables DB.
+2.  **Synchronisation Base de Données** :
+    *   **Par défaut (Mode Persistant)** : Exécute `pnpm db:push` pour mettre à jour le schéma sans perdre de données (Production).
+    *   **Mode Reset (Automatique en Preview/Dev)** : Si l'environnement est `preview` ou `development`, ou si `FORCE_DB_RESET=true`, exécute `pnpm db:hard-reset` (Reset + Seed) pour garantir un environnement propre.
+3.  **Configuration des Emails** (`pnpm seed:email-templates`) :
+    *   Injection/Mise à jour des templates d'emails transactionnels (SendGrid/Scaleway).
+4.  **Synchronisation des Permissions** (`pnpm seed:pages`) :
+    *   Scan des routes de l'application.
+    *   Mise à jour des permissions et rôles en base.
+5.  **Build Next.js** : Compilation de l'application frontend/backend.
+
+> **Note** : Ce processus garantit que chaque déploiement dispose d'une base de données à jour.
+
+### Scripts Utiles
+
+- `scripts/setup-vercel-env.sh` : Configure automatiquement les variables d'environnement sur Vercel (Production, Preview, Development) à partir de votre fichier `.env`.
+- `scripts/vercel-api-setup.sh` : Configure spécifiquement les clés API (CRON_SECRET, API_KEY) sur Vercel.
+- `scripts/check-email-config.ts` : Vérifie la configuration des emails transactionnels.
+
 ```
 
-### 2. Push vers `dev`
+### 2. Intégration dans le processus de déploiement (CI/CD)
+
+Chaque script ou exécutable critique pour le fonctionnement de l'application doit être intégré dans le processus de déploiement automatisé.
+Le point d'entrée de ce processus est le script `scripts/build-with-db.sh`, qui est exécuté par Vercel lors du build (`package.json` > `scripts` > `build`).
+
+Actuellement, les scripts suivants sont exécutés automatiquement :
+
+1.  **Mise à jour de la BDD** :
+    *   `drizzle-kit push` : Applique les changements de schéma (nouvelles tables, colonnes) sans perte de données.
+    *   *Optionnel* : `scripts/reset-db.ts` et `scripts/seed-database.ts` si `FORCE_DB_RESET=true`.
+2.  **Templates d'emails** (`pnpm seed:email-templates`) :
+    *   `scripts/seed-email-templates.ts` : Initialise les modèles d'emails dans la BDD.
+3.  **Permissions des pages** (`pnpm seed:pages`) :
+    *   `scripts/sync-pages.ts` : Synchronise les permissions d'accès aux pages.
+4.  **Configuration Email (Preview/Dev)** :
+    *   `scripts/fix-email-provider-defaults.ts` : Ajuste la configuration pour les environnements de test.
+
+**⚠️ Important :** Si vous ajoutez un nouveau script qui doit être exécuté lors du déploiement (ex: migration de données, seeding spécifique), vous **devez** l'ajouter dans `scripts/build-with-db.sh`.
+
+**📚 Changements de Schéma Importants :**
+- **Système de Types de Produits** (Jan 2026) : Nouvelle table `product_leads` + refonte du champ `products.type`. Voir [PRODUCTS_TYPE_SYSTEM.md](./PRODUCTS_TYPE_SYSTEM.md) pour les détails.
+
+### 3. Push vers `dev`
 
 ```bash
 git checkout dev

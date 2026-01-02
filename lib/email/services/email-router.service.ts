@@ -129,7 +129,19 @@ export class EmailRouterService {
       }
     }
 
-    emailLogger.info(`Sending email via ${provider.providerName}`, provider.providerName);
+    // Ensure 'from' field is set
+    if (!message.from) {
+        message.from = 'no-reply@neosaas.tech'; // Default fallback
+        message.fromName = 'NeoSaaS Platform';
+    }
+
+    emailLogger.info(`Sending email via ${provider.providerName}`, provider.providerName, {
+      to: message.to,
+      from: message.from,
+      subject: message.subject,
+      hasHtml: !!message.htmlContent,
+      hasText: !!message.textContent
+    });
 
     const result = await provider.sendEmail(message);
 

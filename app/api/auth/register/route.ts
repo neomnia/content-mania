@@ -1,9 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { db, validateDatabaseUrl } from "@/db"
-import { users, companies, roles, userRoles } from "@/db/schema"
+import { users, companies, roles, userRoles, verificationTokens } from "@/db/schema"
 import { hashPassword, createToken, setAuthCookie } from "@/lib/auth"
-import { eq } from "drizzle-orm"
+import { eq, or } from "drizzle-orm"
 import { emailRouter, emailTemplateRepository } from "@/lib/email"
+import { randomBytes } from "crypto"
+import { getPlatformConfig } from "@/lib/config"
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { email, password } = body
+    const { email, password, username } = body
 
     console.log("[v0] Registration request for email:", email)
 
@@ -36,13 +38,18 @@ export async function POST(request: NextRequest) {
 
     // Check if user already exists
     try {
+      const conditions = [eq(users.email, email)]
+      if (username) {
+        conditions.push(eq(users.username, username))
+      }
+
       const existingUser = await db.query.users.findFirst({
-        where: eq(users.email, email),
+        where: conditions.length > 1 ? or(...conditions) : conditions[0],
       })
 
       if (existingUser) {
         console.log("[v0] User already exists")
-        return NextResponse.json({ error: "User with this email already exists" }, { status: 409 })
+        return NextResponse.json({ error: "User with this email or username already exists" }, { status: 409 })
       }
       console.log("[v0] User does not exist, proceeding with registration")
     } catch (dbError) {
@@ -80,6 +87,7 @@ export async function POST(request: NextRequest) {
         .insert(users)
         .values({
           email,
+          username: username || null,
           password: hashedPassword,
           firstName,
           lastName,
@@ -127,74 +135,81 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create JWT token
-    const token = createToken({
-      userId: newUser.id,
-      email: newUser.email,
-      companyId: newUser.companyId || undefined,
-      roles: writerRole ? ["writer"] : [],
-      permissions: writerRole ? ["read", "write", "invite", "manage_users"] : [],
-    })
-    console.log("[v0] JWT token created")
+    // Generate verification token
+    const verificationToken = randomBytes(32).toString("hex")
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
-    // Set auth cookie
-    await setAuthCookie(token)
-    console.log("[v0] Auth cookie set")
-
-    // Send welcome/registration email
     try {
-      const template = await emailTemplateRepository.getTemplate("registration")
+      await db.insert(verificationTokens).values({
+        identifier: newUser.email,
+        token: verificationToken,
+        expires,
+      })
+      console.log("[v0] Verification token created")
+    } catch (dbError) {
+      console.error("[v0] Error creating verification token:", dbError)
+      return NextResponse.json({ error: "Failed to create verification token" }, { status: 500 })
+    }
+
+    // Send verification email
+    try {
+      const host = request.headers.get("host") || "localhost:3000"
+      const protocol = process.env.NODE_ENV === "production" ? "https" : "http"
+      const verificationUrl = `${protocol}://${host}/auth/verify?token=${verificationToken}&email=${encodeURIComponent(newUser.email)}`
+      
+      let subject = "Verify your account - NeoSaaS"
+      let htmlContent = `
+        <h1>Welcome to NeoSaaS!</h1>
+        <p>Please click the link below to verify your account and complete your profile:</p>
+        <p><a href="${verificationUrl}">Verify Account</a></p>
+        <p>Or copy and paste this link: ${verificationUrl}</p>
+      `
+      let textContent = `Welcome to NeoSaaS!\n\nPlease verify your account by visiting: ${verificationUrl}`
+
+      const platformConfig = await getPlatformConfig()
+      let fromAddress = platformConfig.defaultSenderEmail || "no-reply@neosaas.tech"
+      let fromName: string | undefined = undefined
+
+      const template = await emailTemplateRepository.getTemplate("email_verification")
       if (template && template.isActive) {
-        const actionUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard`
+        subject = template.subject.replace("{{siteName}}", "NeoSaaS")
+        htmlContent = template.htmlContent || htmlContent
+        textContent = template.textContent || textContent
 
-        let htmlContent = template.htmlContent || ""
-        let textContent = template.textContent || ""
-        const subject = template.subject.replace("{{siteName}}", "NeoSaaS")
+        if (template.fromEmail) {
+          fromAddress = template.fromEmail
+          fromName = template.fromName || undefined
+        }
 
-        // Replace variables
         const variables = {
           firstName: newUser.firstName,
           siteName: "NeoSaaS",
-          actionUrl,
+          actionUrl: verificationUrl,
         }
 
         Object.entries(variables).forEach(([key, value]) => {
-          const regex = new RegExp(`{{${key}}}`, "g")
+          const regex = new RegExp(`{{\\s*${key}\\s*}}`, "g")
           htmlContent = htmlContent.replace(regex, value)
           textContent = textContent.replace(regex, value)
         })
-
-        await emailRouter.sendEmail({
-          to: [newUser.email],
-          from: { name: template.fromName, email: template.fromEmail },
-          subject: subject,
-          html: htmlContent,
-          text: textContent,
-          templateId: template.type,
-        })
-        console.log(`[v0] Welcome email sent to ${newUser.email}`)
-      } else {
-        console.warn("[v0] registration template not found or inactive, account created but email not sent")
       }
+
+      await emailRouter.sendEmail({
+        to: [newUser.email],
+        from: fromAddress,
+        fromName: fromName,
+        subject: subject,
+        htmlContent: htmlContent,
+        textContent: textContent,
+      })
+      console.log(`[v0] Verification email sent to ${newUser.email}`)
     } catch (emailError) {
-      console.error("[v0] Failed to send welcome email:", emailError)
-      // Don't fail the registration if email fails
+      console.error("[v0] Failed to send verification email:", emailError)
     }
 
-    // Return user data (without password)
-    const { password: _, ...userWithoutPassword } = newUser
+    // Return success message
     return NextResponse.json({
-      user: {
-        ...userWithoutPassword,
-        company: {
-          id: company.id,
-          name: company.name,
-          email: company.email,
-        },
-        roles: writerRole ? ["writer"] : [],
-        permissions: writerRole ? ["read", "write", "invite", "manage_users"] : [],
-      },
-      message: "Account created successfully. Please complete your profile.",
+      message: "Account created successfully. Please check your email to verify your account.",
     })
   } catch (error) {
     console.error("[v0] Registration error:", error)

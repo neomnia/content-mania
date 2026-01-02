@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { requireAuth, isAdmin } from "@/lib/auth/server"
 import { PrivateLayoutClient } from "./layout-client"
 import { getPlatformConfig } from "@/lib/config"
+import { AdminAlerts } from "@/components/admin/admin-alerts"
 
 // Force dynamic rendering for maintenance mode check
 export const dynamic = 'force-dynamic'
@@ -18,14 +19,16 @@ export default async function PrivateLayout({ children }: { children: React.Reac
   // Verify authentication - redirects to login if not authenticated
   const user = await requireAuth()
   const platformConfig = await getPlatformConfig()
+  const userIsAdmin = await isAdmin(user.userId)
 
   // Check maintenance mode - redirect non-admin users to maintenance page
   if (platformConfig.maintenanceMode) {
-    const userIsAdmin = await isAdmin(user.userId)
     if (!userIsAdmin) {
       redirect("/maintenance")
     }
   }
 
-  return <PrivateLayoutClient user={user} platformConfig={platformConfig}>{children}</PrivateLayoutClient>
+  const alerts = userIsAdmin ? <AdminAlerts /> : null
+
+  return <PrivateLayoutClient user={user} platformConfig={platformConfig} alerts={alerts}>{children}</PrivateLayoutClient>
 }

@@ -4,12 +4,14 @@ Ce document explique comment configurer et utiliser les templates d'email dans N
 
 ## Templates Disponibles
 
-Le système inclut 4 templates d'email principaux :
+Le système inclut 6 templates d'email principaux :
 
 1. **user_invitation** - Invitation à rejoindre une entreprise
-2. **registration** - Email de bienvenue après inscription
-3. **account_update** - Notification de modification de compte
-4. **admin_notification** - Notifications pour les super admins
+2. **email_verification** - Email de vérification après inscription
+3. **email_update_notification** - Notification de changement d'email
+4. **account_deletion** - Confirmation de suppression de compte
+5. **password_reset** - Lien de réinitialisation de mot de passe
+6. **admin_notification** - Notifications pour les super admins
 
 ## Installation des Templates
 
@@ -53,21 +55,27 @@ Avant d'envoyer des emails, vous devez configurer un provider email (actuellemen
 - `{{companyName}}` - Nom de l'entreprise
 - `{{siteName}}` - Nom du site (NeoSaaS)
 - `{{roleName}}` - Rôle assigné (Reader/Writer)
-- `{{inviteUrl}}` - Lien d'acceptation de l'invitation
+- `{{actionUrl}}` - Lien d'acceptation de l'invitation
 
-### Template `registration`
+### Template `email_verification`
 - `{{firstName}}` - Prénom de l'utilisateur
-- `{{email}}` - Email de l'utilisateur
-- `{{companyName}}` - Nom de l'entreprise
 - `{{siteName}}` - Nom du site
+- `{{actionUrl}}` - Lien de vérification
+
+### Template `email_update_notification`
+- `{{firstName}}` - Prénom de l'utilisateur
+- `{{siteName}}` - Nom du site
+- `{{newEmail}}` - Nouvelle adresse email
 - `{{actionUrl}}` - Lien vers le dashboard
 
-### Template `account_update`
-- `{{firstName}}`, `{{lastName}}` - Nom complet
-- `{{email}}` - Email
-- `{{companyName}}` - Entreprise
-- `{{updateDetails}}` - Détails des modifications
-- `{{dashboardUrl}}` - Lien vers le profil
+### Template `password_reset`
+- `{{firstName}}` - Prénom de l'utilisateur
+- `{{siteName}}` - Nom du site
+- `{{actionUrl}}` - Lien de réinitialisation
+
+### Template `account_deletion`
+- `{{firstName}}` - Prénom de l'utilisateur
+- `{{siteName}}` - Nom du site
 
 ### Template `admin_notification`
 - `{{notificationType}}` - Type de notification

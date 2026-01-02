@@ -1,6 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart4, Clock, CreditCard, FileText, HardDrive, Mail, Shield, Users } from "lucide-react"
 
+export const metadata = {
+  title: "Features",
+  description: "Discover all the features NeoSaaS offers: user management, billing & subscriptions, analytics, email management, file storage, and more.",
+  keywords: ["features", "user management", "billing", "analytics", "email", "storage", "security"],
+}
+
 export default function FeaturesPage() {
   return (
     <div className="container py-12 md:py-24">

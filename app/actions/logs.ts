@@ -40,7 +40,7 @@ export async function getSystemLogs(filters: LogFilter = {}) {
     const logs = await db.query.systemLogs.findMany({
       where: conditions.length > 0 ? and(...conditions) : undefined,
       orderBy: [desc(systemLogs.createdAt)],
-      limit: 100,
+      limit: 1000,
       with: {
         user: true
       }
@@ -63,10 +63,46 @@ export async function logSystemEvent(data: NewSystemLog) {
   }
 }
 
+export async function deleteSystemLogs(filters: LogFilter = {}) {
+  try {
+    const conditions = []
+
+    if (filters.category && filters.category !== "all") {
+      conditions.push(eq(systemLogs.category, filters.category))
+    }
+
+    if (filters.level && filters.level !== "all") {
+      conditions.push(eq(systemLogs.level, filters.level))
+    }
+
+    if (filters.search) {
+      conditions.push(like(systemLogs.message, `%${filters.search}%`))
+    }
+
+    if (filters.startDate) {
+      conditions.push(sql`${systemLogs.createdAt} >= ${filters.startDate.toISOString()}`)
+    }
+
+    if (filters.endDate) {
+      conditions.push(sql`${systemLogs.createdAt} <= ${filters.endDate.toISOString()}`)
+    }
+
+    // Safety check: prevent deleting all logs without any filter unless explicitly intended (maybe add a flag? or just allow it)
+    // For now, if no filters are provided, it deletes everything.
+    
+    await db.delete(systemLogs).where(conditions.length > 0 ? and(...conditions) : undefined)
+    revalidatePath("/admin/logs")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to delete system logs:", error)
+    return { success: false, error: "Failed to delete system logs" }
+  }
+}
+
 export async function deleteOldLogs(beforeDate: Date) {
   try {
     await db.delete(systemLogs).where(lt(systemLogs.createdAt, beforeDate))
-    revalidatePath("/dashboard/admin/logs")
+    revalidatePath("/admin/logs")
     return { success: true }
   } catch (error) {
     console.error("Failed to delete old logs:", error)

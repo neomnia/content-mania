@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Building2, Users, Mail, Phone, MapPin, FileText, UserPlus, Pencil, Check, X, Search } from "lucide-react"
+import { Building2, Users, Mail, Phone, MapPin, FileText, UserPlus, Pencil, Check, X, Search, Trash2 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { useUser } from "@/lib/contexts/user-context"
+import { cancelInvitation, removeUserFromCompany } from "@/app/actions/company-users"
 
 interface Company {
   id: string
@@ -123,6 +124,10 @@ export default function CompanyManagementPage() {
         const data = await response.json()
         setCompany(data.company)
         setIsEditingCompany(false)
+        
+        // Trigger admin alerts refresh
+        window.dispatchEvent(new Event("refreshAdminAlerts"))
+        
         toast.success("Company information updated successfully")
       } else {
         const error = await response.json()
@@ -177,6 +182,30 @@ export default function CompanyManagementPage() {
       }
     } catch (error) {
       toast.error("An error occurred")
+    }
+  }
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    if (!confirm("Are you sure you want to cancel this invitation?")) return
+    
+    const result = await cancelInvitation(invitationId)
+    if (result.success) {
+      toast.success(result.message)
+      loadTeamMembers()
+    } else {
+      toast.error(result.error)
+    }
+  }
+
+  const handleRemoveUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to remove this user from the company?")) return
+
+    const result = await removeUserFromCompany(userId)
+    if (result.success) {
+      toast.success(result.message)
+      loadTeamMembers()
+    } else {
+      toast.error(result.error)
     }
   }
 
@@ -539,24 +568,44 @@ export default function CompanyManagementPage() {
                       <TableCell className="text-right">
                         {canEdit ? (
                           member.status === "pending" ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                // TODO: Implement resend/cancel invitation
-                                toast.info("Invitation management coming soon")
-                              }}
-                            >
-                              Resend
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                                <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    // TODO: Implement resend
+                                    toast.info("Resend invitation coming soon")
+                                }}
+                                >
+                                Resend
+                                </Button>
+                                <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleCancelInvitation(member.id)}
+                                >
+                                <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
                           ) : !member.isOwner ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleToggleUserStatus(member.id, member.isActive)}
-                            >
-                              {member.isActive ? "Deactivate" : "Activate"}
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                                <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleToggleUserStatus(member.id, member.isActive)}
+                                >
+                                {member.isActive ? "Deactivate" : "Activate"}
+                                </Button>
+                                <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleRemoveUser(member.id)}
+                                >
+                                <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
                           ) : null
                         ) : (
                           <span className="text-sm text-muted-foreground">-</span>

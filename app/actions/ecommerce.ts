@@ -1,0 +1,665 @@
+'use server'
+
+import { db } from "@/db"
+import { products, carts, cartItems, orders, orderItems, outlookIntegrations } from "@/db/schema"
+import { eq, and, desc, asc } from "drizzle-orm"
+import { revalidatePath } from "next/cache"
+import { getCurrentUser } from "@/lib/auth"
+import { z } from "zod"
+import { getLagoClient } from "@/lib/lago"
+import { emailRouter } from "@/lib/email"
+import { cookies } from "next/headers"
+
+// --- Products ---
+
+export async function getProducts(filter: { isPublished?: boolean } = {}) {
+  try {
+    const conditions = []
+    if (filter.isPublished !== undefined) {
+      conditions.push(eq(products.isPublished, filter.isPublished))
+    }
+
+    const allProducts = await db.query.products.findMany({
+      where: conditions.length > 0 ? and(...conditions) : undefined,
+      orderBy: [desc(products.isFeatured), asc(products.price)],
+    })
+    return { success: true, data: allProducts }
+  } catch (error) {
+    console.error("Failed to fetch products:", error)
+    return { success: false, error: "Failed to fetch products" }
+  }
+}
+
+export async function getProductById(id: string) {
+  try {
+    const product = await db.query.products.findFirst({
+      where: eq(products.id, id)
+    })
+    
+    if (!product) {
+      return { success: false, error: "Product not found" }
+    }
+
+    return { success: true, data: product }
+  } catch (error) {
+    console.error("Failed to fetch product:", error)
+    return { success: false, error: "Failed to fetch product" }
+  }
+}
+
+export async function upsertProduct(data: any) {
+  try {
+    const user = await getCurrentUser()
+    // TODO: Check for admin role properly
+    if (!user) {
+      return { success: false, error: "Unauthorized" }
+    }
+
+    // Basic validation (can be improved with Zod)
+    if (data.id) {
+      // Update - seulement les champs fournis
+      const updateData: any = {
+        updatedAt: new Date(),
+      }
+      
+      // Ajouter uniquement les champs qui sont définis dans data
+      if (data.title !== undefined) updateData.title = data.title
+      if (data.subtitle !== undefined) updateData.subtitle = data.subtitle
+      if (data.description !== undefined) updateData.description = data.description
+      if (data.features !== undefined) updateData.features = data.features
+      if (data.price !== undefined) updateData.price = data.price
+      if (data.hourlyRate !== undefined) updateData.hourlyRate = data.hourlyRate
+      if (data.type !== undefined) updateData.type = data.type
+      if (data.fileUrl !== undefined) updateData.fileUrl = data.fileUrl
+      if (data.icon !== undefined) updateData.icon = data.icon
+      if (data.currency !== undefined) updateData.currency = data.currency
+      if (data.outlookEventTypeId !== undefined) updateData.outlookEventTypeId = data.outlookEventTypeId
+      if (data.isPublished !== undefined) updateData.isPublished = data.isPublished
+      if (data.isFeatured !== undefined) updateData.isFeatured = data.isFeatured
+      if (data.upsellProductId !== undefined) updateData.upsellProductId = data.upsellProductId
+      if (data.vatRateId !== undefined) updateData.vatRateId = data.vatRateId
+      if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl
+      
+      await db.update(products)
+        .set(updateData)
+        .where(eq(products.id, data.id))
+      
+      revalidatePath("/store")
+      revalidatePath("/admin/products")
+      return { success: true, data: { id: data.id } }
+    } else {
+      // Create - validation des champs requis
+      if (!data.title || data.price === undefined || data.price === null) {
+        return { success: false, error: "Missing required fields (title and price)" }
+      }
+      
+      const result = await db.insert(products).values({
+        title: data.title,
+        subtitle: data.subtitle,
+        description: data.description,
+        features: data.features,
+        price: data.price,
+        hourlyRate: data.hourlyRate,
+        type: data.type || 'standard',
+        fileUrl: data.fileUrl,
+        icon: data.icon,
+        currency: data.currency || 'EUR',
+        outlookEventTypeId: data.outlookEventTypeId,
+        isPublished: data.isPublished || false,
+        isFeatured: data.isFeatured || false,
+        upsellProductId: data.upsellProductId,
+        vatRateId: data.vatRateId,
+      }).returning({ id: products.id })
+      
+      const productId = result[0].id
+      
+      revalidatePath("/store")
+      revalidatePath("/admin/products")
+      return { success: true, data: { id: productId } }
+    }
+  } catch (error) {
+    console.error("Failed to upsert product:", error)
+    return { success: false, error: "Failed to save product" }
+  }
+}
+
+export async function deleteProduct(id: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return { success: false, error: "Unauthorized" }
+    }
+
+    await db.delete(products).where(eq(products.id, id))
+    
+    revalidatePath("/store")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to delete product:", error)
+    return { success: false, error: "Failed to delete product" }
+  }
+}
+
+// --- Cart ---
+
+export async function getCart() {
+  try {
+    const user = await getCurrentUser()
+    let cart
+
+    if (user) {
+      cart = await db.query.carts.findFirst({
+        where: and(
+          eq(carts.userId, user.id),
+          eq(carts.status, "active")
+        ),
+        with: {
+          items: {
+            with: {
+              product: {
+                with: {
+                  upsellProduct: true
+                }
+              }
+            }
+          }
+        }
+      })
+    } else {
+      const cookieStore = await cookies()
+      const cartId = cookieStore.get("cart_id")?.value
+
+      if (cartId) {
+        cart = await db.query.carts.findFirst({
+          where: and(
+            eq(carts.id, cartId),
+            eq(carts.status, "active")
+          ),
+          with: {
+            items: {
+              with: {
+                product: {
+                  with: {
+                    upsellProduct: true
+                  }
+                }
+              }
+            }
+          }
+        })
+      }
+    }
+
+    return { success: true, data: cart }
+  } catch (error) {
+    console.error("Failed to get cart:", error)
+    return { success: false, error: "Failed to get cart" }
+  }
+}
+
+export async function addToCart(productId: string, quantity: number = 1) {
+  try {
+    const user = await getCurrentUser()
+    let cart
+
+    if (user) {
+      // Get or create active cart
+      cart = await db.query.carts.findFirst({
+        where: and(
+          eq(carts.userId, user.id),
+          eq(carts.status, "active")
+        )
+      })
+
+      if (!cart) {
+        const [newCart] = await db.insert(carts).values({
+          userId: user.id,
+          status: "active"
+        }).returning()
+        cart = newCart
+      }
+    } else {
+      const cookieStore = await cookies()
+      const cartId = cookieStore.get("cart_id")?.value
+
+      if (cartId) {
+        cart = await db.query.carts.findFirst({
+          where: and(
+            eq(carts.id, cartId),
+            eq(carts.status, "active")
+          )
+        })
+      }
+
+      if (!cart) {
+        const [newCart] = await db.insert(carts).values({
+          status: "active"
+        }).returning()
+        cart = newCart
+        
+        cookieStore.set("cart_id", cart.id, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 30, // 30 days
+          httpOnly: true,
+        })
+      }
+    }
+
+    // Check if item exists
+    const existingItem = await db.query.cartItems.findFirst({
+      where: and(
+        eq(cartItems.cartId, cart.id),
+        eq(cartItems.productId, productId)
+      )
+    })
+
+    if (existingItem) {
+      await db.update(cartItems)
+        .set({ quantity: existingItem.quantity + quantity })
+        .where(eq(cartItems.id, existingItem.id))
+    } else {
+      await db.insert(cartItems).values({
+        cartId: cart.id,
+        productId,
+        quantity
+      })
+    }
+
+    revalidatePath("/cart")
+    revalidatePath("/dashboard/cart")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to add to cart:", error)
+    return { success: false, error: "Failed to add to cart" }
+  }
+}
+
+export async function removeFromCart(productId: string) {
+  try {
+    const user = await getCurrentUser()
+    let cartId: string | null = null
+
+    if (user) {
+      const cart = await db.query.carts.findFirst({
+        where: and(
+          eq(carts.userId, user.id),
+          eq(carts.status, "active")
+        )
+      })
+      cartId = cart?.id || null
+    } else {
+      const cookieStore = await cookies()
+      cartId = cookieStore.get("cart_id")?.value || null
+    }
+
+    if (!cartId) {
+      return { success: false, error: "Cart not found" }
+    }
+
+    // Supprimer l'item du panier
+    await db.delete(cartItems)
+      .where(and(
+        eq(cartItems.cartId, cartId),
+        eq(cartItems.productId, productId)
+      ))
+
+    revalidatePath("/cart")
+    revalidatePath("/dashboard/cart")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to remove from cart:", error)
+    return { success: false, error: "Failed to remove from cart" }
+  }
+}
+
+export async function updateCartItemQuantity(productId: string, quantity: number) {
+  try {
+    if (quantity < 1) {
+      return await removeFromCart(productId)
+    }
+
+    const user = await getCurrentUser()
+    let cartId: string | null = null
+
+    if (user) {
+      const cart = await db.query.carts.findFirst({
+        where: and(
+          eq(carts.userId, user.id),
+          eq(carts.status, "active")
+        )
+      })
+      cartId = cart?.id || null
+    } else {
+      const cookieStore = await cookies()
+      cartId = cookieStore.get("cart_id")?.value || null
+    }
+
+    if (!cartId) {
+      return { success: false, error: "Cart not found" }
+    }
+
+    // Mettre à jour la quantité
+    const item = await db.query.cartItems.findFirst({
+      where: and(
+        eq(cartItems.cartId, cartId),
+        eq(cartItems.productId, productId)
+      )
+    })
+
+    if (item) {
+      await db.update(cartItems)
+        .set({ quantity })
+        .where(eq(cartItems.id, item.id))
+    }
+
+    revalidatePath("/cart")
+    revalidatePath("/dashboard/cart")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to update cart item:", error)
+    return { success: false, error: "Failed to update cart item" }
+  }
+}
+
+// --- Checkout ---
+
+export async function processCheckout(cartId: string) {
+  console.log('[processCheckout] 🛒 Starting checkout process', { cartId })
+  
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      console.error('[processCheckout] ❌ User not authenticated')
+      return { success: false, error: "Not authenticated" }
+    }
+
+    console.log('[processCheckout] ✅ User authenticated', { 
+      userId: user.id, 
+      email: user.email 
+    })
+
+    // 1. Get Cart
+    console.log('[processCheckout] 📦 Fetching cart data')
+    const cart = await db.query.carts.findFirst({
+      where: and(
+        eq(carts.id, cartId),
+        eq(carts.userId, user.id),
+        eq(carts.status, "active")
+      ),
+      with: {
+        items: {
+          with: {
+            product: true
+          }
+        }
+      }
+    })
+
+    if (!cart) {
+      console.error('[processCheckout] ❌ Cart not found', { cartId })
+      return { success: false, error: "Cart not found" }
+    }
+
+    if (cart.items.length === 0) {
+      console.error('[processCheckout] ❌ Cart is empty', { cartId })
+      return { success: false, error: "Cart is empty" }
+    }
+
+    console.log('[processCheckout] ✅ Cart loaded', { 
+      cartId: cart.id,
+      itemCount: cart.items.length,
+      items: cart.items.map(i => ({ id: i.product.id, title: i.product.title, price: i.product.price, qty: i.quantity }))
+    })
+
+    // 2. Initialize Lago (optionnel)
+    console.log('[processCheckout] 💳 Checking Lago configuration')
+    let lago
+    let lagoEnabled = false
+    try {
+      lago = await getLagoClient()
+      lagoEnabled = true
+      console.log('[processCheckout] ✅ Lago client initialized - will process invoice')
+    } catch (e) {
+      console.log('[processCheckout] ℹ️  Lago not configured - proceeding without Lago integration')
+      console.log('[processCheckout] ℹ️  Order will be created without invoice generation')
+    }
+
+    let invoiceResult
+
+    if (lago && lagoEnabled) {
+      // 3. Create/Update Customer in Lago
+      console.log('[processCheckout] 👤 Creating/Updating Lago customer')
+      const customerInput = {
+        external_id: user.id,
+        name: user.name || user.email,
+        email: user.email,
+        currency: "USD",
+      }
+
+      try {
+        await lago.customers.create({ customer: customerInput })
+        console.log('[processCheckout] ✅ Lago customer created', { external_id: user.id })
+      } catch (e) {
+        // Ignore if customer exists
+        console.log('[processCheckout] ℹ️  Lago customer already exists (expected)', { external_id: user.id })
+      }
+
+      // 4. Prepare Invoice Fees & Ensure Add-ons exist
+      console.log('[processCheckout] 📦 Creating Lago add-ons for products')
+      const fees = []
+      for (const item of cart.items) {
+        // Ensure Add-on exists
+        try {
+          await lago.addOns.create({
+            add_on: {
+              name: item.product.title,
+              code: item.product.id,
+              amount_cents: item.product.price,
+              amount_currency: "USD",
+              description: item.product.description || undefined,
+            }
+          })
+          console.log('[processCheckout] ✅ Add-on created', { code: item.product.id, name: item.product.title })
+        } catch (e) {
+          // Ignore if add-on already exists
+          console.log('[processCheckout] ℹ️  Add-on already exists', { code: item.product.id })
+        }
+
+        fees.push({
+          add_on_code: item.product.id,
+          units: item.quantity.toString(),
+        })
+      }
+      console.log('[processCheckout] ✅ Invoice fees prepared', { feeCount: fees.length })
+
+      // 5. Create Invoice
+      console.log('[processCheckout] 🧾 Creating Lago invoice')
+      try {
+        invoiceResult = await lago.invoices.create({
+          invoice: {
+            customer: { external_id: user.id },
+            currency: "USD",
+            fees: fees,
+          }
+        })
+        console.log('[processCheckout] ✅ Lago invoice created successfully', {
+          lago_id: invoiceResult.data.lago_invoice.lago_id,
+          number: invoiceResult.data.lago_invoice.number,
+          total_amount_cents: invoiceResult.data.lago_invoice.total_amount_cents,
+          status: invoiceResult.data.lago_invoice.status
+        })
+      } catch (e: any) {
+        console.error('[processCheckout] ⚠️  Lago invoice creation failed, but continuing checkout', {
+          error: e.message,
+          status: e.response?.status,
+          data: e.response?.data
+        })
+        // Ne pas bloquer le checkout si Lago échoue
+        // L'administrateur peut gérer la facturation manuellement
+        console.log('[processCheckout] ℹ️  Proceeding without Lago invoice - order will be created anyway')
+        invoiceResult = null
+      }
+    }
+
+    // 6. Create Order in DB
+    console.log('[processCheckout] 📝 Creating order in database')
+    const totalAmount = cart.items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
+    const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    
+    console.log('[processCheckout] 💰 Order details', {
+      orderNumber,
+      totalAmount,
+      totalFormatted: (totalAmount / 100).toFixed(2) + ' EUR',
+      itemCount: cart.items.length,
+      hasLagoInvoice: !!invoiceResult
+    })
+    
+    const [order] = await db.insert(orders).values({
+      userId: user.id,
+      companyId: user.companyId,
+      orderNumber,
+      totalAmount,
+      status: "completed",
+      paymentStatus: "pending",
+      metadata: invoiceResult ? { 
+        lago_invoice_id: invoiceResult.data.lago_invoice.lago_id,
+        lago_invoice_number: invoiceResult.data.lago_invoice.number
+      } : {
+        note: "Processed without Lago"
+      }
+    }).returning()
+
+    console.log('[processCheckout] ✅ Order created in database', { orderId: order.id, orderNumber: order.orderNumber })
+
+    // 7. Create Order Items
+    console.log('[processCheckout] 📦 Creating order items')
+    for (const item of cart.items) {
+      await db.insert(orderItems).values({
+        orderId: order.id,
+        itemType: "product",
+        itemId: item.product.id,
+        itemName: item.product.title,
+        quantity: item.quantity,
+        unitPrice: item.product.price,
+        totalPrice: item.product.price * item.quantity,
+      })
+      console.log('[processCheckout] ✅ Order item created', {
+        itemName: item.product.title,
+        quantity: item.quantity,
+        unitPrice: (item.product.price / 100).toFixed(2),
+        totalPrice: ((item.product.price * item.quantity) / 100).toFixed(2)
+      })
+    }
+
+    // 8. Send Confirmation Email
+    console.log('[processCheckout] 📧 Sending confirmation email', { to: user.email })
+    try {
+      await emailRouter.sendEmail({
+        to: [user.email],
+        template: "order_confirmation",
+        subject: `Order Confirmation #${orderNumber}`,
+        data: {
+          firstName: user.name?.split(' ')[0] || "Customer",
+          orderNumber,
+          orderDate: new Date().toLocaleDateString(),
+          actionUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://neosaas.com'}/orders/${order.id}`,
+          // Extra data in case template is updated later
+          items: cart.items.map(i => ({
+            name: i.product.title,
+            quantity: i.quantity,
+            price: (i.product.price / 100).toFixed(2)
+          })),
+          total: (totalAmount / 100).toFixed(2)
+        }
+      })
+      console.log('[processCheckout] ✅ Confirmation email sent successfully')
+    } catch (emailError) {
+      console.error('[processCheckout] ❌ Failed to send order confirmation email:', emailError)
+    }
+
+    // 9. Mark Cart as Converted
+    console.log('[processCheckout] 🔄 Converting cart')
+    await db.update(carts)
+      .set({ status: "converted" })
+      .where(eq(carts.id, cart.id))
+
+    console.log('[processCheckout] ✅ Cart converted successfully', { cartId: cart.id })
+
+    revalidatePath("/cart")
+    revalidatePath("/orders")
+    
+    console.log('[processCheckout] 🎉 Checkout completed successfully', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      totalAmount: (totalAmount / 100).toFixed(2) + ' EUR'
+    })
+    
+    return { success: true, orderId: order.id }
+
+  } catch (error) {
+    console.error('[processCheckout] 💥 Checkout failed with exception:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    return { success: false, error: error instanceof Error ? error.message : "Checkout failed" }
+  }
+}
+
+// --- Outlook ---
+
+export async function syncOutlookCalendar(authCode: string) {
+  // TODO: Exchange code for tokens
+  return { success: false, error: "Not implemented yet" }
+}
+
+// --- Product Leads (Appointments) ---
+
+/**
+ * Create a lead for appointment/consultation products
+ * No payment is processed - this is for tracking interest only
+ */
+export async function createProductLead(data: {
+  productId: string
+  userEmail: string
+  userName?: string
+  userPhone?: string
+  metadata?: any
+}) {
+  try {
+    const user = await getCurrentUser()
+    
+    // Verify product exists and is of type 'appointment'
+    const product = await db.query.products.findFirst({
+      where: eq(products.id, data.productId)
+    })
+    
+    if (!product) {
+      return { success: false, error: "Product not found" }
+    }
+    
+    if (product.type !== 'appointment') {
+      return { success: false, error: "This product does not support lead creation" }
+    }
+
+    // Create the lead
+    const { productLeads } = await import("@/db/schema")
+    const result = await db.insert(productLeads).values({
+      productId: data.productId,
+      userId: user?.id || null,
+      userEmail: data.userEmail,
+      userName: data.userName,
+      userPhone: data.userPhone,
+      status: 'new',
+      source: 'website',
+      metadata: data.metadata,
+    }).returning({ id: productLeads.id })
+
+    // TODO: Send notification email to admin
+    // TODO: Send confirmation email to user
+    
+    return { success: true, leadId: result[0].id }
+  } catch (error) {
+    console.error("Failed to create product lead:", error)
+    return { success: false, error: "Failed to create lead" }
+  }
+}

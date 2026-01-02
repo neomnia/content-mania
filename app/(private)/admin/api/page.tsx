@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -22,6 +24,9 @@ const services = [
   { id: "scaleway", name: "Scaleway", icon: "scaleway", type: "storage", description: "Object Storage, Functions, etc." },
   { id: "resend", name: "Resend", icon: "📧", type: "email", description: "Transactional email service" },
   { id: "aws", name: "AWS SES", icon: "☁️", type: "email", description: "Amazon Simple Email Service" },
+  { id: "lago", name: "Lago", icon: "💳", type: "payment", description: "Billing & Payment Orchestration" },
+  { id: "stripe", name: "Stripe", icon: "stripe", type: "payment", description: "Payment Processing" },
+  { id: "paypal", name: "PayPal", icon: "paypal", type: "payment", description: "Online Payments" },
 ]
 
 function ScalewayIcon({ className }: { className?: string }) {
@@ -34,6 +39,33 @@ function ScalewayIcon({ className }: { className?: string }) {
 
 function ServiceIcon({ service, size = "sm" }: { service: (typeof services)[0]; size?: "sm" | "md" | "lg" }) {
   const sizeClass = size === "sm" ? "h-5 w-5" : size === "md" ? "h-6 w-6" : "h-8 w-8"
+  
+  if (service.id === "stripe") {
+    return (
+      <div className={`relative ${sizeClass} flex items-center justify-center`}>
+        <Image 
+          src="/images/stripe-logo.png" 
+          alt="Stripe" 
+          fill
+          className="object-contain"
+        />
+      </div>
+    )
+  }
+  
+  if (service.id === "paypal") {
+    return (
+      <div className={`relative ${sizeClass} flex items-center justify-center`}>
+        <Image 
+          src="/images/paypal-logo.png" 
+          alt="PayPal" 
+          fill
+          className="object-contain"
+        />
+      </div>
+    )
+  }
+
   if (service.icon === "scaleway") {
     return <ScalewayIcon className={sizeClass} />
   }
@@ -72,6 +104,7 @@ export default function AdminApiPage() {
   const [scalewayConfig, setScalewayConfig] = useState({
     accessKey: "",
     secretKey: "",
+    projectId: "",
   })
   const [resendConfig, setResendConfig] = useState({ apiKey: "", domain: "" })
   const [awsConfig, setAwsConfig] = useState({
@@ -79,6 +112,20 @@ export default function AdminApiPage() {
     secretAccessKey: "",
     region: "eu-west-1",
     sessionToken: ""
+  })
+  const [lagoConfig, setLagoConfig] = useState({
+    apiUrl: "https://api.lago.com/api/v1",
+    apiKey: "",
+  })
+  const [stripeConfig, setStripeConfig] = useState({
+    publicKey: "",
+    secretKey: "",
+    webhookSecret: "",
+  })
+  const [paypalConfig, setPaypalConfig] = useState({
+    clientId: "",
+    clientSecret: "",
+    webhookId: "",
   })
 
   useEffect(() => {
@@ -129,6 +176,7 @@ export default function AdminApiPage() {
               setScalewayConfig({
                 accessKey: data.data.config.accessKey || "",
                 secretKey: data.data.config.secretKey || "",
+                projectId: data.data.config.projectId || "",
               })
               break
             case "resend":
@@ -136,6 +184,26 @@ export default function AdminApiPage() {
               break
             case "aws":
               setAwsConfig(data.data.config)
+              break
+            case "lago":
+              setLagoConfig({
+                apiUrl: data.data.config.apiUrl || "https://api.lago.com/api/v1",
+                apiKey: data.data.config.apiKey || "",
+              })
+              break
+            case "stripe":
+              setStripeConfig({
+                publicKey: data.data.config.publicKey || "",
+                secretKey: data.data.config.secretKey || "",
+                webhookSecret: data.data.config.webhookSecret || "",
+              })
+              break
+            case "paypal":
+              setPaypalConfig({
+                clientId: data.data.config.clientId || "",
+                clientSecret: data.data.config.clientSecret || "",
+                webhookId: data.data.config.webhookId || "",
+              })
               break
           }
         }
@@ -150,9 +218,12 @@ export default function AdminApiPage() {
   const resetForm = () => {
     setSelectedService(services[0].id)
     setEnvironment("production")
-    setScalewayConfig({ accessKey: "", secretKey: "" })
+    setScalewayConfig({ accessKey: "", secretKey: "", projectId: "" })
     setResendConfig({ apiKey: "", domain: "" })
     setAwsConfig({ accessKeyId: "", secretAccessKey: "", region: "eu-west-1", sessionToken: "" })
+    setLagoConfig({ apiUrl: "https://api.lago.com/api/v1", apiKey: "" })
+    setStripeConfig({ publicKey: "", secretKey: "", webhookSecret: "" })
+    setPaypalConfig({ clientId: "", clientSecret: "", webhookId: "" })
     setShowKey(false)
     setShowSecretKey(false)
     setModalTestResult(null)
@@ -168,12 +239,15 @@ export default function AdminApiPage() {
 
       switch (selectedService) {
         case "scaleway":
-          if (!scalewayConfig.accessKey || !scalewayConfig.secretKey) {
-            throw new Error("Please fill in Access Key and Secret Key")
+          // Pour TEM, seuls Secret Key et Project ID sont requis
+          // Access Key est optionnel (non utilisé par l'API TEM)
+          if (!scalewayConfig.secretKey || !scalewayConfig.projectId) {
+            throw new Error("Secret Key et Project ID sont requis")
           }
           config = {
-            accessKey: scalewayConfig.accessKey,
+            accessKey: scalewayConfig.accessKey || "", // Optionnel pour TEM
             secretKey: scalewayConfig.secretKey,
+            projectId: scalewayConfig.projectId,
           }
           metadata = {}
           break
@@ -189,6 +263,24 @@ export default function AdminApiPage() {
             throw new Error("Veuillez remplir tous les champs requis")
           }
           config = awsConfig
+          break
+        case "lago":
+          if (!lagoConfig.apiKey) {
+            throw new Error("Veuillez remplir la clé API")
+          }
+          config = lagoConfig
+          break
+        case "stripe":
+          if (!stripeConfig.secretKey || !stripeConfig.publicKey) {
+            throw new Error("Veuillez remplir les clés API")
+          }
+          config = stripeConfig
+          break
+        case "paypal":
+          if (!paypalConfig.clientId || !paypalConfig.clientSecret) {
+            throw new Error("Veuillez remplir les identifiants")
+          }
+          config = paypalConfig
           break
       }
 
@@ -240,12 +332,14 @@ export default function AdminApiPage() {
 
       switch (selectedService) {
         case "scaleway":
-          if (!scalewayConfig.accessKey || !scalewayConfig.secretKey) {
-            throw new Error("Access Key and Secret Key are required")
+          // Pour TEM, seuls Secret Key et Project ID sont requis
+          if (!scalewayConfig.secretKey || !scalewayConfig.projectId) {
+            throw new Error("Secret Key et Project ID sont requis")
           }
           config = {
-            accessKey: scalewayConfig.accessKey,
+            accessKey: scalewayConfig.accessKey || "", // Optionnel pour TEM
             secretKey: scalewayConfig.secretKey,
+            projectId: scalewayConfig.projectId,
           }
           metadata = {}
           break
@@ -261,6 +355,24 @@ export default function AdminApiPage() {
             throw new Error("Access Key ID and Secret Access Key are required")
           }
           config = awsConfig
+          break
+        case "lago":
+          if (!lagoConfig.apiKey) {
+            throw new Error("API Key is required")
+          }
+          config = lagoConfig
+          break
+        case "stripe":
+          if (!stripeConfig.secretKey || !stripeConfig.publicKey) {
+            throw new Error("Secret Key and Public Key are required")
+          }
+          config = stripeConfig
+          break
+        case "paypal":
+          if (!paypalConfig.clientId || !paypalConfig.clientSecret) {
+            throw new Error("Client ID and Client Secret are required")
+          }
+          config = paypalConfig
           break
       }
 
@@ -380,7 +492,41 @@ export default function AdminApiPage() {
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Access Key (ID de la clé) *</Label>
+              <Label>Secret Key (Clé secrète) *</Label>
+              <div className="relative">
+                <Input
+                  type={showSecretKey ? "text" : "password"}
+                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  value={scalewayConfig.secretKey}
+                  onChange={(e) => setScalewayConfig({ ...scalewayConfig, secretKey: e.target.value })}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecretKey(!showSecretKey)}
+                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                >
+                  {showSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                La clé secrète générée lors de la création de la clé API (visible une seule fois)
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Project ID *</Label>
+              <Input
+                type="text"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                value={scalewayConfig.projectId}
+                onChange={(e) => setScalewayConfig({ ...scalewayConfig, projectId: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Console Scaleway → Settings → Project Settings
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Access Key (optionnel)</Label>
               <div className="relative">
                 <Input
                   type={showKey ? "text" : "password"}
@@ -397,25 +543,9 @@ export default function AdminApiPage() {
                   {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Secret Key (Clé secrète) *</Label>
-              <div className="relative">
-                <Input
-                  type={showSecretKey ? "text" : "password"}
-                  placeholder="Secret Key"
-                  value={scalewayConfig.secretKey}
-                  onChange={(e) => setScalewayConfig({ ...scalewayConfig, secretKey: e.target.value })}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSecretKey(!showSecretKey)}
-                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                >
-                  {showSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                L'identifiant de la clé API (non requis pour TEM)
+              </p>
             </div>
           </div>
         )
@@ -522,6 +652,182 @@ export default function AdminApiPage() {
           </div>
         )
 
+      case "lago":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div className="space-y-0.5">
+                <Label className="text-base">Environment Mode</Label>
+                <p className="text-sm text-muted-foreground">
+                  {environment === "production" ? "Production Mode" : "Test / Sandbox Mode"}
+                </p>
+              </div>
+              <Switch
+                checked={environment === "production"}
+                onCheckedChange={(checked) => setEnvironment(checked ? "production" : "test")}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>API URL *</Label>
+              <Input
+                type="text"
+                placeholder="https://api.lago.com/api/v1"
+                value={lagoConfig.apiUrl}
+                onChange={(e) => setLagoConfig({ ...lagoConfig, apiUrl: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>API Key *</Label>
+              <div className="relative">
+                <Input
+                  type={showKey ? "text" : "password"}
+                  placeholder="sk_live_..."
+                  value={lagoConfig.apiKey}
+                  onChange={(e) => setLagoConfig({ ...lagoConfig, apiKey: e.target.value })}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                >
+                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Même en auto-hébergé, l'API Lago est sécurisée. Générez cette clé dans votre dashboard Lago (Developers {'>'} API Keys).
+                <br />
+                <a href="https://docs.getlago.com/guide/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                  Voir la documentation Lago
+                </a>
+              </p>
+            </div>
+          </div>
+        )
+
+      case "stripe":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div className="space-y-0.5">
+                <Label className="text-base">Environment Mode</Label>
+                <p className="text-sm text-muted-foreground">
+                  {environment === "production" ? "Production Mode" : "Test / Sandbox Mode"}
+                </p>
+              </div>
+              <Switch
+                checked={environment === "production"}
+                onCheckedChange={(checked) => setEnvironment(checked ? "production" : "test")}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Public Key *</Label>
+              <Input
+                type="text"
+                placeholder="pk_..."
+                value={stripeConfig.publicKey}
+                onChange={(e) => setStripeConfig({ ...stripeConfig, publicKey: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Secret Key *</Label>
+              <div className="relative">
+                <Input
+                  type={showSecretKey ? "text" : "password"}
+                  placeholder="sk_..."
+                  value={stripeConfig.secretKey}
+                  onChange={(e) => setStripeConfig({ ...stripeConfig, secretKey: e.target.value })}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecretKey(!showSecretKey)}
+                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                >
+                  {showSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Webhook Secret (Optional)</Label>
+              <div className="relative">
+                <Input
+                  type={showKey ? "text" : "password"}
+                  placeholder="whsec_..."
+                  value={stripeConfig.webhookSecret}
+                  onChange={(e) => setStripeConfig({ ...stripeConfig, webhookSecret: e.target.value })}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                >
+                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+
+      case "paypal":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div className="space-y-0.5">
+                <Label className="text-base">Environment Mode</Label>
+                <p className="text-sm text-muted-foreground">
+                  {environment === "production" ? "Production Mode" : "Sandbox Mode"}
+                </p>
+              </div>
+              <Switch
+                checked={environment === "production"}
+                onCheckedChange={(checked) => setEnvironment(checked ? "production" : "test")}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Client ID *</Label>
+              <Input
+                type="text"
+                placeholder="Client ID"
+                value={paypalConfig.clientId}
+                onChange={(e) => setPaypalConfig({ ...paypalConfig, clientId: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Client Secret *</Label>
+              <div className="relative">
+                <Input
+                  type={showSecretKey ? "text" : "password"}
+                  placeholder="Client Secret"
+                  value={paypalConfig.clientSecret}
+                  onChange={(e) => setPaypalConfig({ ...paypalConfig, clientSecret: e.target.value })}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecretKey(!showSecretKey)}
+                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                >
+                  {showSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Webhook ID (Optional)</Label>
+              <Input
+                type="text"
+                placeholder="Webhook ID"
+                value={paypalConfig.webhookId}
+                onChange={(e) => setPaypalConfig({ ...paypalConfig, webhookId: e.target.value })}
+              />
+            </div>
+          </div>
+        )
+
       default:
         return null
     }
@@ -570,16 +876,27 @@ export default function AdminApiPage() {
             <div className="space-y-3">
               {allConfigs.map((config) => {
                 const serviceInfo = getServiceInfo(config.serviceName)
+                const isPayment = serviceInfo?.type === 'payment'
+                
                 return (
                   <div
                     key={config.id}
-                    className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors"
+                    className={`flex items-center justify-between p-4 border rounded-lg transition-colors ${
+                      isPayment 
+                        ? 'bg-purple-50/50 border-purple-200 hover:bg-purple-50 shadow-sm' 
+                        : 'bg-card hover:bg-accent/50'
+                    }`}
                   >
                     <div className="flex items-center gap-4">
                       {serviceInfo && <ServiceIcon service={serviceInfo} size="lg" />}
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-lg">{serviceInfo?.name || config.serviceName}</span>
+                          {isPayment && (
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200">
+                              Payment Provider
+                            </Badge>
+                          )}
                           {config.isActive && (
                             <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                               <CheckCircle className="h-3 w-3 mr-1" />
@@ -667,16 +984,24 @@ export default function AdminApiPage() {
                 onValueChange={setSelectedService}
                 disabled={!!editingConfig}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-auto py-3 shadow-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {services.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
-                      <span className="flex items-center gap-2">
-                        <ServiceIcon service={service} />
-                        {service.name}
-                      </span>
+                    <SelectItem key={service.id} value={service.id} className="py-2 cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex items-center justify-center h-10 w-10 rounded-md shrink-0 ${service.type === 'payment' ? 'bg-purple-100 text-purple-600' : 'bg-muted'}`}>
+                           <ServiceIcon service={service} size="md" />
+                        </div>
+                        <div className="flex flex-col text-left">
+                          <span className="font-medium flex items-center gap-2">
+                            {service.name}
+                            {service.type === 'payment' && <Badge variant="secondary" className="text-[10px] h-4 px-1 bg-purple-100 text-purple-700">Payment</Badge>}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{service.description}</span>
+                        </div>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

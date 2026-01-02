@@ -64,6 +64,12 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const updates: Record<string, string> = {};
 
+    // Handle logo removal
+    const removeLogo = formData.get('removeLogo') as string;
+    if (removeLogo === 'true') {
+      updates['logo'] = '';
+    }
+
     // Handle logo upload
     const logoFile = formData.get('logo') as File;
     if (logoFile && logoFile.size > 0) {
@@ -94,11 +100,26 @@ export async function POST(request: NextRequest) {
     const siteName = formData.get('siteName') as string;
     if (siteName) updates['site_name'] = siteName;
 
+    const siteUrl = formData.get('siteUrl') as string;
+    if (siteUrl) updates['site_url'] = siteUrl;
+
+    const gdprContactName = formData.get('gdprContactName') as string;
+    if (gdprContactName) updates['gdpr_contact_name'] = gdprContactName;
+
+    const adminFooterCopyright = formData.get('adminFooterCopyright') as string;
+    if (adminFooterCopyright) updates['admin_footer_copyright'] = adminFooterCopyright;
+
+    const logoDisplayMode = formData.get('logoDisplayMode') as string;
+    if (logoDisplayMode) updates['logo_display_mode'] = logoDisplayMode;
+
     const authEnabled = formData.get('authEnabled');
     if (authEnabled !== null) updates['auth_enabled'] = authEnabled.toString();
 
     const maintenanceMode = formData.get('maintenanceMode');
     if (maintenanceMode !== null) updates['maintenance_mode'] = maintenanceMode.toString();
+
+    const defaultSenderEmail = formData.get('defaultSenderEmail') as string;
+    if (defaultSenderEmail) updates['default_sender_email'] = defaultSenderEmail;
 
     const customHeaderCode = formData.get('customHeaderCode');
     if (customHeaderCode !== null) updates['custom_header_code'] = customHeaderCode.toString();
@@ -106,8 +127,27 @@ export async function POST(request: NextRequest) {
     const customFooterCode = formData.get('customFooterCode');
     if (customFooterCode !== null) updates['custom_footer_code'] = customFooterCode.toString();
 
+    const customHttpHeaders = formData.get('customHttpHeaders');
+    if (customHttpHeaders !== null) {
+      // Validate JSON format
+      try {
+        if (customHttpHeaders.toString().trim()) {
+          JSON.parse(customHttpHeaders.toString());
+        }
+        updates['custom_http_headers'] = customHttpHeaders.toString();
+      } catch (error) {
+        return NextResponse.json(
+          { error: 'Invalid JSON format for HTTP headers' },
+          { status: 400 }
+        );
+      }
+    }
+
     const gtmCode = formData.get('gtmCode');
     if (gtmCode !== null) updates['gtm_code'] = gtmCode.toString();
+
+    const forceHttps = formData.get('forceHttps');
+    if (forceHttps !== null) updates['force_https'] = forceHttps.toString();
 
     let seoSettingsStr = formData.get('seoSettings') as string;
 
@@ -142,19 +182,40 @@ export async function POST(request: NextRequest) {
     const socialLinks = formData.get('socialLinks');
     if (socialLinks !== null) updates['social_links'] = socialLinks.toString();
 
+    const lagoPaypalEnabled = formData.get('lagoPaypalEnabled');
+    if (lagoPaypalEnabled !== null) updates['lago_paypal_enabled'] = lagoPaypalEnabled.toString();
+
+    const lagoStripeEnabled = formData.get('lagoStripeEnabled');
+    if (lagoStripeEnabled !== null) updates['lago_stripe_enabled'] = lagoStripeEnabled.toString();
+
+    const lagoApiKey = formData.get('lagoApiKey') as string;
+    if (lagoApiKey !== null) updates['lago_api_key'] = lagoApiKey;
+
+    const lagoApiKeyTest = formData.get('lagoApiKeyTest') as string;
+    if (lagoApiKeyTest !== null) updates['lago_api_key_test'] = lagoApiKeyTest;
+
+    const lagoApiUrl = formData.get('lagoApiUrl') as string;
+    if (lagoApiUrl !== null) updates['lago_api_url'] = lagoApiUrl;
+
+    const lagoMode = formData.get('lagoMode') as string;
+    if (lagoMode !== null) updates['lago_mode'] = lagoMode;
+
     // Save updates
     for (const [key, value] of Object.entries(updates)) {
+      // Ensure value is a string, even if it's empty
+      const safeValue = value === null || value === undefined ? '' : String(value);
+      
       await db
         .insert(platformConfig)
         .values({
           key,
-          value,
+          value: safeValue,
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
           target: platformConfig.key,
           set: {
-            value,
+            value: safeValue,
             updatedAt: new Date(),
           },
         });

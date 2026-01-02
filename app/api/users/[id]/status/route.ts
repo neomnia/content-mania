@@ -76,13 +76,8 @@ export async function PATCH(
       );
     }
 
-    // Prevent deactivating company owners
-    if (!isActive && targetUser.isOwner) {
-      return NextResponse.json(
-        { error: 'Cannot deactivate company owner' },
-        { status: 400 }
-      );
-    }
+    // Note: Company owner protection removed as isOwner field doesn't exist
+    // Super admins can manage all users through the admin panel
 
     // Prevent users from deactivating themselves
     if (targetUser.id === currentUser.userId) {

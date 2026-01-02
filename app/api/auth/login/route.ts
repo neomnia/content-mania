@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, validateDatabaseUrl } from '@/db';
 import { users, userRoles, roles, rolePermissions, permissions } from '@/db/schema';
 import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { logSystemEvent } from '@/app/actions/logs';
 
 export async function POST(request: NextRequest) {
@@ -19,21 +19,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by email
+    // Find user by email or username
     const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
+      where: or(eq(users.email, email), eq(users.username, email)),
     });
 
     if (!user) {
       await logSystemEvent({
         category: 'auth',
         level: 'warning',
-        message: `Failed login attempt for email: ${email} (User not found)`,
-        metadata: { email, ip: request.headers.get('x-forwarded-for') || 'unknown' }
+        message: `Failed login attempt for identifier: ${email} (User not found)`,
+        metadata: { identifier: email, ip: request.headers.get('x-forwarded-for') || 'unknown' }
       });
 
       return NextResponse.json(
-        { error: 'Email not found' },
+        { error: 'Invalid credentials' },
         { status: 401 }
       );
     }

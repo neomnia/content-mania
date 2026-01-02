@@ -92,15 +92,21 @@ email_provider_configs       ← DEPRECATED (legacy)
 #### Via l'interface admin (recommandé)
 
 1. Accédez à `/admin/api`
-2. Sélectionnez "Scaleway"
+2. Cliquez sur **Add API** ou sélectionnez "Scaleway"
 3. Environnement : "Production"
-4. Remplissez les champs :
-   - **Access Key** : Votre clé d'accès Scaleway
-   - **Secret Key** : Votre token API pour TEM
-   - **Project ID** : Votre ID de projet Scaleway
-   - **Region** : `fr-par` (dans metadata)
-5. Cochez "Active" et "Default"
-6. Cliquez sur "Save Configuration"
+4. Remplissez les **2 champs obligatoires** :
+
+| Champ | Requis | Où le trouver |
+|-------|--------|---------------|
+| **Secret Key** | ✅ Oui | IAM → API Keys (visible uniquement à la création) |
+| **Project ID** | ✅ Oui | Console Scaleway → Settings → Project Settings |
+| **Access Key** | ❌ Non | Non utilisé par l'API TEM |
+
+5. Cliquez sur **Vérifier la clé** pour tester la connexion TEM
+6. Cochez "Active" et "Default"
+7. Cliquez sur "Save Configuration"
+
+> 💡 **Note** : L'Access Key n'est pas requis pour TEM. Seuls la Secret Key et le Project ID sont nécessaires.
 
 #### Via l'API
 
@@ -113,7 +119,6 @@ curl -X POST http://localhost:3000/api/services/scaleway \
     "isActive": true,
     "isDefault": true,
     "config": {
-      "accessKey": "SCW...",
       "secretKey": "your-secret-key",
       "projectId": "your-project-id"
     },
@@ -123,7 +128,17 @@ curl -X POST http://localhost:3000/api/services/scaleway \
   }'
 ```
 
-### 2. Vérifier la configuration
+### 2. Configurer l'expéditeur par défaut
+
+Pour éviter les rejets d'emails, il est crucial de définir une adresse d'expédition par défaut qui correspond à un domaine vérifié dans Scaleway TEM.
+
+1. Accédez à `/admin/config` (Configuration Générale)
+2. Dans la section "Email Settings", remplissez le champ **Default Sender Email**
+3. Exemple : `no-reply@neosaas.tech`
+
+Cette adresse sera utilisée si aucun expéditeur n'est défini spécifiquement dans le template d'email.
+
+### 3. Vérifier la configuration
 
 ```bash
 npm run check:email-config
@@ -341,13 +356,24 @@ npm run check:email-config
 # 2. Si absente, configurer via /admin/api
 ```
 
+### Erreur : "Scaleway TEM requires projectId and secretKey"
+
+**Cause** : Le Project ID est manquant dans la configuration
+
+**Solution** :
+1. Accédez à `/admin/api`
+2. Modifiez la configuration Scaleway
+3. Ajoutez votre **Project ID** (trouvable dans Console Scaleway → Settings → Project Settings)
+4. Sauvegardez
+
 ### Erreur : "Scaleway API error: 401"
 
 **Cause** : Token API invalide ou expiré
 
 **Solution** :
 1. Vérifiez votre token dans la console Scaleway
-2. Mettez à jour via `/admin/api`
+2. Vérifiez que le Project ID correspond au projet de la clé API
+3. Mettez à jour via `/admin/api`
 
 ### Erreur : "Domain not verified"
 

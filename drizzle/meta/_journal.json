@@ -8,6 +8,20 @@
       "when": 1763989616686,
       "tag": "0000_abnormal_shadow_king",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1765310820960,
+      "tag": "0001_premium_zzzax",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765313699073,
+      "tag": "0002_chubby_red_ghost",
+      "breakpoints": true
     }
   ]
 }

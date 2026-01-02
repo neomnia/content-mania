@@ -4,6 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Info, AlertTriangle, ArrowLeft, ArrowRight, Copy } from "lucide-react"
 
+export const metadata = {
+  title: "Installation",
+  description: "Learn how to install and set up NeoSaaS for your project. Step-by-step installation guide with prerequisites and configuration.",
+  keywords: ["installation", "setup", "configure", "deploy", "getting started"],
+}
+
 export default function InstallationPage() {
   return (
     <div className="space-y-6">
@@ -116,7 +122,7 @@ export default function InstallationPage() {
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            This will install Next.js 16, Tailwind CSS, Prisma, and all other dependencies defined in package.json.
+            This will install Next.js 16, Tailwind CSS, Drizzle ORM, and all other dependencies defined in package.json.
           </p>
         </div>
 
@@ -139,7 +145,7 @@ export default function InstallationPage() {
               <Copy className="h-4 w-4" />
             </Button>
           </div>
-          <p>Add your PostgreSQL database URL (from Neon or local PostgreSQL):</p>
+          <p>Configurez vos variables d'environnement, notamment la DATABASE_URL (depuis Neon, Scaleway ou PostgreSQL local) :</p>
           <div className="relative">
             <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm font-mono">
               <code>DATABASE_URL="postgresql://username:password@localhost:5432/neosaas"</code>
@@ -153,116 +159,78 @@ export default function InstallationPage() {
               <Copy className="h-4 w-4" />
             </Button>
           </div>
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>Configuration automatique</AlertTitle>
+            <AlertDescription>
+              Une fois vos variables d'environnement configurées, le processus de déploiement s'occupe automatiquement de 
+              l'installation et de la configuration de la base de données. Aucune manipulation manuelle n'est nécessaire !
+            </AlertDescription>
+          </Alert>
         </div>
 
         <div className="space-y-4">
-          <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight">Step 4: Set Up Prisma Database</h2>
-          <p>NeoSaaS uses Prisma as the ORM. Follow these steps to set up your database:</p>
+          <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight">Step 4: Déployez votre application</h2>
+          <p>Une fois vos variables d'environnement configurées, déployez simplement votre application. Le système s'occupe de tout :</p>
+          
+          <ul className="list-disc pl-6 space-y-2 text-sm text-muted-foreground">
+            <li>Installation automatique de la base de données</li>
+            <li>Création des tables et schémas nécessaires</li>
+            <li>Configuration de l'environnement de production</li>
+          </ul>
 
-          <div className="space-y-3">
-            <h3 className="text-lg font-semibold">4.1. Generate Prisma Client</h3>
-            <p className="text-sm text-muted-foreground">Generate the Prisma Client based on your schema:</p>
-            <div className="relative">
-              <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm font-mono">
-                <code>npx prisma generate</code>
-              </pre>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-2 h-8 w-8 text-muted-foreground hover:text-foreground"
-                aria-label="Copy code"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="text-lg font-semibold">4.2. Run Database Migrations</h3>
-            <p className="text-sm text-muted-foreground">Push the database schema to your database (creates tables):</p>
-            <div className="relative">
-              <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm font-mono">
-                <code>npx prisma db push</code>
-              </pre>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-2 h-8 w-8 text-muted-foreground hover:text-foreground"
-                aria-label="Copy code"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground">Or run migrations for production:</p>
-            <div className="relative">
-              <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm font-mono">
-                <code>npx prisma migrate deploy</code>
-              </pre>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-2 h-8 w-8 text-muted-foreground hover:text-foreground"
-                aria-label="Copy code"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="text-lg font-semibold">4.3. (Optional) Seed the Database</h3>
-            <p className="text-sm text-muted-foreground">If you want to populate your database with sample data:</p>
-            <div className="relative">
-              <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm font-mono">
-                <code>npx prisma db seed</code>
-              </pre>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-2 h-8 w-8 text-muted-foreground hover:text-foreground"
-                aria-label="Copy code"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="text-lg font-semibold">4.4. Open Prisma Studio (Optional)</h3>
-            <p className="text-sm text-muted-foreground">
-              Prisma Studio provides a visual interface to view and edit your database:
-            </p>
-            <div className="relative">
-              <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm font-mono">
-                <code>npx prisma studio</code>
-              </pre>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-2 h-8 w-8 text-muted-foreground hover:text-foreground"
-                aria-label="Copy code"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              This will open Prisma Studio at <code className="bg-muted px-2 py-1 rounded">http://localhost:5555</code>
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground mt-4">
+            Le site sera accessible dès que le déploiement sera terminé. Aucune commande de migration manuelle n'est requise !
+          </p>
         </div>
 
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Important: Database URL</AlertTitle>
-          <AlertDescription>
-            Make sure your <code>DATABASE_URL</code> in the <code>.env</code> file is correctly configured before
-            running Prisma commands. The URL should include your database credentials and connection string.
-          </AlertDescription>
-        </Alert>
+        <div className="space-y-4">
+          <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight">Step 5: Créez votre premier utilisateur administrateur</h2>
+          <p>Lors de votre première connexion, utilisez les identifiants par défaut :</p>
+          
+          <div className="bg-muted p-4 rounded-lg space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Email :</span>
+              <code className="bg-background px-2 py-1 rounded">admin@exemple.com</code>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Mot de passe :</span>
+              <code className="bg-background px-2 py-1 rounded">admin</code>
+            </div>
+          </div>
+
+          <Alert variant="destructive" className="mt-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Important : Sécurité</AlertTitle>
+            <AlertDescription>
+              Pour des raisons de sécurité, pensez à modifier ces identifiants par défaut dès votre première connexion !
+            </AlertDescription>
+          </Alert>
+        </div>
 
         <div className="space-y-4">
-          <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight">Step 5: Start the Development Server</h2>
-          <p>Once everything is configured, start the Next.js development server:</p>
+          <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight">Step 6: Accédez au Dashboard</h2>
+          <p>
+            Une fois connecté avec vos identifiants administrateur, vous pouvez accéder au dashboard pour développer 
+            et gérer les services de votre projet :
+          </p>
+          
+          <ul className="list-disc pl-6 space-y-2 text-sm text-muted-foreground">
+            <li>Gestion des utilisateurs et des rôles</li>
+            <li>Configuration des services et intégrations</li>
+            <li>Tableau de bord analytique</li>
+            <li>Gestion du contenu et des produits</li>
+            <li>Configuration des paiements et abonnements</li>
+          </ul>
+
+          <p className="text-sm text-muted-foreground mt-4">
+            Le dashboard est votre interface centrale pour développer et gérer tous les aspects de votre application SaaS.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight">Step 7: Développement local (optionnel)</h2>
+          <p>Pour le développement en local, démarrez le serveur de développement Next.js :</p>
           <div className="relative">
             <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm font-mono">
               <code>npm run dev</code>
@@ -277,24 +245,26 @@ export default function InstallationPage() {
             </Button>
           </div>
           <p>
-            Your application will be available at{" "}
+            Votre application sera disponible à l'adresse{" "}
             <code className="bg-muted px-2 py-1 rounded">http://localhost:3000</code>
           </p>
           <p className="text-sm text-muted-foreground">
-            Access the admin dashboard example at{" "}
-            <code className="bg-muted px-2 py-1 rounded">http://localhost:3000/dashboard-exemple</code>
+            Accédez au dashboard administrateur à{" "}
+            <code className="bg-muted px-2 py-1 rounded">http://localhost:3000/dashboard</code>
           </p>
         </div>
 
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertTitle>Next Steps</AlertTitle>
+          <AlertTitle>Prochaines étapes</AlertTitle>
           <AlertDescription>
-            Congratulations! Your NeoSaaS installation is complete. Check out the{" "}
+            Félicitations ! Votre installation NeoSaaS est terminée. Une fois connecté avec vos identifiants 
+            administrateur (<strong>admin@exemple.com</strong> / <strong>admin</strong>), vous pouvez commencer 
+            à développer les services de votre projet directement depuis le dashboard. Consultez la{" "}
             <Link href="/docs/architecture" className="text-[#CD7F32] hover:underline">
-              Architecture documentation
+              documentation d'architecture
             </Link>{" "}
-            to understand how the application is structured.
+            pour comprendre la structure de l'application.
           </AlertDescription>
         </Alert>
 

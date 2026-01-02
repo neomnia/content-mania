@@ -66,16 +66,14 @@ export default function RegisterPage() {
         return
       }
 
+      // Show success message - user needs to verify email before logging in
       toast.success("Account created successfully!", {
-        description: "Welcome! You can now complete your profile and company information.",
+        description: "Please check your email to verify your account before logging in.",
+        duration: 10000, // Show for 10 seconds
       })
 
-      const redirectUrl = searchParams.get("redirect")
-      if (redirectUrl) {
-        router.push(redirectUrl)
-      } else {
-        router.push("/dashboard")
-      }
+      // Redirect to login page with success message
+      router.push("/auth/login?registered=true")
     } catch (error) {
       toast.error("An error occurred during registration")
       console.error("Registration error:", error)

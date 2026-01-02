@@ -18,6 +18,11 @@
     "seed:pages": "tsx scripts/sync-pages.ts",
     "check:email-config": "tsx scripts/check-email-config.ts"
   },
+  "pnpm": {
+    "overrides": {
+      "react-native": "npm:empty-npm-package@1.0.0"
+    }
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
     "@neondatabase/serverless": "latest",
@@ -65,6 +70,7 @@
     "input-otp": "latest",
     "jose": "latest",
     "jsonwebtoken": "latest",
+    "lago-javascript-client": "^1.36.0",
     "lucide-react": "^0.454.0",
     "next": "latest",
     "next-themes": "latest",
@@ -72,6 +78,7 @@
     "react": "^19",
     "react-day-picker": "latest",
     "react-dom": "^19",
+    "react-easy-crop": "^5.5.6",
     "react-hook-form": "latest",
     "react-resizable-panels": "latest",
     "recharts": "latest",

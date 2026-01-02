@@ -2,6 +2,7 @@ import type React from "react"
 import { requireAdmin } from "@/lib/auth/server"
 import { redirect } from "next/navigation"
 import { AdminClientGuard } from "./admin-client-guard"
+import { AdminAlerts } from "@/components/admin/admin-alerts"
 
 /**
  * Admin Layout - Dual Protection (Server + Client)
@@ -26,7 +27,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     console.log("[ADMIN LAYOUT] ==========================================")
 
     // CLIENT-SIDE: Additional protection layer
-    return <AdminClientGuard>{children}</AdminClientGuard>
+    return (
+      <AdminClientGuard>
+        {children}
+      </AdminClientGuard>
+    )
   } catch (error) {
     console.log("[ADMIN LAYOUT] ❌ SERVER-SIDE: Admin access DENIED - Exception caught:", error)
     console.log("[ADMIN LAYOUT] Redirecting to /dashboard...")

@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth"
 import { getPlatformConfig } from "@/lib/config"
 import { PlatformConfigProvider } from "@/contexts/platform-config-context"
 import { isAdmin } from "@/lib/auth/server"
+import { CookieConsent } from "@/components/legal/cookie-consent"
 
 // Force dynamic rendering to ensure maintenance mode check runs on every request
 export const dynamic = 'force-dynamic'
@@ -32,6 +33,13 @@ export default async function PublicLayout({
         <SiteHeader user={user} />
         <main className="flex-1">{children}</main>
         <SiteFooter />
+        <CookieConsent 
+          logo={platformConfig.showCookieLogo ? platformConfig.logo : null} 
+          enabled={platformConfig.cookieConsentEnabled}
+          message={platformConfig.cookieConsentMessage}
+          siteName={platformConfig.siteName}
+          position={platformConfig.cookiePosition}
+        />
       </div>
     </PlatformConfigProvider>
   )

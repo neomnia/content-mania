@@ -10,33 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { CheckCircle2, CreditCard, Lock, Mail, ArrowLeft, Calendar } from "lucide-react"
+import { CheckCircle2, CreditCard, Lock, Mail, ArrowLeft, Calendar, ShoppingBag, ArrowRight, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
-
-const modules = [
-  {
-    id: "1",
-    name: "Payment Module",
-    price: 299,
-    icon: CreditCard,
-    deliveryTime: "48 hours",
-  },
-  {
-    id: "2",
-    name: "Authentication Module",
-    price: 399,
-    icon: Lock,
-    deliveryTime: "48 hours",
-  },
-  {
-    id: "3",
-    name: "Emailing Module",
-    price: 249,
-    icon: Mail,
-    deliveryTime: "48 hours",
-  },
-]
+import { getProductById, getCart, processCheckout, addToCart } from "@/app/actions/ecommerce"
+import { getPaymentMethods, getCustomerPortalUrl } from "@/app/actions/payments"
 
 const plans = [
   {
@@ -73,48 +51,100 @@ const plans = [
 export default function CheckoutPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [selectedModule, setSelectedModule] = useState<(typeof modules)[0] | null>(null)
-  const [selectedPlan, setSelectedPlan] = useState<(typeof plans)[0] | null>(null)
+  const [cartItems, setCartItems] = useState<any[]>([])
+  const [upsellProduct, setUpsellProduct] = useState<any | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
-
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    company: "",
-    phone: "",
-  })
+  const [loading, setLoading] = useState(true)
+  const [cartId, setCartId] = useState<string | null>(null)
+  const [selectedMethod, setSelectedMethod] = useState<"card" | "paypal">("card")
+  const [userInfo, setUserInfo] = useState<{
+    name: string
+    email: string
+    company?: string
+  } | null>(null)
 
   useEffect(() => {
     const moduleId = searchParams.get("module")
     const planId = searchParams.get("plan")
 
-    if (moduleId) {
-      const module = modules.find((m) => m.id === moduleId)
-      if (module) {
-        setSelectedModule(module)
-      } else {
-        router.push("/dashboard")
+    const loadData = async () => {
+      try {
+        // If module ID is present, add it to cart first
+        if (moduleId) {
+          const addResult = await addToCart(moduleId)
+          if (!addResult.success) {
+            toast.error("Failed to add item to cart")
+          }
+          // Continue to load cart...
+        }
+
+        if (planId) {
+          const plan = plans.find((p) => p.id === planId)
+          if (plan) {
+            setCartItems([{
+              ...plan,
+              icon: Calendar,
+              quantity: 1,
+              currency: "EUR"
+            }])
+          }
+        } else {
+          // Load from server cart (for both normal cart access AND after adding module)
+          const result = await getCart()
+          if (result.success && result.data && result.data.items.length > 0) {
+            setCartId(result.data.id)
+            const items = result.data.items.map((item: any) => ({
+              id: item.product.id,
+              name: item.product.title,
+              price: item.product.price / 100,
+              icon: ShoppingBag,
+              deliveryTime: "Instant Access",
+              description: item.product.description,
+              quantity: item.quantity,
+              currency: item.product.currency
+            }))
+            setCartItems(items)
+
+            // Check for upsell
+            const itemWithUpsell = result.data.items.find((item: any) => item.product.upsellProduct)
+            if (itemWithUpsell) {
+              const upsell = itemWithUpsell.product.upsellProduct
+              // Only show if not already in cart
+              if (!items.find((i: any) => i.id === upsell.id)) {
+                setUpsellProduct({
+                  id: upsell.id,
+                  name: upsell.title,
+                  price: upsell.price / 100,
+                  description: upsell.description,
+                  currency: upsell.currency
+                })
+              }
+            }
+          } else {
+            // Empty cart - don't redirect immediately, let user see the checkout page
+            console.log('[Checkout] Cart is empty, but staying on page')
+            // User can navigate back or add items
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load checkout data", error)
+        toast.error("Failed to load checkout details")
+      } finally {
+        setLoading(false)
       }
-    } else if (planId) {
-      const plan = plans.find((p) => p.id === planId)
-      if (plan) {
-        setSelectedPlan(plan)
-      } else {
-        router.push("/dashboard")
-      }
-    } else {
-      router.push("/dashboard")
     }
 
+    loadData()
+
+    // Charger les informations utilisateur depuis localStorage
     const profileData = localStorage.getItem("userProfile")
     if (profileData) {
       try {
         const profile = JSON.parse(profileData)
-        setFormData({
+        setUserInfo({
           name: `${profile.firstName || ""} ${profile.lastName || ""}`.trim(),
           email: profile.email || "",
-          company: profile.company || "",
-          phone: profile.phone || "",
+          company: profile.company || undefined,
         })
       } catch (error) {
         console.error("Failed to parse profile data:", error)
@@ -122,195 +152,310 @@ export default function CheckoutPage() {
     }
   }, [searchParams, router])
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Plus nécessaire - les infos user sont chargées automatiquement
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsProcessing(true)
 
-    // Simulate payment processing
-    setTimeout(() => {
-      toast.success("Order placed successfully! Redirecting to booking...")
-      // Redirect to booking after successful payment
-      window.location.href = "https://outlook.office365.com/book/neosaas@neomnia.net/?ismsaljsauthenabled=true"
-    }, 2000)
+    try {
+      if (!cartId) {
+        toast.warning("Pas de panier actif. Redirection vers le panier...")
+        router.push("/dashboard/cart")
+        setIsProcessing(false)
+        return
+      }
+
+      console.log('[Checkout] Processing order...', { cartId })
+      const result = await processCheckout(cartId)
+      
+      if (result.success) {
+        toast.success("Commande traitée avec succès !")
+        console.log('[Checkout] ✅ Order completed successfully')
+        // Rediriger vers le panier pour voir la confirmation
+        router.push("/dashboard/cart")
+      } else {
+        console.error('[Checkout] ❌ Checkout failed:', result.error)
+        toast.error(result.error || "Erreur lors du checkout")
+        // Ne pas bloquer l'utilisateur, le laisser sur la page
+      }
+    } catch (error) {
+      console.error("Checkout error:", error)
+      toast.error("Une erreur est survenue. Veuillez réessayer.")
+      // Ne pas bloquer l'utilisateur
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
-  const selectedItem = selectedModule || selectedPlan
-  if (!selectedItem) {
-    return null
+  const handleAddUpsell = async () => {
+    if (!upsellProduct) return
+    
+    try {
+      const result = await addToCart(upsellProduct.id)
+      if (result.success) {
+        toast.success("Upsell added to cart")
+        // Reload page to refresh cart
+        window.location.reload()
+      } else {
+        toast.error("Failed to add upsell")
+      }
+    } catch (error) {
+      toast.error("Failed to add upsell")
+    }
   }
 
-  const Icon = selectedModule?.icon
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-[#CD7F32]" />
+      </div>
+    )
+  }
+
+  // Afficher un message si le panier est vide au lieu de bloquer
+  if (cartItems.length === 0) {
+    return (
+      <div className="container max-w-6xl py-10">
+        <Link href="/dashboard" className="flex items-center text-muted-foreground hover:text-foreground mb-6">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour au Dashboard
+        </Link>
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingBag className="h-6 w-6" />
+              Panier vide
+            </CardTitle>
+            <CardDescription>
+              Votre panier est actuellement vide. Ajoutez des produits pour continuer.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-3">
+              <Link href="/store" className="flex-1">
+                <Button className="w-full">
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Parcourir la boutique
+                </Button>
+              </Link>
+              <Link href="/dashboard/cart" className="flex-1">
+                <Button variant="outline" className="w-full">
+                  Voir le panier
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0)
+  const tax = subtotal * 0.2
+  const total = subtotal + tax
+  const currencySymbol = cartItems.length > 0 && cartItems[0].currency === 'USD' ? '$' : '€'
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+    <div className="container max-w-6xl py-10">
+      <div className="flex items-center justify-between mb-6">
+        <Link href="/dashboard" className="flex items-center text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour au Dashboard
+        </Link>
+        <Link href="/dashboard/cart">
+          <Button variant="outline" size="sm">
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Voir le panier
           </Button>
         </Link>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid gap-8 lg:grid-cols-3">
         {/* Order Summary */}
-        <Card className="border-[#CD7F32]">
-          <CardHeader>
-            <CardTitle className="text-[#1A1A1A] dark:text-white">Order Summary</CardTitle>
-            <CardDescription className="text-[#6B7280]">
-              Review your {selectedModule ? "module" : "plan"} selection
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-start gap-4 p-4 rounded-lg bg-[#F5F5F5] dark:bg-[#1A1A1A]/50">
-              {Icon && (
-                <div className="p-3 rounded-lg bg-[#CD7F32]">
-                  <Icon className="h-6 w-6 text-white" />
+        <div className="lg:col-span-1 order-2 lg:order-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {cartItems.map((item, index) => (
+                <div key={`${item.id}-${index}`} className="flex items-start space-x-4 mb-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <item.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{item.name}</h3>
+                    <p className="text-sm text-muted-foreground">{item.deliveryTime}</p>
+                    <div className="flex justify-between mt-1">
+                      <span className="text-sm text-muted-foreground">Qty: {item.quantity}</span>
+                      <span className="font-medium">{currencySymbol}{item.price * item.quantity}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {upsellProduct && (
+                <div className="mt-4 p-4 border border-dashed border-primary/50 rounded-lg bg-primary/5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="font-semibold text-sm text-primary">Special Offer!</h4>
+                      <p className="text-sm font-medium mt-1">{upsellProduct.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{upsellProduct.description}</p>
+                      <p className="text-sm font-bold mt-2">{currencySymbol}{upsellProduct.price}</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={handleAddUpsell} className="ml-2">
+                      Add
+                    </Button>
+                  </div>
                 </div>
               )}
-              <div className="flex-1">
-                <h3 className="font-semibold text-[#1A1A1A] dark:text-white">{selectedItem.name}</h3>
-                {selectedPlan && <p className="text-sm text-[#6B7280] mt-1">{selectedPlan.description}</p>}
-                <Badge className="mt-2 bg-[#CD7F32] text-white border-0">
-                  {selectedModule ? `Delivery: ${selectedModule.deliveryTime}` : selectedPlan?.deliveryTime}
-                </Badge>
-              </div>
-            </div>
 
-            <Separator />
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#6B7280]">
-                  {selectedModule ? "Module Price" : selectedPlan?.isHourly ? "Hourly Rate" : "Plan Price"}
-                </span>
-                <span className="font-medium text-[#1A1A1A] dark:text-white">
-                  €{selectedItem.price}
-                  {selectedPlan?.isHourly ? "/hour" : ""}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#6B7280]">Setup & Configuration</span>
-                <span className="font-medium text-[#CD7F32]">Included</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#6B7280]">Technical Support (30 days)</span>
-                <span className="font-medium text-[#CD7F32]">Included</span>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between text-lg font-bold">
-              <span className="text-[#1A1A1A] dark:text-white">Total</span>
-              <span className="text-[#CD7F32]">€{selectedItem.price}</span>
-            </div>
-
-            <div className="space-y-2 pt-4">
-              <div className="flex items-start gap-2 text-sm text-[#6B7280]">
-                <CheckCircle2 className="h-4 w-4 text-[#CD7F32] mt-0.5 flex-shrink-0" />
-                <span>Module delivered within 48 hours</span>
-              </div>
-              <div className="flex items-start gap-2 text-sm text-[#6B7280]">
-                <CheckCircle2 className="h-4 w-4 text-[#CD7F32] mt-0.5 flex-shrink-0" />
-                <span>Free technical consultation included</span>
-              </div>
-              <div className="flex items-start gap-2 text-sm text-[#6B7280]">
-                <CheckCircle2 className="h-4 w-4 text-[#CD7F32] mt-0.5 flex-shrink-0" />
-                <span>30-day support guarantee</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Payment Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-[#1A1A1A] dark:text-white">Contact Information</CardTitle>
-            <CardDescription className="text-[#6B7280]">We'll contact you to schedule module delivery</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-[#1A1A1A] dark:text-white">
-                  Full Name *
-                </Label>
-                <Input
-                  id="name"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="John Doe"
-                  className="border-[#F5F5F5]"
-                />
-              </div>
+              <Separator />
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-[#1A1A1A] dark:text-white">
-                  Email Address *
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="john@company.com"
-                  className="border-[#F5F5F5]"
-                />
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{currencySymbol}{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tax (20%)</span>
+                  <span>{currencySymbol}{tax.toFixed(2)}</span>
+                </div>
+                <Separator className="my-2" />
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total</span>
+                  <span>{currencySymbol}{total.toFixed(2)}</span>
+                </div>
               </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="company" className="text-[#1A1A1A] dark:text-white">
-                  Company
-                </Label>
-                <Input
-                  id="company"
-                  value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  placeholder="Your Company Inc."
-                  className="border-[#F5F5F5]"
-                />
-              </div>
+        {/* Checkout Form */}
+        <div className="lg:col-span-2 order-1 lg:order-2">
+          {/* Billing Information */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Mail className="mr-2 h-5 w-5" />
+                Informations de facturation
+              </CardTitle>
+              <CardDescription>
+                Ces informations seront utilisées pour votre facture
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {userInfo ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-sm text-muted-foreground">Nom</span>
+                    <span className="font-medium">{userInfo.name}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-sm text-muted-foreground">Email</span>
+                    <span className="font-medium">{userInfo.email}</span>
+                  </div>
+                  {userInfo.company && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="text-sm text-muted-foreground">Entreprise</span>
+                      <span className="font-medium">{userInfo.company}</span>
+                    </div>
+                  )}
+                  <div className="mt-4">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/dashboard/settings">
+                        Modifier mes informations
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground text-sm">Chargement des informations...</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-[#1A1A1A] dark:text-white">
-                  Phone Number
-                </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+33 1 23 45 67 89"
-                  className="border-[#F5F5F5]"
-                />
-              </div>
+          {/* Payment Method */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Méthode de paiement</CardTitle>
+              <CardDescription>Sélectionnez votre mode de paiement sécurisé</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="font-semibold flex items-center">
+                    <Lock className="mr-2 h-4 w-4" />
+                    Mode de paiement
+                  </h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div 
+                      className={`cursor-pointer border rounded-lg p-4 flex items-center space-x-4 transition-all ${selectedMethod === 'card' ? 'border-[#CD7F32] bg-[#CD7F32]/5 ring-1 ring-[#CD7F32]' : 'border-border hover:border-[#CD7F32]/50'}`}
+                      onClick={() => setSelectedMethod('card')}
+                    >
+                      <CreditCard className={`h-6 w-6 ${selectedMethod === 'card' ? 'text-[#CD7F32]' : 'text-muted-foreground'}`} />
+                      <div>
+                        <p className="font-medium">Carte Bancaire</p>
+                        <p className="text-xs text-muted-foreground">Paiement sécurisé via Lago</p>
+                      </div>
+                    </div>
+                    
+                    <div 
+                      className={`cursor-pointer border rounded-lg p-4 flex items-center space-x-4 transition-all ${selectedMethod === 'paypal' ? 'border-[#CD7F32] bg-[#CD7F32]/5 ring-1 ring-[#CD7F32]' : 'border-border hover:border-[#CD7F32]/50'}`}
+                      onClick={() => setSelectedMethod('paypal')}
+                    >
+                      <svg className={`h-6 w-6 ${selectedMethod === 'paypal' ? 'text-[#003087]' : 'text-muted-foreground'}`} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.946 5.438-3.158 7.12-6.594 7.12H10.5l-.962 6.032a.64.64 0 0 1-.632.537l-1.83.002v.002z" />
+                      </svg>
+                      <div>
+                        <p className="font-medium">PayPal</p>
+                        <p className="text-xs text-muted-foreground">Compte PayPal</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-              <Separator className="my-6" />
+                <Separator />
 
-              <Button
-                type="submit"
-                className="w-full bg-[#CD7F32] hover:bg-[#B86F28] text-white"
-                disabled={isProcessing}
-                size="lg"
-              >
-                {isProcessing ? (
-                  "Processing..."
-                ) : (
-                  <>
-                    <Calendar className="mr-2 h-5 w-5" />
-                    Proceed to Booking
-                  </>
-                )}
-              </Button>
+                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Lock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                    <div className="text-sm">
+                      <p className="font-medium mb-1">Paiement 100% sécurisé</p>
+                      <p className="text-muted-foreground text-xs">
+                        Vos données de paiement sont cryptées et sécurisées via Lago. 
+                        Nous ne stockons aucune information bancaire.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-              <p className="text-xs text-center text-[#6B7280] mt-4">
-                After submitting, you'll be redirected to our booking system to schedule your delivery consultation.
-              </p>
-            </form>
-          </CardContent>
-        </Card>
+                <Button type="submit" className="w-full" size="lg" disabled={isProcessing}>
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Traitement en cours...
+                    </>
+                  ) : (
+                    <>
+                      Payer {currencySymbol}{total.toFixed(2)}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+
+                <p className="text-xs text-center text-muted-foreground">
+                  En cliquant sur "Payer", vous acceptez nos conditions générales de vente
+                </p>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

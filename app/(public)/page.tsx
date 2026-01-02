@@ -10,26 +10,16 @@ import { MobileMenu } from "@/components/layout/mobile-menu"
 import { BrandIcon } from "@/components/features/brand/brand-icon"
 import { NeoSaasArchitectureDiagram } from "@/components/features/brand/neosaas-architecture-diagram"
 
+export const metadata = {
+  title: "Home",
+  description: "NeoSaaS provides all the tools you need to build, launch, and scale your SaaS business. User management, billing, analytics, and more.",
+  keywords: ["SaaS", "platform", "business", "startup", "subscription", "billing"],
+}
+
 export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Link href="/dashboard">
-        <div className="fixed bottom-8 right-8 z-50 group">
-          <Button 
-            size="lg" 
-            className="bg-[#5B8FF9] hover:bg-[#4A7FE8] text-white shadow-2xl rounded-full px-6 py-6 flex items-center gap-2 transition-all hover:scale-110"
-          >
-            <Lock className="h-5 w-5" />
-            <span className="font-semibold">Dashboard Privé</span>
-            <Badge className="bg-white text-[#5B8FF9] text-xs">DEV</Badge>
-          </Button>
-          <div className="absolute -top-12 right-0 bg-[#5B8FF9] text-white text-xs px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-            Accès développement uniquement
-          </div>
-        </div>
-      </Link>
-
       {/* Hero Section */}
       <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-gradient-to-b from-background to-muted">
         <div className="container px-4 md:px-6">

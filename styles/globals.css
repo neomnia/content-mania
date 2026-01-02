@@ -69,3 +69,28 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Admin tables responsive improvements */
+@layer components {
+  /* Force select content to be full width on mobile */
+  @media (max-width: 640px) {
+    [role="listbox"], 
+    [data-radix-select-content] {
+      width: 95vw !important;
+      max-width: 95vw !important;
+    }
+  }
+  
+  /* Improve table horizontal scroll on mobile */
+  @media (max-width: 768px) {
+    .table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Ensure table doesn't break layout */
+    table {
+      min-width: 800px;
+    }
+  }
+}

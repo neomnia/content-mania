@@ -5,17 +5,31 @@ echo "🔍 Vérification de l'environnement..."
 
 # Vérifier si on est sur Vercel
 if [ -n "$VERCEL" ]; then
-  echo "✅ Build Vercel détecté"
+  echo "✅ Build Vercel détecté (Env: ${VERCEL_ENV:-unknown})"
 
   # Vérifier si DATABASE_URL est défini
   if [ -n "$DATABASE_URL" ]; then
     echo "✅ DATABASE_URL configuré"
     echo ""
-    echo "🗄️  Synchronisation du schéma de la base de données (HARD RESET)..."
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-    # Exécuter la réinitialisation complète (Reset + Push + Seed)
-    pnpm db:hard-reset
+    
+    # Auto-enable FORCE_DB_RESET for preview/dev if not explicitly set
+    if [ -z "$FORCE_DB_RESET" ]; then
+      if [ "$VERCEL_ENV" = "preview" ] || [ "$VERCEL_ENV" = "development" ]; then
+        echo "⚠️ Environnement de test détecté ($VERCEL_ENV) : Activation automatique de FORCE_DB_RESET"
+        export FORCE_DB_RESET="true"
+      fi
+    fi
+    
+    if [ "$FORCE_DB_RESET" = "true" ]; then
+      echo "⚠️ FORCE_DB_RESET activé : Réinitialisation complète de la base de données..."
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      pnpm db:hard-reset
+    else
+      echo "🛡️ Mode Persistant : Mise à jour du schéma uniquement (db:push)..."
+      echo "ℹ️ Pour réinitialiser la base, définissez la variable d'environnement FORCE_DB_RESET=true"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      pnpm db:push
+    fi
 
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "✅ Base de données réinitialisée et synchronisée avec succès"

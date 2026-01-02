@@ -20,6 +20,7 @@ interface Company {
   email: string
   city?: string
   address?: string
+  zipCode?: string
   vatNumber?: string
   phone?: string
 }
@@ -52,6 +53,7 @@ export default function EnterprisePage() {
     email: "",
     city: "",
     address: "",
+    zipCode: "",
     vatNumber: "",
     phone: "",
   })
@@ -80,6 +82,7 @@ export default function EnterprisePage() {
             email: data.company.email || "",
             city: data.company.city || "",
             address: data.company.address || "",
+            zipCode: data.company.zipCode || "",
             vatNumber: data.company.vatNumber || "",
             phone: data.company.phone || "",
           })
@@ -262,12 +265,33 @@ export default function EnterprisePage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="zipCode">Postal Code</Label>
+                  <Input
+                    id="zipCode"
+                    value={companyForm.zipCode}
+                    onChange={(e) => setCompanyForm({ ...companyForm, zipCode: e.target.value })}
+                    placeholder="75000"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
                   <Input
                     id="phone"
                     value={companyForm.phone}
                     onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
                     placeholder="+33 1 23 45 67 89"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vatNumber">VAT Number</Label>
+                  <Input
+                    id="vatNumber"
+                    value={companyForm.vatNumber}
+                    onChange={(e) => setCompanyForm({ ...companyForm, vatNumber: e.target.value })}
+                    placeholder="FR12345678901"
                   />
                 </div>
               </div>
@@ -279,16 +303,6 @@ export default function EnterprisePage() {
                   value={companyForm.address}
                   onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
                   placeholder="123 Rue de la Paix, 75000 Paris"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vatNumber">VAT Number</Label>
-                <Input
-                  id="vatNumber"
-                  value={companyForm.vatNumber}
-                  onChange={(e) => setCompanyForm({ ...companyForm, vatNumber: e.target.value })}
-                  placeholder="FR12345678901"
                 />
               </div>
 
@@ -312,6 +326,7 @@ export default function EnterprisePage() {
                           email: company.email || "",
                           city: company.city || "",
                           address: company.address || "",
+                          zipCode: company.zipCode || "",
                           vatNumber: company.vatNumber || "",
                           phone: company.phone || "",
                         })
@@ -347,8 +362,10 @@ export default function EnterprisePage() {
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-sm text-muted-foreground">City</p>
-                    <p className="font-medium">{company?.city || "Not set"}</p>
+                    <p className="text-sm text-muted-foreground">City & Postal Code</p>
+                    <p className="font-medium">
+                      {company?.city || "City not set"} {company?.zipCode ? `(${company.zipCode})` : ""}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">

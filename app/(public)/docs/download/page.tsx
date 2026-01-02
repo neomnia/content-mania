@@ -5,6 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Info, ArrowLeft, Download, Github, ExternalLink, Terminal } from "lucide-react"
 import GitHubVersions from "@/components/features/brand/github-versions"
 
+export const metadata = {
+  title: "Download",
+  description: "Download NeoSaaS from GitHub. Get the latest version of the complete SaaS boilerplate and start building your application.",
+  keywords: ["download", "GitHub", "source code", "clone", "repository"],
+}
+
 export default function DownloadPage() {
   return (
     <div className="space-y-6">

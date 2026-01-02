@@ -68,14 +68,24 @@ Naviguez vers `/admin/api` dans votre interface d'administration.
 - Production : Mode `live`
 - Sandbox : Mode `sandbox`
 
-### 3. Scaleway (Cloud Infrastructure)
+### 3. Scaleway (Cloud Infrastructure & Email TEM)
 
-**Champs requis :**
-- Access Key (`SCW...`)
-- Secret Key
-- Project ID
-- Organization ID (optionnel)
-- Region (fr-par, nl-ams, pl-waw)
+**Champs pour TEM (emails transactionnels) :**
+| Champ | Requis pour TEM | Description |
+|-------|-----------------|-------------|
+| **Secret Key** | ✅ Oui | Clé secrète API (format UUID) |
+| **Project ID** | ✅ Oui | ID du projet Scaleway (format UUID) |
+| **Access Key** | ❌ Non | Identifiant de la clé API (non utilisé par TEM) |
+
+**Champs optionnels :**
+- Organization ID
+- Region (fr-par, nl-ams, pl-waw) - dans metadata
+
+> 💡 **Note pour Scaleway TEM** : Seuls la **Secret Key** et le **Project ID** sont requis pour l'envoi d'emails. L'Access Key n'est pas utilisé par l'API TEM. Voir [SCALEWAY_EMAIL_SETUP.md](./guides/SCALEWAY_EMAIL_SETUP.md) pour le guide complet.
+
+**Où trouver ces informations :**
+1. **Secret Key** : IAM → API Keys → Create API Key (visible une seule fois)
+2. **Project ID** : Console Scaleway → Settings → Project Settings
 
 ### 4. Resend (Email)
 

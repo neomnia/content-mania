@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth"
 import { eq, and } from "drizzle-orm"
 import crypto from "crypto"
 import { emailRouter, emailTemplateRepository } from "@/lib/email"
+import { getPlatformConfig } from "@/lib/config"
 
 /**
  * POST /api/users/invite
@@ -19,24 +20,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    const hasInvitePermission = await db
-      .select({ permissionName: permissions.name })
-      .from(userRoles)
-      .innerJoin(rolePermissions, eq(userRoles.roleId, rolePermissions.roleId))
-      .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-      .where(and(eq(userRoles.userId, currentUser.userId), eq(permissions.name, "invite")))
-      .limit(1)
+    // Check if user is platform admin (super_admin or admin)
+    const isPlatformAdmin = currentUser.roles?.some(role => ["super_admin", "admin"].includes(role));
 
-    if (hasInvitePermission.length === 0) {
-      return NextResponse.json({ error: "You do not have permission to invite users" }, { status: 403 })
+    if (!isPlatformAdmin) {
+      const hasInvitePermission = await db
+        .select({ permissionName: permissions.name })
+        .from(userRoles)
+        .innerJoin(rolePermissions, eq(userRoles.roleId, rolePermissions.roleId))
+        .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+        .where(and(eq(userRoles.userId, currentUser.userId), eq(permissions.name, "invite")))
+        .limit(1)
+
+      if (hasInvitePermission.length === 0) {
+        return NextResponse.json({ error: "You do not have permission to invite users" }, { status: 403 })
+      }
     }
 
     const body = await request.json()
-    const { email, role: roleName } = body
+    const { email, role: roleName, companyId } = body
 
     // Validate fields
     if (!email || !roleName) {
       return NextResponse.json({ error: "Email and role are required" }, { status: 400 })
+    }
+
+    // Fetch fresh user data from DB to ensure we have the latest companyId
+    // (The token might be stale if the user just created a company)
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.id, currentUser.userId),
+      columns: {
+        companyId: true
+      }
+    });
+
+    // Determine target company ID
+    // If user has a company, use it. If not (platform admin), use the one provided in body.
+    const targetCompanyId = dbUser?.companyId || companyId;
+
+    if (!targetCompanyId) {
+      return NextResponse.json({ error: "Company ID is required for platform admins" }, { status: 400 })
     }
 
     // Validate role - only company-scope roles allowed (reader, writer)
@@ -69,7 +92,7 @@ export async function POST(request: NextRequest) {
       .insert(userInvitations)
       .values({
         email,
-        companyId: currentUser.companyId,
+        companyId: targetCompanyId,
         roleId: roleData.id,
         invitedBy: currentUser.userId,
         token,
@@ -84,7 +107,9 @@ export async function POST(request: NextRequest) {
     try {
       const template = await emailTemplateRepository.getTemplate("user_invitation")
       if (template && template.isActive) {
-        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/accept-invite?token=${token}`
+        const host = request.headers.get("host") || "localhost:3000"
+        const protocol = process.env.NODE_ENV === "production" ? "https" : "http"
+        const inviteUrl = `${protocol}://${host}/auth/accept-invite?token=${token}`
 
         let htmlContent = template.htmlContent || ""
         let textContent = template.textContent || ""
@@ -104,24 +129,26 @@ export async function POST(request: NextRequest) {
         const variables = {
           inviterName: inviter ? `${inviter.firstName} ${inviter.lastName}` : "Someone",
           companyName: company?.name || "the team",
-          inviteUrl,
+          actionUrl: inviteUrl,
           siteName: "NeoSaaS",
           roleName: roleName === "writer" ? "Writer (Read & Write)" : "Reader (Read only)",
         }
 
         Object.entries(variables).forEach(([key, value]) => {
-          const regex = new RegExp(`{{${key}}}`, "g")
+          const regex = new RegExp(`{{\\s*${key}\\s*}}`, "g")
           htmlContent = htmlContent.replace(regex, value)
           textContent = textContent.replace(regex, value)
         })
 
+        const platformConfig = await getPlatformConfig()
+
         await emailRouter.sendEmail({
           to: [email],
-          from: { name: template.fromName, email: template.fromEmail },
+          from: template.fromEmail || platformConfig.defaultSenderEmail || "no-reply@neosaas.tech",
+          fromName: template.fromName || undefined,
           subject: subject,
-          html: htmlContent,
-          text: textContent,
-          templateId: template.type,
+          htmlContent: htmlContent,
+          textContent: textContent,
         })
         console.log(`[v0] Invitation email sent to ${email}`)
       } else {

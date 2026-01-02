@@ -18,7 +18,7 @@ interface SiteHeaderProps {
 export function SiteHeader({ user }: SiteHeaderProps) {
   const pathname = usePathname()
   const isDemo = pathname === "/demo"
-  const { siteName, logo } = usePlatformConfig()
+  const { siteName, logo, logoDisplayMode } = usePlatformConfig()
 
   // Default fallback logo
   const logoSrc = logo || "/images/logo_neolux.jpg"
@@ -28,11 +28,15 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <Image src={logoSrc} alt={siteName} width={32} height={32} className="rounded" />
-            <span className="font-bold text-lg">
-              <span className="text-foreground">{siteName.substring(0, 3)}</span>
-              <span className="text-[#CD7F32]">{siteName.substring(3)}</span>
-            </span>
+            {(logoDisplayMode === 'logo' || logoDisplayMode === 'both') && (
+              <Image src={logoSrc} alt={siteName} width={32} height={32} className="rounded" />
+            )}
+            {(logoDisplayMode === 'text' || logoDisplayMode === 'both') && (
+              <span className="font-bold text-lg">
+                <span className="text-foreground">{siteName.substring(0, 3)}</span>
+                <span className="text-[#CD7F32]">{siteName.substring(3)}</span>
+              </span>
+            )}
           </Link>
         </div>
         <MainNav />

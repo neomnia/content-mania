@@ -1,16 +1,16 @@
 /**
- * Script pour initialiser les templates d'emails par défaut
- * Exécuter avec: npx tsx scripts/seed-email-templates.ts
+ * Script to initialize default email templates
+ * Run with: npx tsx scripts/seed-email-templates.ts
  */
 
 import { db } from '../db';
 import { emailTemplates } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
-// Configuration de l'expéditeur par défaut
+// Default sender configuration
 const DEFAULT_FROM = {
   name: 'NeoSaaS Platform',
-  email: 'no-reply@neosaas.tech', // Domaine vérifié
+  email: 'no-reply@neosaas.tech', // Verified domain
 };
 
 interface EmailTemplate {
@@ -26,16 +26,16 @@ const templates: EmailTemplate[] = [
   // 1. Welcome / Registration
   {
     type: 'registration',
-    name: 'Bienvenue - Inscription',
-    description: 'Email envoyé lors de l\'inscription d\'un nouvel utilisateur',
-    subject: 'Bienvenue sur {{siteName}} ! 🎉',
+    name: 'Welcome - Registration',
+    description: 'Email sent upon new user registration',
+    subject: 'Welcome to {{siteName}}! 🎉',
     htmlContent: `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bienvenue</title>
+  <title>Welcome</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -45,7 +45,7 @@ const templates: EmailTemplate[] = [
           <!-- Header -->
           <tr>
             <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700;">Bienvenue ! 🎉</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700;">Welcome! 🎉</h1>
             </td>
           </tr>
 
@@ -53,13 +53,13 @@ const templates: EmailTemplate[] = [
           <tr>
             <td style="padding: 40px;">
               <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                Bonjour <strong>{{firstName}}</strong>,
+                Hello <strong>{{firstName}}</strong>,
               </p>
               <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                Nous sommes ravis de vous accueillir sur <strong>{{siteName}}</strong> !
+                We are thrilled to welcome you to <strong>{{siteName}}</strong>!
               </p>
               <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
-                Votre compte a été créé avec succès. Vous pouvez dès maintenant vous connecter et découvrir toutes nos fonctionnalités.
+                Your account has been successfully created. You can now log in and explore all our features.
               </p>
 
               <!-- CTA Button -->
@@ -67,14 +67,14 @@ const templates: EmailTemplate[] = [
                 <tr>
                   <td style="text-align: center;">
                     <a href="{{actionUrl}}" style="display: inline-block; padding: 14px 32px; background-color: #667eea; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                      Accéder à mon compte
+                      Access My Account
                     </a>
                   </td>
                 </tr>
               </table>
 
               <p style="margin: 30px 0 0; color: #999999; font-size: 14px; line-height: 1.6;">
-                Besoin d'aide ? N'hésitez pas à nous contacter.
+                Need help? Feel free to contact us.
               </p>
             </td>
           </tr>
@@ -83,7 +83,7 @@ const templates: EmailTemplate[] = [
           <tr>
             <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0; color: #999999; font-size: 12px;">
-                © 2025 {{siteName}}. Tous droits réservés.
+                © 2025 {{siteName}}. All rights reserved.
               </p>
             </td>
           </tr>
@@ -95,35 +95,35 @@ const templates: EmailTemplate[] = [
 </html>
     `,
     textContent: `
-Bienvenue sur {{siteName}} !
+Welcome to {{siteName}}!
 
-Bonjour {{firstName}},
+Hello {{firstName}},
 
-Nous sommes ravis de vous accueillir sur {{siteName}} !
+We are thrilled to welcome you to {{siteName}}!
 
-Votre compte a été créé avec succès. Vous pouvez dès maintenant vous connecter et découvrir toutes nos fonctionnalités.
+Your account has been successfully created. You can now log in and explore all our features.
 
-Accéder à mon compte : {{actionUrl}}
+Access My Account: {{actionUrl}}
 
-Besoin d'aide ? N'hésitez pas à nous contacter.
+Need help? Feel free to contact us.
 
-© 2025 {{siteName}}. Tous droits réservés.
+© 2025 {{siteName}}. All rights reserved.
     `,
   },
 
   // 2. Email Verification
   {
     type: 'email_verification',
-    name: 'Vérification d\'email',
-    description: 'Email de vérification de l\'adresse email',
-    subject: 'Vérifiez votre adresse email - {{siteName}}',
+    name: 'Email Verification',
+    description: 'Email to verify the email address',
+    subject: 'Verify your email address - {{siteName}}',
     htmlContent: `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vérification email</title>
+  <title>Email Verification</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -134,7 +134,7 @@ Besoin d'aide ? N'hésitez pas à nous contacter.
           <tr>
             <td style="padding: 40px 40px 20px; text-align: center;">
               <div style="font-size: 48px; margin-bottom: 16px;">📧</div>
-              <h1 style="margin: 0; color: #333333; font-size: 28px; font-weight: 700;">Vérifiez votre email</h1>
+              <h1 style="margin: 0; color: #333333; font-size: 28px; font-weight: 700;">Verify your email</h1>
             </td>
           </tr>
 
@@ -142,10 +142,10 @@ Besoin d'aide ? N'hésitez pas à nous contacter.
           <tr>
             <td style="padding: 20px 40px 40px;">
               <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                Bonjour <strong>{{firstName}}</strong>,
+                Hello <strong>{{firstName}}</strong>,
               </p>
               <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
-                Pour terminer votre inscription sur {{siteName}}, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous :
+                To complete your registration on {{siteName}}, please verify your email address by clicking the button below:
               </p>
 
               <!-- CTA Button -->
@@ -153,15 +153,15 @@ Besoin d'aide ? N'hésitez pas à nous contacter.
                 <tr>
                   <td style="text-align: center;">
                     <a href="{{actionUrl}}" style="display: inline-block; padding: 14px 32px; background-color: #10b981; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                      Vérifier mon email
+                      Verify My Email
                     </a>
                   </td>
                 </tr>
               </table>
 
               <p style="margin: 30px 0 0; color: #999999; font-size: 14px; line-height: 1.6;">
-                Ce lien est valable pendant 24 heures.<br>
-                Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
+                This link is valid for 24 hours.<br>
+                If you did not create an account, you can safely ignore this email.
               </p>
             </td>
           </tr>
@@ -170,7 +170,7 @@ Besoin d'aide ? N'hésitez pas à nous contacter.
           <tr>
             <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0; color: #999999; font-size: 12px;">
-                © 2025 {{siteName}}. Tous droits réservés.
+                © 2025 {{siteName}}. All rights reserved.
               </p>
             </td>
           </tr>
@@ -182,34 +182,34 @@ Besoin d'aide ? N'hésitez pas à nous contacter.
 </html>
     `,
     textContent: `
-Vérifiez votre adresse email
+Verify your email address
 
-Bonjour {{firstName}},
+Hello {{firstName}},
 
-Pour terminer votre inscription sur {{siteName}}, veuillez vérifier votre adresse email en utilisant le lien ci-dessous :
+To complete your registration on {{siteName}}, please verify your email address using the link below:
 
 {{actionUrl}}
 
-Ce lien est valable pendant 24 heures.
-Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
+This link is valid for 24 hours.
+If you did not create an account, you can safely ignore this email.
 
-© 2025 {{siteName}}. Tous droits réservés.
+© 2025 {{siteName}}. All rights reserved.
     `,
   },
 
   // 3. Password Reset
   {
     type: 'password_reset',
-    name: 'Réinitialisation de mot de passe',
-    description: 'Email pour réinitialiser le mot de passe',
-    subject: 'Réinitialisation de votre mot de passe - {{siteName}}',
+    name: 'Password Reset',
+    description: 'Email to reset password',
+    subject: 'Reset your password - {{siteName}}',
     htmlContent: `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Réinitialisation mot de passe</title>
+  <title>Password Reset</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -220,7 +220,7 @@ Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
           <tr>
             <td style="padding: 40px 40px 20px; text-align: center;">
               <div style="font-size: 48px; margin-bottom: 16px;">🔒</div>
-              <h1 style="margin: 0; color: #333333; font-size: 28px; font-weight: 700;">Réinitialisation de mot de passe</h1>
+              <h1 style="margin: 0; color: #333333; font-size: 28px; font-weight: 700;">Password Reset</h1>
             </td>
           </tr>
 
@@ -228,10 +228,10 @@ Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
           <tr>
             <td style="padding: 20px 40px 40px;">
               <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                Bonjour <strong>{{firstName}}</strong>,
+                Hello <strong>{{firstName}}</strong>,
               </p>
               <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
-                Vous avez demandé à réinitialiser votre mot de passe sur {{siteName}}. Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :
+                You requested to reset your password on {{siteName}}. Click the button below to create a new password:
               </p>
 
               <!-- CTA Button -->
@@ -239,7 +239,7 @@ Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
                 <tr>
                   <td style="text-align: center;">
                     <a href="{{actionUrl}}" style="display: inline-block; padding: 14px 32px; background-color: #ef4444; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                      Réinitialiser mon mot de passe
+                      Reset My Password
                     </a>
                   </td>
                 </tr>
@@ -247,12 +247,12 @@ Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
 
               <div style="margin: 30px 0; padding: 16px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
                 <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
-                  ⚠️ <strong>Important :</strong> Ce lien expire dans 1 heure.
+                  ⚠️ <strong>Important:</strong> This link expires in 1 hour.
                 </p>
               </div>
 
               <p style="margin: 20px 0 0; color: #999999; font-size: 14px; line-height: 1.6;">
-                Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email en toute sécurité.
+                If you did not request this reset, you can safely ignore this email.
               </p>
             </td>
           </tr>
@@ -261,7 +261,7 @@ Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
           <tr>
             <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0; color: #999999; font-size: 12px;">
-                © 2025 {{siteName}}. Tous droits réservés.
+                © 2025 {{siteName}}. All rights reserved.
               </p>
             </td>
           </tr>
@@ -273,31 +273,31 @@ Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
 </html>
     `,
     textContent: `
-Réinitialisation de mot de passe
+Password Reset
 
-Bonjour {{firstName}},
+Hello {{firstName}},
 
-Vous avez demandé à réinitialiser votre mot de passe sur {{siteName}}. Utilisez le lien ci-dessous pour créer un nouveau mot de passe :
+You requested to reset your password on {{siteName}}. Use the link below to create a new password:
 
 {{actionUrl}}
 
-⚠️ IMPORTANT : Ce lien expire dans 1 heure.
+⚠️ IMPORTANT: This link expires in 1 hour.
 
-Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email en toute sécurité.
+If you did not request this reset, you can safely ignore this email.
 
-© 2025 {{siteName}}. Tous droits réservés.
+© 2025 {{siteName}}. All rights reserved.
     `,
   },
 
   // 4. User Invitation
   {
     type: 'user_invitation',
-    name: 'Invitation utilisateur',
-    description: 'Email d\'invitation à rejoindre une entreprise',
-    subject: 'Vous êtes invité(e) à rejoindre {{companyName}} sur {{siteName}}',
+    name: 'User Invitation',
+    description: 'Email invitation to join a company',
+    subject: 'You are invited to join {{companyName}} on {{siteName}}',
     htmlContent: `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -312,7 +312,7 @@ Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet ema
           <tr>
             <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); border-radius: 8px 8px 0 0;">
               <div style="font-size: 48px; margin-bottom: 16px;">✉️</div>
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">Vous êtes invité(e) !</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">You are invited!</h1>
             </td>
           </tr>
 
@@ -320,13 +320,13 @@ Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet ema
           <tr>
             <td style="padding: 40px;">
               <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                Bonjour,
+                Hello,
               </p>
               <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
-                Vous avez été invité(e) à rejoindre <strong>{{companyName}}</strong> sur {{siteName}}.
+                You have been invited to join <strong>{{companyName}}</strong> on {{siteName}}.
               </p>
               <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
-                Cliquez sur le bouton ci-dessous pour accepter l'invitation et créer votre compte :
+                Click the button below to accept the invitation and create your account:
               </p>
 
               <!-- CTA Button -->
@@ -334,15 +334,15 @@ Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet ema
                 <tr>
                   <td style="text-align: center;">
                     <a href="{{actionUrl}}" style="display: inline-block; padding: 14px 32px; background-color: #3b82f6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                      Accepter l'invitation
+                      Accept Invitation
                     </a>
                   </td>
                 </tr>
               </table>
 
               <p style="margin: 30px 0 0; color: #999999; font-size: 14px; line-height: 1.6;">
-                Cette invitation expire dans 7 jours.<br>
-                Si vous ne souhaitez pas rejoindre {{companyName}}, vous pouvez ignorer cet email.
+                This invitation expires in 7 days.<br>
+                If you do not wish to join {{companyName}}, you can ignore this email.
               </p>
             </td>
           </tr>
@@ -351,7 +351,7 @@ Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet ema
           <tr>
             <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0; color: #999999; font-size: 12px;">
-                © 2025 {{siteName}}. Tous droits réservés.
+                © 2025 {{siteName}}. All rights reserved.
               </p>
             </td>
           </tr>
@@ -363,36 +363,36 @@ Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet ema
 </html>
     `,
     textContent: `
-Vous êtes invité(e) !
+You are invited!
 
-Bonjour,
+Hello,
 
-Vous avez été invité(e) à rejoindre {{companyName}} sur {{siteName}}.
+You have been invited to join {{companyName}} on {{siteName}}.
 
-Cliquez sur le lien ci-dessous pour accepter l'invitation et créer votre compte :
+Click the link below to accept the invitation and create your account:
 
 {{actionUrl}}
 
-Cette invitation expire dans 7 jours.
-Si vous ne souhaitez pas rejoindre {{companyName}}, vous pouvez ignorer cet email.
+This invitation expires in 7 days.
+If you do not wish to join {{companyName}}, you can ignore this email.
 
-© 2025 {{siteName}}. Tous droits réservés.
+© 2025 {{siteName}}. All rights reserved.
     `,
   },
 
   // 5. Order Confirmation
   {
     type: 'order_confirmation',
-    name: 'Confirmation de commande',
-    description: 'Email de confirmation de commande',
-    subject: 'Confirmation de votre commande - {{siteName}}',
+    name: 'Order Confirmation',
+    description: 'Email for order confirmation',
+    subject: 'Order Confirmation - {{siteName}}',
     htmlContent: `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirmation commande</title>
+  <title>Order Confirmation</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -403,7 +403,7 @@ Si vous ne souhaitez pas rejoindre {{companyName}}, vous pouvez ignorer cet emai
           <tr>
             <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px 8px 0 0;">
               <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">Commande confirmée !</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">Order Confirmed!</h1>
             </td>
           </tr>
 
@@ -411,19 +411,19 @@ Si vous ne souhaitez pas rejoindre {{companyName}}, vous pouvez ignorer cet emai
           <tr>
             <td style="padding: 40px;">
               <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                Bonjour <strong>{{firstName}}</strong>,
+                Hello <strong>{{firstName}}</strong>,
               </p>
               <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
-                Merci pour votre commande ! Nous l'avons bien reçue et elle est en cours de traitement.
+                Thank you for your order! We have received it and it is being processed.
               </p>
 
               <!-- Order Details Box -->
               <div style="margin: 30px 0; padding: 20px; background-color: #f3f4f6; border-radius: 6px;">
                 <p style="margin: 0 0 10px; color: #666666; font-size: 14px;">
-                  <strong style="color: #333333;">Numéro de commande :</strong> {{orderNumber}}
+                  <strong style="color: #333333;">Order Number:</strong> {{orderNumber}}
                 </p>
                 <p style="margin: 0; color: #666666; font-size: 14px;">
-                  <strong style="color: #333333;">Date :</strong> {{orderDate}}
+                  <strong style="color: #333333;">Date:</strong> {{orderDate}}
                 </p>
               </div>
 
@@ -432,14 +432,14 @@ Si vous ne souhaitez pas rejoindre {{companyName}}, vous pouvez ignorer cet emai
                 <tr>
                   <td style="text-align: center;">
                     <a href="{{actionUrl}}" style="display: inline-block; padding: 14px 32px; background-color: #10b981; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                      Voir ma commande
+                      View My Order
                     </a>
                   </td>
                 </tr>
               </table>
 
               <p style="margin: 30px 0 0; color: #999999; font-size: 14px; line-height: 1.6;">
-                Vous recevrez un email de suivi dès que votre commande sera expédiée.
+                You will receive a tracking email as soon as your order ships.
               </p>
             </td>
           </tr>
@@ -448,7 +448,7 @@ Si vous ne souhaitez pas rejoindre {{companyName}}, vous pouvez ignorer cet emai
           <tr>
             <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0; color: #999999; font-size: 12px;">
-                © 2025 {{siteName}}. Tous droits réservés.
+                © 2025 {{siteName}}. All rights reserved.
               </p>
             </td>
           </tr>
@@ -460,32 +460,32 @@ Si vous ne souhaitez pas rejoindre {{companyName}}, vous pouvez ignorer cet emai
 </html>
     `,
     textContent: `
-Commande confirmée !
+Order Confirmed!
 
-Bonjour {{firstName}},
+Hello {{firstName}},
 
-Merci pour votre commande ! Nous l'avons bien reçue et elle est en cours de traitement.
+Thank you for your order! We have received it and it is being processed.
 
-Numéro de commande : {{orderNumber}}
-Date : {{orderDate}}
+Order Number: {{orderNumber}}
+Date: {{orderDate}}
 
-Voir ma commande : {{actionUrl}}
+View My Order: {{actionUrl}}
 
-Vous recevrez un email de suivi dès que votre commande sera expédiée.
+You will receive a tracking email as soon as your order ships.
 
-© 2025 {{siteName}}. Tous droits réservés.
+© 2025 {{siteName}}. All rights reserved.
     `,
   },
 
   // 6. General Notification
   {
     type: 'notification',
-    name: 'Notification générale',
-    description: 'Template pour les notifications générales',
+    name: 'General Notification',
+    description: 'Template for general notifications',
     subject: 'Notification - {{siteName}}',
     htmlContent: `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -508,18 +508,18 @@ Vous recevrez un email de suivi dès que votre commande sera expédiée.
           <tr>
             <td style="padding: 20px 40px 40px;">
               <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                Bonjour <strong>{{firstName}}</strong>,
+                Hello <strong>{{firstName}}</strong>,
               </p>
               <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
                 {{notificationMessage}}
               </p>
 
-              <!-- CTA Button (si nécessaire) -->
+              <!-- CTA Button (if needed) -->
               <table role="presentation" style="margin: 30px 0;">
                 <tr>
                   <td style="text-align: center;">
                     <a href="{{actionUrl}}" style="display: inline-block; padding: 14px 32px; background-color: #6366f1; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                      Voir les détails
+                      View Details
                     </a>
                   </td>
                 </tr>
@@ -531,7 +531,7 @@ Vous recevrez un email de suivi dès que votre commande sera expédiée.
           <tr>
             <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0; color: #999999; font-size: 12px;">
-                © 2025 {{siteName}}. Tous droits réservés.
+                © 2025 {{siteName}}. All rights reserved.
               </p>
             </td>
           </tr>
@@ -545,29 +545,29 @@ Vous recevrez un email de suivi dès que votre commande sera expédiée.
     textContent: `
 Notification
 
-Bonjour {{firstName}},
+Hello {{firstName}},
 
 {{notificationMessage}}
 
-Voir les détails : {{actionUrl}}
+View Details: {{actionUrl}}
 
-© 2025 {{siteName}}. Tous droits réservés.
+© 2025 {{siteName}}. All rights reserved.
     `,
   },
 
   // 7. Account Deletion
   {
     type: 'account_deletion',
-    name: 'Suppression de compte',
-    description: 'Email de confirmation de suppression de compte',
-    subject: 'Confirmation de suppression de compte - {{siteName}}',
+    name: 'Account Deletion',
+    description: 'Email confirmation for account deletion',
+    subject: 'Account Deletion Confirmation - {{siteName}}',
     htmlContent: `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Suppression de compte</title>
+  <title>Account Deletion</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -576,33 +576,44 @@ Voir les détails : {{actionUrl}}
         <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); border-radius: 8px 8px 0 0;">
-              <div style="font-size: 48px; margin-bottom: 16px;">👋</div>
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">Compte supprimé</h1>
+            <td style="padding: 40px 40px 20px; text-align: center; border-bottom: 1px solid #eee;">
+              <div style="font-size: 28px; font-weight: bold; color: #CD7F32; letter-spacing: -0.5px;">NeoSaaS</div>
             </td>
           </tr>
 
           <!-- Body -->
           <tr>
             <td style="padding: 40px;">
-              <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                Bonjour <strong>{{firstName}}</strong>,
-              </p>
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
-                Nous vous confirmons que votre compte sur <strong>{{siteName}}</strong> a été supprimé avec succès.
-              </p>
-              <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
-                Toutes vos données personnelles ont été effacées de nos systèmes, conformément à notre politique de confidentialité.
-              </p>
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; padding: 12px; background-color: #fee2e2; border-radius: 50%; margin-bottom: 16px;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  </svg>
+                </div>
+                <h1 style="margin: 0; color: #1f2937; font-size: 24px; font-weight: 700;">Account Deleted</h1>
+              </div>
 
-              <div style="margin: 30px 0; padding: 20px; background-color: #f3f4f6; border-radius: 6px;">
-                <p style="margin: 0; color: #666666; font-size: 14px; font-style: italic;">
-                  Nous sommes tristes de vous voir partir. Si vous changez d'avis, vous serez toujours le bienvenu pour créer un nouveau compte.
+              <p style="margin: 0 0 20px; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                Hello <strong>{{firstName}}</strong>,
+              </p>
+              <p style="margin: 0 0 20px; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                We are writing to confirm that your account on <strong>{{siteName}}</strong> has been successfully deleted.
+              </p>
+              
+              <div style="background-color: #f3f4f6; border-left: 4px solid #CD7F32; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+                <p style="margin: 0; color: #374151; font-size: 14px; line-height: 1.5;">
+                  <strong>Confirmation:</strong> All your personal data and associated information have been permanently removed from our database in accordance with our data retention policy.
                 </p>
               </div>
 
-              <p style="margin: 30px 0 0; color: #999999; font-size: 14px; line-height: 1.6;">
-                Si vous n'êtes pas à l'origine de cette demande, veuillez nous contacter immédiatement.
+              <p style="margin: 0 0 30px; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                We're sorry to see you go. If you decide to return in the future, you will be more than welcome to create a new account.
+              </p>
+
+              <p style="margin: 30px 0 0; color: #9ca3af; font-size: 14px; line-height: 1.6; border-top: 1px solid #eee; padding-top: 20px;">
+                If you did not request this deletion, please contact our support team immediately, although data recovery may not be possible.
               </p>
             </td>
           </tr>
@@ -610,8 +621,8 @@ Voir les détails : {{actionUrl}}
           <!-- Footer -->
           <tr>
             <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
-              <p style="margin: 0; color: #999999; font-size: 12px;">
-                © 2025 {{siteName}}. Tous droits réservés.
+              <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                © 2025 {{siteName}}. All rights reserved.
               </p>
             </td>
           </tr>
@@ -623,19 +634,115 @@ Voir les détails : {{actionUrl}}
 </html>
     `,
     textContent: `
-Compte supprimé
+Account Deleted - {{siteName}}
 
-Bonjour {{firstName}},
+Hello {{firstName}},
 
-Nous vous confirmons que votre compte sur {{siteName}} a été supprimé avec succès.
+We confirm that your account on {{siteName}} has been successfully deleted.
 
-Toutes vos données personnelles ont été effacées de nos systèmes.
+Confirmation: All your personal data and associated information have been permanently removed from our database.
 
-Nous sommes tristes de vous voir partir. Si vous changez d'avis, vous serez toujours le bienvenu.
+We are sad to see you go. If you change your mind, you are always welcome back.
 
-© 2025 {{siteName}}. Tous droits réservés.
+© 2025 {{siteName}}. All rights reserved.
     `,
   },
+  // 8. Email Update Notification
+  {
+    type: 'email_update_notification',
+    name: 'Email Update Notification',
+    description: 'Email sent when email address is updated',
+    subject: 'Security Alert: Email Address Updated - {{siteName}}',
+    htmlContent: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Updated</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Email Address Updated</h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 40px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                 <!-- Logo Placeholder - Replace with actual logo URL if available -->
+                 <div style="font-size: 24px; font-weight: bold; color: #333;">{{siteName}}</div>
+              </div>
+
+              <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                Hello <strong>{{firstName}}</strong>,
+              </p>
+              <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                This email is to confirm that the email address associated with your <strong>{{siteName}}</strong> account has been successfully updated.
+              </p>
+              
+              <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin-bottom: 20px;">
+                <p style="margin: 0; color: #555; font-size: 14px;">
+                  <strong>New Email Address:</strong> {{newEmail}}
+                </p>
+              </div>
+
+              <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                If you did not authorize this change, please contact our support team immediately to secure your account.
+              </p>
+
+              <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+
+              <h3 style="margin: 0 0 15px; color: #333; font-size: 16px;">Legal Information</h3>
+              <p style="margin: 0 0 10px; color: #666; font-size: 12px; line-height: 1.5;">
+                This is an automated security notification. Please do not reply to this email.
+              </p>
+              <p style="margin: 0 0 10px; color: #666; font-size: 12px; line-height: 1.5;">
+                <strong>{{companyName}}</strong><br>
+                123 Tech Street, Innovation City<br>
+                Privacy Policy | Terms of Service
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
+              <p style="margin: 0; color: #999999; font-size: 12px;">
+                © 2025 {{siteName}}. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    textContent: `
+Email Address Updated - {{siteName}}
+
+Hello {{firstName}},
+
+This email is to confirm that the email address associated with your {{siteName}} account has been successfully updated.
+
+New Email Address: {{newEmail}}
+
+If you did not authorize this change, please contact our support team immediately.
+
+Legal Information:
+{{companyName}}
+Privacy Policy | Terms of Service
+    `
+  }
 ];
 
 async function seedEmailTemplates() {
@@ -669,7 +776,7 @@ async function seedEmailTemplates() {
 
         console.log(`✅ Updated: ${template.name} (${template.type})`);
       } else {
-        // Créer un nouveau template
+        // Create new template
         await db.insert(emailTemplates).values({
           type: template.type,
           name: template.name,
@@ -693,7 +800,7 @@ async function seedEmailTemplates() {
 
   console.log('\n🎉 Email templates seeded successfully!');
   console.log(`\n📝 Total templates: ${templates.length}`);
-  console.log('\n💡 Variables disponibles dans les templates:');
+  console.log('\n💡 Available variables in templates:');
   console.log('   - {{firstName}}, {{lastName}}, {{email}}');
   console.log('   - {{companyName}}, {{siteName}}');
   console.log('   - {{actionUrl}}');

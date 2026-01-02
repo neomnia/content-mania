@@ -10,22 +10,35 @@ Ce guide vous explique comment configurer et utiliser Scaleway TEM pour l'envoi 
 
 ## Étape 1 : Obtenir les identifiants Scaleway
 
+> ⚠️ **Important** : Pour Scaleway TEM, **2 informations sont obligatoires** :
+> - **Secret Key** : La clé secrète de l'API
+> - **Project ID** : L'identifiant du projet Scaleway
+>
+> L'Access Key (identifiant de la clé) est **optionnel** pour TEM.
+
 ### 1.1 Accéder à la console Scaleway
 
-Rendez-vous sur https://console.scaleway.com/project/credentials
+Rendez-vous sur https://console.scaleway.com
 
-### 1.2 Récupérer le Project ID
-
-- Dans la console Scaleway, cliquez sur votre nom de projet en haut de la page
-- Copiez le **Project ID** qui s'affiche
-
-### 1.3 Créer une clé API
+### 1.2 Créer une clé API
 
 1. Allez dans **Identity and Access Management (IAM)**
 2. Cliquez sur **API Keys**
 3. Créez une nouvelle clé API avec les permissions suivantes :
    - `TransactionalEmailFullAccess` ou au minimum `TransactionalEmailEmailManager`
-4. Copiez le **Secret Key** (il ne sera plus visible après)
+4. **Copiez immédiatement la Secret Key** (ne sera plus visible après !)
+
+> 💡 **Note** : L'Access Key (format `SCWXXXXXXXXX`) n'est pas utilisé par l'API TEM, seule la Secret Key est requise pour l'authentification.
+
+### 1.3 Récupérer le Project ID
+
+Le Project ID est **indispensable** pour identifier votre projet dans les appels API TEM.
+
+1. Dans la console Scaleway, cliquez sur **Settings** dans le menu latéral
+2. Allez dans **Project Settings**
+3. Copiez le **Project ID** (format UUID : `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`)
+
+> 💡 **Astuce** : Stockez ces informations dans un gestionnaire de mots de passe sécurisé.
 
 ## Étape 2 : Vérifier votre domaine
 
@@ -59,9 +72,26 @@ Une fois les DNS propagés (peut prendre jusqu'à 48h), cliquez sur **Verify** d
 
 ## Étape 3 : Configurer l'application
 
-### 3.1 Variables d'environnement
+### 3.1 Via l'interface Admin (RECOMMANDÉ)
 
-Ajoutez ces variables dans votre fichier `.env` :
+La méthode la plus simple est d'utiliser l'interface d'administration :
+
+1. Accédez à `/admin/api` dans votre application
+2. Cliquez sur **Add API** ou modifiez la configuration Scaleway existante
+3. Remplissez les **2 champs obligatoires** :
+
+| Champ | Requis | Description |
+|-------|--------|-------------|
+| **Secret Key** | ✅ Oui | Clé secrète de l'API (format UUID) |
+| **Project ID** | ✅ Oui | ID de votre projet Scaleway (format UUID) |
+| **Access Key** | ❌ Non | Identifiant de la clé API (non utilisé par TEM) |
+
+4. Cliquez sur **Vérifier la clé** pour tester la connexion à l'API TEM
+5. Cliquez sur **Save Configuration**
+
+### 3.2 Variables d'environnement (optionnel)
+
+Vous pouvez également définir des variables d'environnement pour le développement :
 
 ```bash
 # Scaleway Transactional Email (TEM)
@@ -70,35 +100,24 @@ SCW_SECRET_KEY=your-scaleway-secret-key
 SCW_REGION=fr-par
 ```
 
-### 3.2 Initialiser la configuration en base de données
+> ⚠️ **Note** : En production, utilisez toujours l'interface admin `/admin/api`. Les credentials sont chiffrés en base de données avec AES-256-GCM.
 
-Deux options s'offrent à vous :
-
-#### Option A : Via l'endpoint de debug (développement uniquement)
+### 3.3 Via l'API (avancé)
 
 ```bash
-curl http://localhost:3000/api/debug/seed-email
-```
-
-Cet endpoint va :
-- Lire les variables d'environnement `SCW_PROJECT_ID` et `SCW_SECRET_KEY`
-- Créer une configuration Scaleway TEM chiffrée en base de données
-- Activer cette configuration par défaut
-
-#### Option B : Via l'API de configuration
-
-```bash
-curl -X POST http://localhost:3000/api/email/config \
+curl -X POST http://localhost:3000/api/services/scaleway \
   -H "Content-Type: application/json" \
   -d '{
-    "provider": "scaleway-tem",
+    "serviceType": "email",
+    "environment": "production",
     "isActive": true,
     "isDefault": true,
     "config": {
       "projectId": "your-project-id",
-      "secretKey": "your-secret-key",
-      "region": "fr-par",
-      "plan": "essential"
+      "secretKey": "your-secret-key"
+    },
+    "metadata": {
+      "region": "fr-par"
     }
   }'
 ```
@@ -163,18 +182,38 @@ Pour changer de plan, modifiez la propriété `plan` dans la configuration :
 
 ## Troubleshooting
 
+### Erreur : "Scaleway TEM requires projectId and secretKey"
+
+**Cause** : Le Project ID n'est pas configuré dans l'interface admin.
+
+**Solution** :
+1. Accédez à `/admin/api`
+2. Modifiez la configuration Scaleway
+3. Ajoutez votre **Project ID** (voir [Étape 1.2](#12-récupérer-le-project-id-obligatoire))
+4. Sauvegardez
+
+### Erreur : "Clés Scaleway manquantes (Access Key, Secret Key et Project ID requis)"
+
+**Cause** : Un ou plusieurs des trois champs obligatoires sont vides.
+
+**Solution** : Vérifiez que les trois champs sont remplis :
+- Project ID
+- Access Key
+- Secret Key
+
 ### Erreur : "Domain not verified"
 
 Vérifiez que :
 - Votre domaine est bien vérifié dans la console Scaleway
 - Vous utilisez une adresse email du domaine vérifié comme `from`
 
-### Erreur : "Authentication failed"
+### Erreur : "Authentication failed" / "401 Unauthorized"
 
 Vérifiez que :
-- Le `SCW_SECRET_KEY` est correct
-- La clé API a les bonnes permissions
-- Le `SCW_PROJECT_ID` correspond au projet où le domaine est configuré
+- Le `Secret Key` est correct et n'a pas expiré
+- La clé API a les bonnes permissions (`TransactionalEmailFullAccess`)
+- Le `Project ID` correspond au projet où le domaine est configuré
+- L'`Access Key` est bien celui associé au `Secret Key`
 
 ### Erreur : "Rate limit exceeded"
 

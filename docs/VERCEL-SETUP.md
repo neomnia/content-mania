@@ -34,10 +34,14 @@ Le fichier `package.json` utilise un script de build personnalisé :
 ```
 
 Ce script effectue automatiquement les actions suivantes lors du déploiement sur Vercel :
-1. **Synchronisation du Schéma** (`pnpm db:push`) : Met à jour la structure de la base de données.
+1. **Gestion de la Base de Données** :
+   - **Production** : Mise à jour du schéma uniquement (`db:push`) pour préserver les données.
+   - **Preview / Development** : **Réinitialisation Complète Automatique** (`db:hard-reset`) pour garantir un environnement de test propre à chaque déploiement.
 2. **Initialisation des Templates** (`pnpm seed:email-templates`) : Crée ou met à jour les modèles d'emails.
 3. **Initialisation des Permissions** (`pnpm seed:pages`) : Configure les permissions par défaut des pages (ACL).
 4. **Compilation** (`next build`) : Construit l'application Next.js.
+
+> **Note :** Tout nouvel exécutable ou script nécessaire au déploiement doit être ajouté dans `scripts/build-with-db.sh`.
 
 ### ⚠️ Important
 Pour que ce processus fonctionne, la variable `DATABASE_URL` **doit être définie** dans l'environnement Vercel. Si elle est absente, la synchronisation sera ignorée.

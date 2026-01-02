@@ -5,6 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Book } from 'lucide-react'
 import Image from "next/image"
 
+export const metadata = {
+  title: "Documentation",
+  description: "NeoSaaS documentation: everything you need to build, launch, and scale your SaaS business. Installation guides, architecture, and API references.",
+  keywords: ["documentation", "docs", "guide", "tutorial", "API", "installation"],
+}
+
 export default function DocsPage() {
   return (
     <div className="space-y-8">
@@ -141,6 +147,19 @@ export default function DocsPage() {
               <div className="text-center">
                 <h4 className="font-semibold">Amazon SES</h4>
                 <p className="text-xs text-muted-foreground">Transactional Emails</p>
+              </div>
+            </Link>
+
+            <Link href="https://www.scaleway.com/en/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
+              <div className="relative w-24 h-24 flex items-center justify-center">
+                <svg viewBox="0 0 200 200" className="w-20 h-20">
+                  <circle cx="100" cy="100" r="100" fill="#4F0599"/>
+                  <path d="M60 90 L90 60 L90 90 L120 90 L120 60 L150 90 L120 120 L120 90 L90 90 L90 120 Z" fill="white" stroke="white" strokeWidth="8" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="text-center">
+                <h4 className="font-semibold">Scaleway</h4>
+                <p className="text-xs text-muted-foreground">Cloud Infrastructure</p>
               </div>
             </Link>
 

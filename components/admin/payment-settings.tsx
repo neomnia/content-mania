@@ -1,0 +1,211 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { toast } from "sonner"
+import { CreditCard, AlertCircle, ExternalLink, Loader2, TestTube, Rocket } from "lucide-react"
+import Link from "next/link"
+
+export function PaymentSettings() {
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  
+  const [config, setConfig] = useState({
+    isEnabled: true,
+    paypalEnabled: false,
+    stripeEnabled: false,
+    lagoMode: "production"
+  })
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch('/api/admin/config')
+        if (res.ok) {
+          const data = await res.json()
+          setConfig({
+            isEnabled: true,
+            paypalEnabled: data.lago_paypal_enabled === 'true',
+            stripeEnabled: data.lago_stripe_enabled === 'true',
+            lagoMode: data.lago_mode || "production"
+          })
+        }
+      } catch (error) {
+        console.error("Failed to fetch payment config", error)
+        toast.error("Failed to load payment settings")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchConfig()
+  }, [])
+
+  const handleSave = async (newConfig: typeof config) => {
+    setIsSaving(true)
+    setConfig(newConfig) // Optimistic update
+    
+    try {
+      const formData = new FormData()
+      formData.append('lagoPaypalEnabled', newConfig.paypalEnabled.toString())
+      formData.append('lagoStripeEnabled', newConfig.stripeEnabled.toString())
+      formData.append('lagoMode', newConfig.lagoMode)
+      
+      const res = await fetch('/api/admin/config', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) throw new Error("Failed to save")
+      
+      toast.success("Payment settings saved")
+    } catch (error) {
+      toast.error("Failed to save payment settings")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-[#CD7F32]" />
+            Lago Configuration
+          </CardTitle>
+          <CardDescription>
+            Configure your billing engine settings. API keys are managed separately in the{" "}
+            <Link href="/admin/api" className="text-primary hover:underline">
+              API Manager
+            </Link>
+            .
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          
+          {/* Environment Mode with Toggle */}
+          <div className="rounded-lg border p-4 space-y-4">
+            <div className="space-y-1">
+              <Label className="text-base font-medium">Environment Mode</Label>
+              <p className="text-sm text-muted-foreground">
+                Switch between Test and Production environments.
+              </p>
+            </div>
+            
+            <div className="flex items-center justify-center gap-3 p-4 bg-muted/30 rounded-lg">
+              <div className={`flex items-center gap-2 font-medium transition-colors ${config.lagoMode === 'test' ? 'text-orange-600' : 'text-muted-foreground'}`}>
+                <TestTube className="h-4 w-4" />
+                <span>Test</span>
+              </div>
+              
+              <Switch
+                checked={config.lagoMode === 'production'}
+                onCheckedChange={(checked) => handleSave({ ...config, lagoMode: checked ? 'production' : 'test' })}
+                disabled={isSaving}
+                className="data-[state=checked]:bg-green-600"
+              />
+              
+              <div className={`flex items-center gap-2 font-medium transition-colors ${config.lagoMode === 'production' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                <Rocket className="h-4 w-4" />
+                <span>Production</span>
+              </div>
+            </div>
+            
+            <div className="text-xs text-center text-muted-foreground">
+              {config.lagoMode === 'production' ? (
+                <span className="text-green-600 font-medium">✓ Production mode enabled</span>
+              ) : (
+                <span className="text-orange-600 font-medium">⚠️ Test mode enabled</span>
+              )}
+            </div>
+          </div>
+
+          {/* Payment Methods */}
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label className="text-base font-medium">Payment Methods</Label>
+              <p className="text-sm text-muted-foreground">
+                Enable payment providers for your platform.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  {/* Stripe Icon */}
+                  <div className="h-10 w-10 rounded-full bg-[#635BFF]/10 flex items-center justify-center">
+                    <svg viewBox="0 0 32 32" className="h-6 w-6 fill-[#635BFF]" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M13.9 16.2c0 1.3 1.3 1.9 3.4 1.9 2.6 0 4.9-.6 4.9-.6v3.6s-1.9.6-4.5.6c-4.6 0-7.3-2.3-7.3-6.1 0-5.9 8.3-6.1 8.3-9.2 0-1-.9-1.6-2.6-1.6-2.3 0-4.6.7-4.6.7V1.8s2-.6 4.8-.6c4.3 0 7 2.2 7 5.9 0 6.1-8.4 6.2-8.4 9.1z"/>
+                    </svg>
+                  </div>
+                  <div className="space-y-0.5">
+                    <Label className="text-base">Stripe</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Accept credit cards
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={config.stripeEnabled}
+                  onCheckedChange={(checked) => handleSave({ ...config, stripeEnabled: checked })}
+                  disabled={isSaving}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  {/* PayPal Icon */}
+                  <div className="h-10 w-10 rounded-full bg-[#003087]/10 flex items-center justify-center">
+                    <svg viewBox="0 0 32 32" className="h-5 w-5 fill-[#003087]" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M26.6 9.3c-.6-2.6-2.8-4.3-6.5-4.3h-6.4c-.7 0-1.3.5-1.4 1.2L9.8 26.5c-.1.5.3 1 .8 1h3.8c.6 0 1.1-.4 1.2-1l.9-5.6h2.6c4.6 0 8.2-1.9 9.3-6.6.3-1.3.3-2.5-.2-3.6-.5-1.1-1.3-1.9-2.4-2.4z"/>
+                    </svg>
+                  </div>
+                  <div className="space-y-0.5">
+                    <Label className="text-base">PayPal</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Online payments
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={config.paypalEnabled}
+                  onCheckedChange={(checked) => handleSave({ ...config, paypalEnabled: checked })}
+                  disabled={isSaving}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* API Configuration Info */}
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="space-y-2 flex-1">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100">API Configuration</h4>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  To configure Lago API keys, URLs, and credentials, please use the centralized API Management interface.
+                </p>
+                <Button variant="link" className="h-auto p-0 text-blue-700 dark:text-blue-300" asChild>
+                  <Link href="/admin/api" className="flex items-center gap-1">
+                    Open API Manager <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

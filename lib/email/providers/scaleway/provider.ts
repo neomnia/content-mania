@@ -43,7 +43,13 @@ export class ScalewayTemProvider extends BaseEmailProvider {
       );
 
       // Vérifier que le domaine d'envoi est vérifié (si configuré)
-      const fromDomain = message.from.split('@')[1];
+      // message.from peut être "Name <email@domain.com>" ou juste "email@domain.com"
+      // On extrait l'email pour le check de domaine
+      const fromEmail = message.from.includes('<') 
+        ? message.from.match(/<([^>]+)>/)?.[1] || message.from
+        : message.from;
+
+      const fromDomain = fromEmail.split('@')[1];
       const verifiedDomains = this.temConfig!.verifiedDomains || [];
 
       if (verifiedDomains.length > 0 && !verifiedDomains.includes(fromDomain)) {
@@ -63,7 +69,7 @@ export class ScalewayTemProvider extends BaseEmailProvider {
       // Préparer le payload selon les spécifications de l'API Scaleway TEM
       const payload: any = {
         from: {
-          email: message.from,
+          email: fromEmail,
           ...(message.fromName && { name: message.fromName }),
         },
         to: to.map(email => ({ email })),
@@ -98,6 +104,13 @@ export class ScalewayTemProvider extends BaseEmailProvider {
         });
       }
 
+      // Log payload for debugging (excluding full content to avoid log spam, but keeping structure)
+      emailLogger.info('Scaleway TEM Payload structure:', this.providerName, {
+        ...payload,
+        html: payload.html ? '(content present)' : undefined,
+        text: payload.text ? '(content present)' : undefined
+      });
+
       const response = await fetch(`${apiUrl}/regions/${region}/emails`, {
         method: 'POST',
         headers: {
@@ -109,6 +122,14 @@ export class ScalewayTemProvider extends BaseEmailProvider {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Log raw error data for debugging
+        emailLogger.error(
+          `Scaleway API Raw Error Response: ${JSON.stringify(errorData)}`,
+          null,
+          this.providerName
+        );
+
         let errorMessage = errorData.message || errorData.error || response.statusText;
 
         // Gestion détaillée de l'erreur de domaine non vérifié

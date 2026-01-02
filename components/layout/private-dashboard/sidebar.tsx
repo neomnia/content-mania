@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   Users,
   FileText,
+  ShoppingBag,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -38,11 +39,12 @@ const navItems = [
 
 const adminItems = [
   { name: "Dashboard", href: "/admin", icon: Shield, superAdminOnly: false },
-  { name: "Users", href: "/admin/users", icon: Users, superAdminOnly: true },
+  { name: "Products", href: "/admin/products", icon: ShoppingBag, superAdminOnly: false },
+  { name: "Organization", href: "/admin/users", icon: Users, superAdminOnly: true },
+  { name: "Parameters", href: "/admin/settings", icon: Settings, superAdminOnly: false },
   { name: "API Management", href: "/admin/api", icon: Key, superAdminOnly: false },
-  { name: "Pages ACL", href: "/admin/pages", icon: Settings, superAdminOnly: false },
   { name: "Mail Management", href: "/admin/mail", icon: Mail, superAdminOnly: false },
-  { name: "Logs", href: "/admin/logs", icon: FileText, superAdminOnly: false },
+  { name: "Legal & Compliance", href: "/admin/legal", icon: FileText, superAdminOnly: false },
 ]
 
 interface PrivateSidebarProps {
@@ -53,7 +55,7 @@ interface PrivateSidebarProps {
 export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps) {
   const pathname = usePathname()
   const { isAdmin, isSuperAdmin, isLoading } = useUser()
-  const { siteName } = usePlatformConfig()
+  const { siteName, logo, logoDisplayMode } = usePlatformConfig()
   const [isAdminOpen, setIsAdminOpen] = useState(
     pathname.startsWith("/admin") || pathname.startsWith("/dashboard/admin"),
   )
@@ -93,29 +95,40 @@ export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps)
           isCollapsed ? "w-[68px]" : "w-64",
         )}
       >
-        <div className={cn("flex h-16 items-center border-b", isCollapsed ? "px-3 justify-center" : "px-6")}>
+                        <div className={cn("flex h-16 items-center border-b", isCollapsed ? "px-3 justify-center" : "px-6")}>
           <Link href="/dashboard" className="flex items-center gap-2" onClick={handleLinkClick}>
-            <div className="h-8 w-8 rounded-lg bg-[#CD7F32] flex items-center justify-center flex-shrink-0">
-              <span className="font-bold text-white text-sm">{logoInitials}</span>
-            </div>
-            {!isCollapsed && (
-              <span className="font-bold text-lg">
+            {(isCollapsed || logoDisplayMode === 'logo' || logoDisplayMode === 'both') && (
+              logo ? (
+                <img src={logo} alt={siteName} className="h-8 w-8 object-contain" />
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#CD7F32] text-primary-foreground font-bold">
+                  {logoInitials}
+                </div>
+              )
+            )}
+            {!isCollapsed && (logoDisplayMode === 'text' || logoDisplayMode === 'both') && (
+              <span className="font-bold text-xl">
                 <span className="text-foreground">{siteName.substring(0, 3)}</span>
                 <span className="text-[#CD7F32]">{siteName.substring(3)}</span>
               </span>
             )}
           </Link>
+          <div className={cn("ml-auto flex items-center", isCollapsed && "hidden")}>
           {isOpen && !isCollapsed && (
             <Button variant="ghost" size="icon" className="ml-auto md:hidden" onClick={onClose}>
               <X className="h-5 w-5" />
             </Button>
           )}
         </div>
+        </div>
 
         <nav className={cn("flex-1 space-y-1 overflow-y-auto", isCollapsed ? "p-2" : "p-4")}>
           {navItems.map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href
+            const isRoot = item.href === "/dashboard"
+            const isActive = isRoot 
+              ? pathname === item.href 
+              : (pathname === item.href || pathname.startsWith(`${item.href}/`))
 
             const linkContent = (
               <Link
@@ -151,7 +164,10 @@ export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps)
                 <div className="pt-2 border-t mt-2 space-y-1">
                   {visibleAdminItems.map((item) => {
                     const Icon = item.icon
-                    const isActive = pathname === item.href
+                    const isRoot = item.href === "/admin"
+                    const isActive = isRoot 
+                      ? pathname === item.href 
+                      : (pathname === item.href || pathname.startsWith(`${item.href}/`))
                     return (
                       <Tooltip key={item.href}>
                         <TooltipTrigger asChild>
@@ -179,14 +195,17 @@ export function PrivateSidebar({ isOpen = false, onClose }: PrivateSidebarProps)
                   <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                     <div className="flex items-center gap-3">
                       <Shield className="h-5 w-5" />
-                      <span>Admin</span>
+                      <span>Business</span>
                     </div>
                     <ChevronDown className={cn("h-4 w-4 transition-transform", isAdminOpen && "rotate-180")} />
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-1 space-y-1 pl-6">
                     {visibleAdminItems.map((item) => {
                       const Icon = item.icon
-                      const isActive = pathname === item.href
+                      const isRoot = item.href === "/admin"
+                      const isActive = isRoot 
+                        ? pathname === item.href 
+                        : (pathname === item.href || pathname.startsWith(`${item.href}/`))
                       return (
                         <Link
                           key={item.href}

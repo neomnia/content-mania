@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Info, Database, Code, Server, Layers } from "lucide-react"
 
 export const metadata = {
-  title: "Architecture | NeoSaaS Documentation",
-  description: "Understand the NeoSaaS architecture and how components work together",
+  title: "Architecture",
+  description: "Understand the NeoSaaS architecture and how components work together. Learn about client layer, backend API, database, and deployment.",
+  keywords: ["architecture", "system design", "technical overview", "structure"],
 }
 
 export default function ArchitecturePage() {

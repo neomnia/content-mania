@@ -17,8 +17,23 @@ export async function GET() {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
+    // Fetch fresh user data to ensure we have the latest companyId
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.id, currentUser.userId),
+      columns: {
+        companyId: true
+      }
+    });
+
+    const companyId = dbUser?.companyId || currentUser.companyId;
+
+    if (!companyId) {
+       // If no company, return empty list or handle as needed
+       return NextResponse.json({ users: [] });
+    }
+
     const companyUsers = await db.query.users.findMany({
-      where: eq(users.companyId, currentUser.companyId),
+      where: eq(users.companyId, companyId),
       columns: {
         password: false, // Exclude password
       },
@@ -53,7 +68,7 @@ export async function GET() {
         roleId: userInvitations.roleId,
       })
       .from(userInvitations)
-      .where(eq(userInvitations.companyId, currentUser.companyId))
+      .where(eq(userInvitations.companyId, companyId))
 
     const invitationsWithRoles = await Promise.all(
       pendingInvitations.map(async (inv) => {

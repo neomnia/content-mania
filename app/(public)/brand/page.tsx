@@ -2,6 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 
+export const metadata = {
+  title: "Brand Guidelines",
+  description: "NeoSaaS brand identity system and guidelines. Logo usage, color palette, typography, and design elements for consistent branding.",
+  keywords: ["brand", "guidelines", "logo", "colors", "typography", "design"],
+}
+
 export default function BrandPage() {
   return (
     <div className="container py-12 md:py-24">
