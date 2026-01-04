@@ -1,0 +1,177 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/db'
+import { appointments } from '@/db/schema'
+import { eq, and, desc, gte, lte, or } from 'drizzle-orm'
+import { verifyAuth } from '@/lib/auth/server'
+import { z } from 'zod'
+import { syncAppointmentToCalendars } from '@/lib/calendar/sync'
+
+const appointmentSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  location: z.string().optional(),
+  meetingUrl: z.string().url().optional().or(z.literal('')),
+  startTime: z.string(),
+  endTime: z.string(),
+  timezone: z.string().default("Europe/Paris"),
+  status: z.enum(['pending', 'confirmed', 'cancelled', 'completed', 'no_show']).default('pending'),
+  type: z.enum(['free', 'paid']).default('free'),
+  price: z.number().int().min(0).default(0),
+  currency: z.string().default("EUR"),
+  productId: z.string().uuid().optional().nullable(),
+  attendeeEmail: z.string().email().optional(),
+  attendeeName: z.string().optional(),
+  attendeePhone: z.string().optional(),
+  notes: z.string().optional(),
+  syncToCalendar: z.boolean().optional().default(true),
+})
+
+// GET /api/appointments - List appointments
+export async function GET(request: NextRequest) {
+  try {
+    const user = await verifyAuth()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const status = searchParams.get('status')
+    const type = searchParams.get('type')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    const limit = parseInt(searchParams.get('limit') || '50')
+
+    const conditions = [eq(appointments.userId, user.userId)]
+
+    if (status) {
+      conditions.push(eq(appointments.status, status))
+    }
+    if (type) {
+      conditions.push(eq(appointments.type, type))
+    }
+    if (startDate) {
+      conditions.push(gte(appointments.startTime, new Date(startDate)))
+    }
+    if (endDate) {
+      conditions.push(lte(appointments.endTime, new Date(endDate)))
+    }
+
+    const result = await db.query.appointments.findMany({
+      where: and(...conditions),
+      orderBy: [desc(appointments.startTime)],
+      limit,
+      with: {
+        product: true,
+      },
+    })
+
+    return NextResponse.json({ success: true, data: result })
+  } catch (error) {
+    console.error('Failed to fetch appointments:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch appointments' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST /api/appointments - Create appointment
+export async function POST(request: NextRequest) {
+  try {
+    const user = await verifyAuth()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const validated = appointmentSchema.parse(body)
+
+    const startTime = new Date(validated.startTime)
+    const endTime = new Date(validated.endTime)
+
+    if (startTime >= endTime) {
+      return NextResponse.json(
+        { error: 'End time must be after start time' },
+        { status: 400 }
+      )
+    }
+
+    // Check for overlapping appointments
+    const overlapping = await db.query.appointments.findFirst({
+      where: and(
+        eq(appointments.userId, user.userId),
+        or(
+          eq(appointments.status, 'pending'),
+          eq(appointments.status, 'confirmed')
+        ),
+        or(
+          and(
+            lte(appointments.startTime, startTime),
+            gte(appointments.endTime, startTime)
+          ),
+          and(
+            lte(appointments.startTime, endTime),
+            gte(appointments.endTime, endTime)
+          ),
+          and(
+            gte(appointments.startTime, startTime),
+            lte(appointments.endTime, endTime)
+          )
+        )
+      ),
+    })
+
+    if (overlapping) {
+      return NextResponse.json(
+        { error: 'This time slot overlaps with an existing appointment' },
+        { status: 409 }
+      )
+    }
+
+    const [result] = await db.insert(appointments).values({
+      userId: user.userId,
+      title: validated.title,
+      description: validated.description || null,
+      location: validated.location || null,
+      meetingUrl: validated.meetingUrl || null,
+      startTime,
+      endTime,
+      timezone: validated.timezone,
+      status: validated.status,
+      type: validated.type,
+      price: validated.price,
+      currency: validated.currency,
+      productId: validated.productId || null,
+      attendeeEmail: validated.attendeeEmail || null,
+      attendeeName: validated.attendeeName || null,
+      attendeePhone: validated.attendeePhone || null,
+      notes: validated.notes || null,
+      isPaid: validated.type === 'free',
+      paymentStatus: validated.type === 'free' ? 'paid' : 'pending',
+    }).returning()
+
+    // Sync to external calendars if requested
+    if (validated.syncToCalendar) {
+      try {
+        await syncAppointmentToCalendars(result.id)
+      } catch (syncError) {
+        console.error('Calendar sync failed:', syncError)
+        // Don't fail the request if sync fails
+      }
+    }
+
+    return NextResponse.json({ success: true, data: result }, { status: 201 })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.errors[0].message },
+        { status: 400 }
+      )
+    }
+    console.error('Failed to create appointment:', error)
+    return NextResponse.json(
+      { error: 'Failed to create appointment' },
+      { status: 500 }
+    )
+  }
+}

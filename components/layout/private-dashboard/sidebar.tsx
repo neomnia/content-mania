@@ -19,6 +19,8 @@ import {
   Users,
   FileText,
   ShoppingBag,
+  Calendar,
+  CalendarDays,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -32,6 +34,8 @@ import { usePlatformConfig } from "@/contexts/platform-config-context"
 
 const navItems = [
   { name: "Overview", href: "/dashboard", icon: Home },
+  { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
+  { name: "Appointments", href: "/dashboard/appointments", icon: CalendarDays },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
   { name: "Company Management", href: "/dashboard/company-management", icon: Building2 },
   { name: "Profile", href: "/dashboard/profile", icon: User },

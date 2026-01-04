@@ -913,3 +913,163 @@ export type NewOutlookIntegration = typeof outlookIntegrations.$inferInsert
 export type VatRate = typeof vatRates.$inferSelect
 export type NewVatRate = typeof vatRates.$inferInsert
 
+// =============================================================================
+// CALENDAR & APPOINTMENTS MODULE
+// =============================================================================
+
+/**
+ * Calendar Connections - OAuth tokens for Google Calendar and Microsoft Outlook
+ * Supports multiple calendar providers per user
+ */
+export const calendarConnections = pgTable("calendar_connections", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  provider: text("provider").notNull(), // 'google' | 'microsoft'
+  email: text("email"), // Calendar account email
+  accessToken: text("access_token").notNull(), // Encrypted
+  refreshToken: text("refresh_token"), // Encrypted
+  expiresAt: timestamp("expires_at"),
+  calendarId: text("calendar_id"), // Primary calendar ID
+  isActive: boolean("is_active").default(true).notNull(),
+  lastSyncAt: timestamp("last_sync_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+/**
+ * Appointments - Manage paid and free appointments
+ * Integrates with Lago for payments and external calendars for sync
+ */
+export const appointments = pgTable("appointments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  productId: uuid("product_id")
+    .references(() => products.id, { onDelete: "set null" }), // Optional link to appointment product
+  title: text("title").notNull(),
+  description: text("description"),
+  location: text("location"), // Physical or virtual meeting location
+  meetingUrl: text("meeting_url"), // Virtual meeting link (Zoom, Teams, etc.)
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  timezone: text("timezone").default("Europe/Paris").notNull(),
+  status: text("status").notNull().default("pending"), // 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'
+  type: text("type").notNull().default("free"), // 'free' | 'paid'
+  price: integer("price").default(0).notNull(), // Price in cents
+  currency: text("currency").default("EUR").notNull(),
+  isPaid: boolean("is_paid").default(false).notNull(),
+  lagoInvoiceId: text("lago_invoice_id"), // Lago invoice ID for paid appointments
+  lagoTransactionId: text("lago_transaction_id"), // Lago transaction ID
+  paymentStatus: text("payment_status").default("pending"), // 'pending' | 'paid' | 'failed' | 'refunded'
+  paidAt: timestamp("paid_at"),
+  googleEventId: text("google_event_id"), // Google Calendar event ID
+  microsoftEventId: text("microsoft_event_id"), // Microsoft Outlook event ID
+  reminderSent: boolean("reminder_sent").default(false).notNull(),
+  reminderAt: timestamp("reminder_at"), // When to send reminder
+  attendeeEmail: text("attendee_email"), // External attendee email
+  attendeeName: text("attendee_name"), // External attendee name
+  attendeePhone: text("attendee_phone"), // External attendee phone
+  notes: text("notes"), // Internal notes
+  cancellationReason: text("cancellation_reason"),
+  cancelledAt: timestamp("cancelled_at"),
+  metadata: jsonb("metadata"), // Additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+/**
+ * Appointment Slots - Define available time slots for booking
+ * Allows users to set their availability for appointments
+ */
+export const appointmentSlots = pgTable("appointment_slots", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  productId: uuid("product_id")
+    .references(() => products.id, { onDelete: "cascade" }), // Optional: specific to a product
+  dayOfWeek: integer("day_of_week").notNull(), // 0 (Sunday) to 6 (Saturday)
+  startTime: text("start_time").notNull(), // "09:00" format
+  endTime: text("end_time").notNull(), // "17:00" format
+  duration: integer("duration").notNull().default(60), // Duration in minutes
+  bufferBefore: integer("buffer_before").default(0), // Buffer time before appointment (minutes)
+  bufferAfter: integer("buffer_after").default(0), // Buffer time after appointment (minutes)
+  maxAppointments: integer("max_appointments").default(1), // Max concurrent appointments
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+/**
+ * Appointment Exceptions - Override availability for specific dates
+ * Used for vacations, holidays, or special availability
+ */
+export const appointmentExceptions = pgTable("appointment_exceptions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  date: timestamp("date").notNull(), // Specific date
+  isAvailable: boolean("is_available").default(false).notNull(), // false = blocked, true = extra availability
+  startTime: text("start_time"), // Override start time (if available)
+  endTime: text("end_time"), // Override end time (if available)
+  reason: text("reason"), // e.g., "Vacation", "Holiday"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+// Calendar Connections Relations
+export const calendarConnectionsRelations = relations(calendarConnections, ({ one }) => ({
+  user: one(users, {
+    fields: [calendarConnections.userId],
+    references: [users.id],
+  }),
+}))
+
+// Appointments Relations
+export const appointmentsRelations = relations(appointments, ({ one }) => ({
+  user: one(users, {
+    fields: [appointments.userId],
+    references: [users.id],
+  }),
+  product: one(products, {
+    fields: [appointments.productId],
+    references: [products.id],
+  }),
+}))
+
+// Appointment Slots Relations
+export const appointmentSlotsRelations = relations(appointmentSlots, ({ one }) => ({
+  user: one(users, {
+    fields: [appointmentSlots.userId],
+    references: [users.id],
+  }),
+  product: one(products, {
+    fields: [appointmentSlots.productId],
+    references: [products.id],
+  }),
+}))
+
+// Appointment Exceptions Relations
+export const appointmentExceptionsRelations = relations(appointmentExceptions, ({ one }) => ({
+  user: one(users, {
+    fields: [appointmentExceptions.userId],
+    references: [users.id],
+  }),
+}))
+
+// Types
+export type CalendarConnection = typeof calendarConnections.$inferSelect
+export type NewCalendarConnection = typeof calendarConnections.$inferInsert
+
+export type Appointment = typeof appointments.$inferSelect
+export type NewAppointment = typeof appointments.$inferInsert
+
+export type AppointmentSlot = typeof appointmentSlots.$inferSelect
+export type NewAppointmentSlot = typeof appointmentSlots.$inferInsert
+
+export type AppointmentException = typeof appointmentExceptions.$inferSelect
+export type NewAppointmentException = typeof appointmentExceptions.$inferInsert
+
