@@ -18,6 +18,7 @@ Bienvenue dans la documentation principale du projet.
 ## Administration
 - [**Patterns UX pour l'interface admin**](./ADMIN_UX_PATTERNS.md) - Sheet vs Dialog, formulaires, actions (⭐ LECTURE OBLIGATOIRE)
 - [**Design responsive admin**](./ADMIN_RESPONSIVE_DESIGN.md) - Implémentation complète mobile/tablette pour tous les tableaux (⭐ NOUVEAU)
+- [**Système de recherche universel**](./ADMIN_SEARCH_SYSTEM.md) - Recherche dynamique dans tout le site (front, dashboard, admin, docs) avec filtrage par permissions (⭐ NOUVEAU)
 - [**Organisation du Dashboard Admin**](./ADMIN_DASHBOARD_ORGANIZATION.md) - Structure, onglets fusionnés, responsivité (⭐ NOUVEAU)
 - [**Organisation de la page Settings**](./ADMIN_SETTINGS_ORGANIZATION.md) - Modules réorganisés, HTTPS par défaut (⭐ NOUVEAU)
 - [Règles de design responsive pour tableaux admin](./ADMIN_TABLES_RESPONSIVE_RULES.md) - Standards mobile-friendly pour tous les tableaux

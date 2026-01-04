@@ -18,6 +18,10 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { usePlatformConfig } from "@/contexts/platform-config-context"
 import { useCart } from "@/contexts/cart-context"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { getUserRoleConfig } from "@/lib/status-configs"
+import type { SearchElement } from "@/lib/search-catalog"
+import { searchCatalog } from "@/lib/search-catalog"
 
 interface UserData {
   firstName: string
@@ -38,10 +42,51 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
   const { itemCount } = useCart()
   const [user, setUser] = useState<UserData | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<Array<{ name: string; path: string; category: string; keywords: string[]; score?: number }>>([])
+  const [searchResults, setSearchResults] = useState<Array<SearchElement & { score: number }>>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [searchCatalog, setSearchCatalog] = useState<SearchElement[]>([])
+
+  // Load search catalog from API
+  useEffect(() => {
+    const loadSearchCatalog = async () => {
+      try {
+        const response = await fetch('/api/search/catalog')
+        if (response.ok) {
+          const data = await response.json()
+          setSearchCatalog(data.catalog || [])
+        }
+      } catch (error) {
+        console.error('[HEADER] Failed to load search catalog:', error)
+      }
+    }
+    loadSearchCatalog()
+  }, [])
 
   useEffect(() => {
+    // Fetch user data from API
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch("/api/auth/me")
+        if (response.ok) {
+          const data = await response.json()
+          const userData = {
+            firstName: data.user.firstName || "",
+            lastName: data.user.lastName || "",
+            email: data.user.email || "",
+            role: data.user.roles?.[0]?.roleName || "User",
+            position: data.user.position || data.user.roles?.[0]?.roleName || "User",
+            profileImage: data.user.profileImage || null,
+          }
+          setUser(userData)
+          // Update localStorage for other components
+          localStorage.setItem("user", JSON.stringify(userData))
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error)
+      }
+    }
+
+    // Initial load from localStorage
     const storedUser = localStorage.getItem("user")
     if (storedUser) {
       setUser(JSON.parse(storedUser))
@@ -56,6 +101,9 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
         profileImage: null,
       })
     }
+
+    // Fetch fresh data from API
+    fetchUserData()
 
     const handleStorageChange = () => {
       const updatedUser = localStorage.getItem("user")
@@ -74,86 +122,11 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
   }, [])
 
   useEffect(() => {
-    if (searchQuery.length > 0) {
+    if (searchQuery.length > 0 && searchCatalog.length > 0) {
       setIsSearching(true)
       const timer = setTimeout(() => {
-        // Catalogue complet des pages et fonctionnalités du dashboard
-        const dashboardElements = [
-          // Pages principales
-          { name: "Dashboard Principal", path: "/dashboard", category: "Navigation", keywords: ["accueil", "home", "main"] },
-          { name: "Mon Profil", path: "/dashboard/profile", category: "Compte", keywords: ["profile", "user", "compte", "utilisateur", "settings"] },
-          { name: "Paiements & Facturation", path: "/dashboard/payments", category: "Finance", keywords: ["billing", "payments", "facture", "invoice"] },
-          { name: "Panier", path: "/dashboard/cart", category: "Commerce", keywords: ["cart", "shopping", "achats"] },
-          
-          // Administration
-          { name: "Admin Dashboard", path: "/admin", category: "Administration", keywords: ["admin", "administration", "gestion"] },
-          { name: "Gestion des Utilisateurs", path: "/admin/users", category: "Administration", keywords: ["users", "utilisateurs", "members", "membres"] },
-          { name: "Gestion des Commandes", path: "/admin/orders", category: "Commerce", keywords: ["orders", "commandes", "sales", "ventes"] },
-          { name: "Gestion des Produits", path: "/admin/products", category: "Commerce", keywords: ["products", "produits", "inventory", "stock", "catalogue"] },
-          { name: "Taux de TVA", path: "/admin/vat-rates", category: "Configuration", keywords: ["vat", "tva", "tax", "taxes"] },
-          { name: "Pages & ACL", path: "/admin/pages", category: "Configuration", keywords: ["pages", "acl", "access", "permissions", "droits"] },
-          { name: "Configuration Email", path: "/admin/mail", category: "Configuration", keywords: ["mail", "email", "smtp", "transactional"] },
-          { name: "API Management", path: "/admin/api", category: "Développement", keywords: ["api", "keys", "clés", "integration"] },
-          { name: "Logs Système", path: "/admin/logs", category: "Monitoring", keywords: ["logs", "journal", "events", "événements", "monitoring"] },
-          { name: "Pages Légales", path: "/admin/legal", category: "Configuration", keywords: ["legal", "légal", "privacy", "terms", "mentions"] },
-          { name: "Paramètres", path: "/admin/settings", category: "Configuration", keywords: ["settings", "configuration", "paramètres", "config"] },
-          
-          // Exemples & Démo
-          { name: "Dashboard Exemple", path: "/dashboard-exemple", category: "Exemples", keywords: ["demo", "example", "exemple"] },
-          { name: "Test Checkout", path: "/admin/test-checkout", category: "Tests", keywords: ["test", "checkout", "paiement"] },
-          
-          // Store Public
-          { name: "Boutique", path: "/store", category: "Commerce", keywords: ["store", "shop", "boutique", "magasin"] },
-          { name: "Pricing", path: "/pricing", category: "Commercial", keywords: ["pricing", "tarifs", "plans", "abonnements"] },
-          
-          // Documentation
-          { name: "Documentation", path: "/docs", category: "Aide", keywords: ["docs", "documentation", "help", "aide"] },
-          { name: "Installation", path: "/docs/installation", category: "Aide", keywords: ["install", "setup", "configuration"] },
-          { name: "Architecture", path: "/docs/architecture", category: "Aide", keywords: ["architecture", "structure"] },
-        ]
-
-        // Algorithme de recherche amélioré avec scoring
-        const results = dashboardElements
-          .map((element) => {
-            const query = searchQuery.toLowerCase()
-            let score = 0
-
-            // Score pour correspondance exacte du nom
-            if (element.name.toLowerCase() === query) {
-              score += 100
-            }
-
-            // Score pour correspondance du début du nom
-            if (element.name.toLowerCase().startsWith(query)) {
-              score += 50
-            }
-
-            // Score pour correspondance dans le nom
-            if (element.name.toLowerCase().includes(query)) {
-              score += 30
-            }
-
-            // Score pour correspondance dans le path
-            if (element.path.toLowerCase().includes(query)) {
-              score += 20
-            }
-
-            // Score pour correspondance dans les mots-clés
-            if (element.keywords.some(keyword => keyword.includes(query))) {
-              score += 15
-            }
-
-            // Score pour correspondance dans la catégorie
-            if (element.category.toLowerCase().includes(query)) {
-              score += 10
-            }
-
-            return { ...element, score }
-          })
-          .filter((element) => element.score > 0)
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 8) // Limiter à 8 résultats max
-
+        // Utiliser la fonction de recherche centralisée
+        const results = searchCatalog(searchQuery, searchCatalog)
         setSearchResults(results)
         setIsSearching(false)
       }, 300)
@@ -163,7 +136,7 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
       setSearchResults([])
       setIsSearching(false)
     }
-  }, [searchQuery])
+  }, [searchQuery, searchCatalog])
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName[0]}${lastName[0]}`.toUpperCase()
@@ -286,10 +259,16 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-64" align="end">
             <DropdownMenuLabel>
-              <div className="flex flex-col space-y-1">
+              <div className="flex flex-col space-y-2">
                 <p className="text-sm font-semibold">{user ? `${user.firstName} ${user.lastName}` : "User"}</p>
                 <p className="text-xs text-muted-foreground">{user?.email || "user@neosaas.com"}</p>
                 <p className="text-xs text-[#CD7F32] font-medium">{user?.position || user?.role || "Member"}</p>
+                {user?.role && (
+                  <StatusBadge 
+                    config={getUserRoleConfig(user.role)}
+                    size="sm"
+                  />
+                )}
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
