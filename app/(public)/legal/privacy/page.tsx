@@ -10,12 +10,6 @@ export const metadata = {
   keywords: ["privacy", "policy", "data protection", "GDPR", "personal information"],
 }
 
-export const metadata = {
-  title: "Privacy Policy",
-  description: "Our privacy policy explains how we collect, use, and protect your personal information. Read our data protection and privacy practices.",
-  keywords: ["privacy", "policy", "data protection", "GDPR", "personal information"],
-}
-
 export default async function PrivacyPolicyPage() {
   const config = await getPlatformConfig()
   const company = await getLegalCompanyDetails()
