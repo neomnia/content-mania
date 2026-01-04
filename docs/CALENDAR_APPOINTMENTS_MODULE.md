@@ -226,15 +226,139 @@ MICROSOFT_REDIRECT_URI=https://yourdomain.com/api/calendar/callback/microsoft
 
 ## Frontend Pages
 
-### Dashboard Routes
+### Client Dashboard Routes
+
+Routes accessible to all authenticated users for managing their own appointments.
 
 | Route | Description |
 |-------|-------------|
-| `/dashboard/appointments` | List of appointments |
+| `/dashboard/appointments` | List of user's appointments |
 | `/dashboard/appointments/new` | Create new appointment |
 | `/dashboard/appointments/[id]` | Appointment details |
-| `/dashboard/calendar` | Calendar view |
-| `/dashboard/calendar/settings` | Calendar connections |
+| `/dashboard/calendar` | Calendar view (react-big-calendar) |
+| `/dashboard/calendar/settings` | Calendar connections (Google/Microsoft) |
+| `/dashboard/support` | Help center & FAQ |
+
+### Admin Routes
+
+Routes accessible only to administrators for managing all appointments across the platform.
+
+| Route | Description |
+|-------|-------------|
+| `/admin/appointments` | Admin appointments management |
+
+### Admin API Endpoints
+
+#### GET /api/admin/appointments
+List all appointments across all users (admin only).
+
+**Query Parameters:**
+- `status`: Filter by status
+- `type`: Filter by type
+- `startDate`: Filter from date
+- `endDate`: Filter to date
+- `limit`: Maximum results (default: 100)
+
+**Response includes user information:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Consultation",
+      "user": {
+        "id": "user_uuid",
+        "firstName": "Jean",
+        "lastName": "Dupont",
+        "email": "jean@example.com"
+      },
+      "product": { ... },
+      "status": "confirmed",
+      "startTime": "2024-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### POST /api/admin/appointments (action: stats)
+Get appointment statistics for the current month.
+
+**Request Body:**
+```json
+{
+  "action": "stats"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "total": 45,
+    "pending": 5,
+    "confirmed": 20,
+    "completed": 15,
+    "cancelled": 3,
+    "noShow": 2,
+    "paidAppointments": 30,
+    "unpaidAppointments": 5,
+    "totalRevenue": 150000,
+    "unpaidAmount": 25000
+  }
+}
+```
+
+## Support Page
+
+The client dashboard includes a Support/Help Center page (`/dashboard/support`) with:
+
+### Features
+- **FAQ Section**: Accordion-based frequently asked questions in French
+- **Quick Actions**:
+  - Documentation link
+  - Live chat button
+  - Email contact (support@neosaas.com)
+- **Contact Form**: Submit support tickets with category selection
+- **Tips Section**: Helpful guidance for users
+
+### Categories for Support Tickets
+- Question générale (General question)
+- Facturation / Paiement (Billing/Payment)
+- Rendez-vous (Appointments)
+- Problème technique (Technical issue)
+- Mon compte (Account)
+- Autre (Other)
+
+## Navigation Structure
+
+### Client Sidebar (navItems)
+```typescript
+const navItems = [
+  { name: "Overview", href: "/dashboard", icon: Home },
+  { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
+  { name: "Appointments", href: "/dashboard/appointments", icon: CalendarDays },
+  { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
+  { name: "Company Management", href: "/dashboard/company-management", icon: Building2 },
+  { name: "Profile", href: "/dashboard/profile", icon: User },
+  { name: "Support", href: "/dashboard/support", icon: HelpCircle },
+]
+```
+
+### Admin Sidebar (adminItems)
+```typescript
+const adminItems = [
+  { name: "Dashboard", href: "/admin", icon: Shield },
+  { name: "Appointments", href: "/admin/appointments", icon: CalendarDays },
+  { name: "Products", href: "/admin/products", icon: ShoppingBag },
+  { name: "Organization", href: "/admin/users", icon: Users },
+  { name: "Parameters", href: "/admin/settings", icon: Settings },
+  { name: "API Management", href: "/admin/api", icon: Key },
+  { name: "Mail Management", href: "/admin/mail", icon: Mail },
+  { name: "Legal & Compliance", href: "/admin/legal", icon: FileText },
+]
+```
 
 ## Server Actions
 

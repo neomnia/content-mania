@@ -21,6 +21,7 @@ import {
   ShoppingBag,
   Calendar,
   CalendarDays,
+  HelpCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -39,10 +40,12 @@ const navItems = [
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
   { name: "Company Management", href: "/dashboard/company-management", icon: Building2 },
   { name: "Profile", href: "/dashboard/profile", icon: User },
+  { name: "Support", href: "/dashboard/support", icon: HelpCircle },
 ]
 
 const adminItems = [
   { name: "Dashboard", href: "/admin", icon: Shield, superAdminOnly: false },
+  { name: "Appointments", href: "/admin/appointments", icon: CalendarDays, superAdminOnly: false },
   { name: "Products", href: "/admin/products", icon: ShoppingBag, superAdminOnly: false },
   { name: "Organization", href: "/admin/users", icon: Users, superAdminOnly: true },
   { name: "Parameters", href: "/admin/settings", icon: Settings, superAdminOnly: false },
