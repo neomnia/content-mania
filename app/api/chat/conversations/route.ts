@@ -4,7 +4,7 @@ import { chatConversations, chatMessages } from '@/db/schema'
 import { eq, desc, and, or, isNull, isNotNull } from 'drizzle-orm'
 import { verifyAuth } from '@/lib/auth/server'
 import { z } from 'zod'
-import { v4 as uuidv4 } from 'uuid'
+import crypto from 'crypto'
 
 const createConversationSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     // Determine sender info
     const isGuest = !user
-    const sessionId = isGuest ? (validated.guestSessionId || uuidv4()) : null
+    const sessionId = isGuest ? (validated.guestSessionId || crypto.randomUUID()) : null
 
     // Create conversation
     const [conversation] = await db.insert(chatConversations).values({
