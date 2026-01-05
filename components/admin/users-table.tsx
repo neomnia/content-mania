@@ -170,11 +170,23 @@ export function UsersTable({ initialUsers, initialInvitations = [], companies = 
     let compareValue = 0
 
     switch (sortField) {
+      case "id":
+        compareValue = a.id.localeCompare(b.id)
+        break
       case "name":
         compareValue = `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
         break
+      case "username":
+        compareValue = (a.username || "").localeCompare(b.username || "")
+        break
       case "email":
         compareValue = a.email.localeCompare(b.email)
+        break
+      case "company":
+        compareValue = (a.company?.name || "").localeCompare(b.company?.name || "")
+        break
+      case "role":
+        compareValue = (a.userRoles[0]?.role.name || "").localeCompare(b.userRoles[0]?.role.name || "")
         break
       case "createdAt":
         compareValue = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -190,7 +202,7 @@ export function UsersTable({ initialUsers, initialInvitations = [], companies = 
     return sortOrder === "asc" ? compareValue : -compareValue
   })
 
-  const handleSort = (field: "name" | "email" | "createdAt" | "updatedAt") => {
+  const handleSort = (field: "id" | "name" | "username" | "email" | "company" | "role" | "createdAt" | "updatedAt") => {
     if (sortField === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc")
     } else {
@@ -822,6 +834,19 @@ export function UsersTable({ initialUsers, initialInvitations = [], companies = 
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
+              <TableHead className="w-24">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("id")}
+                >
+                  ID
+                  {sortField === "id" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
               <TableHead>
                 <Button
                   variant="ghost"
@@ -835,7 +860,19 @@ export function UsersTable({ initialUsers, initialInvitations = [], companies = 
                   )}
                 </Button>
               </TableHead>
-              <TableHead>Username</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("username")}
+                >
+                  Username
+                  {sortField === "username" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
               <TableHead>
                 <Button
                   variant="ghost"
@@ -849,8 +886,32 @@ export function UsersTable({ initialUsers, initialInvitations = [], companies = 
                   )}
                 </Button>
               </TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead>Role</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("company")}
+                >
+                  Company
+                  {sortField === "company" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("role")}
+                >
+                  Role
+                  {sortField === "role" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
               <TableHead>Status</TableHead>
               <TableHead>
                 <Button
@@ -965,6 +1026,9 @@ export function UsersTable({ initialUsers, initialInvitations = [], companies = 
                       onCheckedChange={(checked) => handleSelectUser(user.id, checked as boolean)}
                     />
                   </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {user.id.substring(0, 8)}...
+                  </TableCell>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
@@ -1043,62 +1107,43 @@ export function UsersTable({ initialUsers, initialInvitations = [], companies = 
                       </span>
                     </div>
                   </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    <div>{new Date(user.createdAt).toLocaleDateString()}</div>
+                    <div className="text-[10px]">{new Date(user.createdAt).toLocaleTimeString()}</div>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {user.updatedAt ? (
+                      <>
+                        <div>{new Date(user.updatedAt).toLocaleDateString()}</div>
+                        <div className="text-[10px]">{new Date(user.updatedAt).toLocaleTimeString()}</div>
+                      </>
+                    ) : (
+                      <span>-</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={user.id === currentUserId}>
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => setEditingUser(user)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit User
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(user.email)}>
-                          Copy Email
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 focus:text-red-600"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete User
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={async () => {
-                            const result = await setSiteManager(user.id)
-                            if (result.success) {
-                              toast.success("Site manager updated")
-                            } else {
-                              toast.error(result.error)
-                            }
-                          }}
-                          disabled={user.isSiteManager}
-                        >
-                          <Gavel className="mr-2 h-4 w-4" />
-                          {user.isSiteManager ? "Is Site Manager" : "Set as Site Manager"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={async () => {
-                            const result = await setDpo(user.id)
-                            if (result.success) {
-                              toast.success("DPO updated")
-                            } else {
-                              toast.error(result.error)
-                            }
-                          }}
-                          disabled={user.isDpo}
-                        >
-                          <ShieldCheck className="mr-2 h-4 w-4" />
-                          {user.isDpo ? "Is DPO" : "Set as DPO"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setEditingUser(user)}
+                        title="Edit user"
+                        disabled={user.id === currentUserId}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDeleteUser(user.id)}
+                        title="Delete user"
+                        disabled={user.id === currentUserId}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -1217,151 +1262,15 @@ export function UsersTable({ initialUsers, initialInvitations = [], companies = 
         )}
       </div>
 
-      {/* Edit User Dialog */}
-      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Update user information and company assignment.
-            </DialogDescription>
-          </DialogHeader>
-          {editingUser && (
-            <form onSubmit={handleEditUser} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-username">Username</Label>
-                <Input
-                  id="edit-username"
-                  name="username"
-                  defaultValue={editingUser.username || ""}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-firstName">First Name</Label>
-                  <Input
-                    id="edit-firstName"
-                    name="firstName"
-                    defaultValue={editingUser.firstName}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-lastName">Last Name</Label>
-                  <Input
-                    id="edit-lastName"
-                    name="lastName"
-                    defaultValue={editingUser.lastName}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email</Label>
-                  <Input
-                    id="edit-email"
-                    name="email"
-                    type="email"
-                    defaultValue={editingUser.email}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-phone">Phone</Label>
-                  <Input
-                    id="edit-phone"
-                    name="phone"
-                    defaultValue={editingUser.phone || ""}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-position">Position</Label>
-                  <Input
-                    id="edit-position"
-                    name="position"
-                    defaultValue={editingUser.position || ""}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-companyId">Company</Label>
-                  <Select name="companyId" defaultValue={editingUser.companyId || "none"}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select company" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Company (Platform Admin)</SelectItem>
-                      {companies.map((company) => (
-                        <SelectItem key={company.id} value={company.id}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-role">Role</Label>
-                <Select name="role" defaultValue={editingUser.userRoles[0]?.role.name || "reader"}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="reader">Reader (Company)</SelectItem>
-                    <SelectItem value="writer">Writer (Company)</SelectItem>
-                    <SelectItem value="admin">Admin (Platform)</SelectItem>
-                    <SelectItem value="super_admin">Super Admin (Platform)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-address">Address</Label>
-                <Input
-                  id="edit-address"
-                  name="address"
-                  defaultValue={editingUser.address || ""}
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-city">City</Label>
-                  <Input
-                    id="edit-city"
-                    name="city"
-                    defaultValue={editingUser.city || ""}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-postalCode">Postal Code</Label>
-                  <Input
-                    id="edit-postalCode"
-                    name="postalCode"
-                    defaultValue={editingUser.postalCode || ""}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-country">Country</Label>
-                  <Input
-                    id="edit-country"
-                    name="country"
-                    defaultValue={editingUser.country || ""}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditingUser(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Saving..." : "Save Changes"}
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Edit User Sheet */}
+      <UserEditSheet
+        user={editingUser}
+        open={!!editingUser}
+        onOpenChange={(open) => !open && setEditingUser(null)}
+        onSave={handleEditUser}
+        companies={companies}
+        isLoading={isLoading}
+      />
 
       {/* Edit Company Dialog */}
       <Dialog open={!!editingCompany} onOpenChange={(open) => !open && setEditingCompany(null)}>

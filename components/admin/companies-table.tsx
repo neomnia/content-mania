@@ -60,6 +60,7 @@ import {
   updateCompanyStatus,
   bulkUpdateCompanyStatus
 } from "@/app/actions/users"
+import { CompanyEditSheet } from "@/components/admin/company-edit-sheet"
 
 interface User {
   id: string
@@ -87,6 +88,7 @@ interface Company {
   isActive: boolean
   users: User[]
   createdAt: Date
+  updatedAt?: Date
 }
 
 interface CompaniesTableProps {
@@ -103,6 +105,8 @@ export function CompaniesTable({ initialCompanies }: CompaniesTableProps) {
   const [viewingUsers, setViewingUsers] = useState<Company | null>(null)
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all")
   const csvImportInputRef = useRef<HTMLInputElement>(null)
+  const [sortField, setSortField] = useState<"id" | "name" | "email" | "city" | "users" | "createdAt" | "updatedAt" | null>(null)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
   const filteredCompanies = companies.filter((company) => {
     const matchesSearch =
@@ -119,9 +123,54 @@ export function CompaniesTable({ initialCompanies }: CompaniesTableProps) {
     return matchesSearch && matchesStatus
   })
 
+  // Sort companies
+  const sortedCompanies = [...filteredCompanies].sort((a, b) => {
+    if (!sortField) return 0
+
+    let compareValue = 0
+
+    switch (sortField) {
+      case "id":
+        compareValue = a.id.localeCompare(b.id)
+        break
+      case "name":
+        compareValue = a.name.localeCompare(b.name)
+        break
+      case "email":
+        compareValue = a.email.localeCompare(b.email)
+        break
+      case "city":
+        compareValue = (a.city || "").localeCompare(b.city || "")
+        break
+      case "users":
+        compareValue = a.users.length - b.users.length
+        break
+      case "createdAt":
+        compareValue = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        break
+      case "updatedAt":
+        if (!a.updatedAt && !b.updatedAt) return 0
+        if (!a.updatedAt) return 1
+        if (!b.updatedAt) return -1
+        compareValue = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+        break
+    }
+
+    return sortOrder === "asc" ? compareValue : -compareValue
+  })
+
+  const handleSort = (field: "id" | "name" | "email" | "city" | "users" | "createdAt" | "updatedAt") => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+    } else {
+      setSortField(field)
+      setSortOrder("asc")
+    }
+  }
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedCompanies(filteredCompanies.map(c => c.id))
+      setSelectedCompanies(sortedCompanies.map(c => c.id))
     } else {
       setSelectedCompanies([])
     }
@@ -383,7 +432,7 @@ export function CompaniesTable({ initialCompanies }: CompaniesTableProps) {
 
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-muted-foreground mr-2">
-            Total: {filteredCompanies.length}
+            Total: {sortedCompanies.length}
           </span>
           
           <Button variant="outline" className="gap-2" onClick={handleExportCSV}>
@@ -497,33 +546,123 @@ export function CompaniesTable({ initialCompanies }: CompaniesTableProps) {
             <TableRow>
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedCompanies.length === filteredCompanies.length && filteredCompanies.length > 0}
+                  checked={selectedCompanies.length === sortedCompanies.length && sortedCompanies.length > 0}
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Users</TableHead>
+              <TableHead className="w-24">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("id")}
+                >
+                  ID
+                  {sortField === "id" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("name")}
+                >
+                  Company
+                  {sortField === "name" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("email")}
+                >
+                  Email
+                  {sortField === "email" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("city")}
+                >
+                  Location
+                  {sortField === "city" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("users")}
+                >
+                  Users
+                  {sortField === "users" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("createdAt")}
+                >
+                  Created
+                  {sortField === "createdAt" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("updatedAt")}
+                >
+                  Updated
+                  {sortField === "updatedAt" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCompanies.length === 0 ? (
+            {sortedCompanies.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   No companies found
                 </TableCell>
               </TableRow>
             ) : (
-              filteredCompanies.map((company) => (
+              sortedCompanies.map((company) => (
                 <TableRow key={company.id} className={!company.isActive ? "opacity-60" : ""}>
                   <TableCell>
                     <Checkbox
                       checked={selectedCompanies.includes(company.id)}
                       onCheckedChange={(checked) => handleSelectCompany(company.id, checked as boolean)}
                     />
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {company.id.substring(0, 8)}...
                   </TableCell>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
@@ -558,57 +697,51 @@ export function CompaniesTable({ initialCompanies }: CompaniesTableProps) {
                       {company.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    <div>{new Date(company.createdAt).toLocaleDateString()}</div>
+                    <div className="text-[10px]">{new Date(company.createdAt).toLocaleTimeString()}</div>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {company.updatedAt ? (
+                      <>
+                        <div>{new Date(company.updatedAt).toLocaleDateString()}</div>
+                        <div className="text-[10px]">{new Date(company.updatedAt).toLocaleTimeString()}</div>
+                      </>
+                    ) : (
+                      <span>-</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => setEditingCompany(company)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit Company
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setViewingUsers(company)}>
-                          <Users className="mr-2 h-4 w-4" />
-                          View Users
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(company.email)}>
-                          Copy Email
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Status</DropdownMenuLabel>
-                        {company.isActive ? (
-                          <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(company.id, false)}
-                            className="text-orange-600"
-                          >
-                            <Ban className="mr-2 h-4 w-4" />
-                            Revoke Access
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(company.id, true)}
-                            className="text-green-600"
-                          >
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Activate Company
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteCompany(company.id)}
-                          className="text-red-600 focus:text-red-600"
-                          disabled={company.users.length > 0}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete Company
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setEditingCompany(company)}
+                        title="Edit company"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setViewingUsers(company)}
+                        title="View users"
+                      >
+                        <Users className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDeleteCompany(company.id)}
+                        title="Delete company"
+                        disabled={company.users.length > 0}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -619,12 +752,12 @@ export function CompaniesTable({ initialCompanies }: CompaniesTableProps) {
 
       {/* Mobile View - Cards */}
       <div className="md:hidden space-y-3">
-        {filteredCompanies.length === 0 ? (
+        {sortedCompanies.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             No companies found
           </div>
         ) : (
-          filteredCompanies.map((company) => (
+          sortedCompanies.map((company) => (
             <div key={company.id} className={`rounded-lg border bg-card p-4 space-y-3 ${!company.isActive ? 'opacity-60' : ''}`}>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -692,102 +825,14 @@ export function CompaniesTable({ initialCompanies }: CompaniesTableProps) {
         )}
       </div>
 
-      {/* Edit Company Dialog */}
-      <Dialog open={!!editingCompany} onOpenChange={(open) => !open && setEditingCompany(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Company</DialogTitle>
-            <DialogDescription>
-              Update company information.
-            </DialogDescription>
-          </DialogHeader>
-          {editingCompany && (
-            <form onSubmit={handleEditCompany} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Company Name</Label>
-                  <Input
-                    id="edit-name"
-                    name="name"
-                    defaultValue={editingCompany.name}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email</Label>
-                  <Input
-                    id="edit-email"
-                    name="email"
-                    type="email"
-                    defaultValue={editingCompany.email}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-phone">Phone</Label>
-                  <Input
-                    id="edit-phone"
-                    name="phone"
-                    defaultValue={editingCompany.phone || ""}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-siret">SIRET</Label>
-                  <Input
-                    id="edit-siret"
-                    name="siret"
-                    defaultValue={editingCompany.siret || ""}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-vatNumber">VAT Number</Label>
-                <Input
-                  id="edit-vatNumber"
-                  name="vatNumber"
-                  defaultValue={editingCompany.vatNumber || ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-address">Address</Label>
-                <Input
-                  id="edit-address"
-                  name="address"
-                  defaultValue={editingCompany.address || ""}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-city">City</Label>
-                  <Input
-                    id="edit-city"
-                    name="city"
-                    defaultValue={editingCompany.city || ""}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-zipCode">Zip Code</Label>
-                  <Input
-                    id="edit-zipCode"
-                    name="zipCode"
-                    defaultValue={editingCompany.zipCode || ""}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditingCompany(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Saving..." : "Save Changes"}
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Edit Company Sheet */}
+      <CompanyEditSheet
+        company={editingCompany}
+        open={!!editingCompany}
+        onOpenChange={(open) => !open && setEditingCompany(null)}
+        onSave={handleEditCompany}
+        isLoading={isLoading}
+      />
 
       {/* View Users Dialog */}
       <Dialog open={!!viewingUsers} onOpenChange={(open) => !open && setViewingUsers(null)}>
