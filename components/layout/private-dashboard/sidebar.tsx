@@ -20,6 +20,7 @@ import {
   FileText,
   ShoppingBag,
   Calendar,
+  CalendarDays,
   HelpCircle,
   MessageSquare,
 } from "lucide-react"
