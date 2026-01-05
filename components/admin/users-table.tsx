@@ -70,6 +70,7 @@ import {
 } from "@/app/actions/users"
 import { resendInvitation, cancelInvitation } from "@/app/actions/invitations"
 import { Mail, XCircle, Gavel, ShieldCheck } from "lucide-react"
+import { UserEditSheet } from "@/components/admin/user-edit-sheet"
 
 interface Company {
   id: string
@@ -121,6 +122,7 @@ interface User {
     }
   }[]
   createdAt: Date
+  updatedAt?: Date
 }
 
 interface UsersTableProps {
@@ -142,6 +144,8 @@ export function UsersTable({ initialUsers, initialInvitations = [], companies = 
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [editingCompany, setEditingCompany] = useState<Company | null>(null)
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all")
+  const [sortField, setSortField] = useState<"name" | "email" | "createdAt" | "updatedAt" | null>(null)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -158,6 +162,42 @@ export function UsersTable({ initialUsers, initialInvitations = [], companies = 
 
     return matchesSearch && matchesStatus
   })
+
+  // Sort users
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    if (!sortField) return 0
+
+    let compareValue = 0
+
+    switch (sortField) {
+      case "name":
+        compareValue = `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
+        break
+      case "email":
+        compareValue = a.email.localeCompare(b.email)
+        break
+      case "createdAt":
+        compareValue = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        break
+      case "updatedAt":
+        if (!a.updatedAt && !b.updatedAt) return 0
+        if (!a.updatedAt) return 1
+        if (!b.updatedAt) return -1
+        compareValue = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+        break
+    }
+
+    return sortOrder === "asc" ? compareValue : -compareValue
+  })
+
+  const handleSort = (field: "name" | "email" | "createdAt" | "updatedAt") => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+    } else {
+      setSortField(field)
+      setSortOrder("asc")
+    }
+  }
 
   const filteredInvitations = invitations.filter((invitation) => {
     const matchesSearch =
@@ -778,16 +818,66 @@ export function UsersTable({ initialUsers, initialInvitations = [], companies = 
             <TableRow>
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                  checked={selectedUsers.length === sortedUsers.length && sortedUsers.length > 0}
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead>Name</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("name")}
+                >
+                  Name
+                  {sortField === "name" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
               <TableHead>Username</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("email")}
+                >
+                  Email
+                  {sortField === "email" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("createdAt")}
+                >
+                  Created
+                  {sortField === "createdAt" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -ml-2"
+                  onClick={() => handleSort("updatedAt")}
+                >
+                  Updated
+                  {sortField === "updatedAt" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </Button>
+              </TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
