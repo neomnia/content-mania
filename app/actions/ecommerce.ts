@@ -143,14 +143,23 @@ export async function deleteProduct(id: string) {
 // --- Cart ---
 
 export async function getCart() {
+  console.log('[getCart] 🛒 Fetching cart...')
+
   try {
     const user = await getCurrentUser()
+    console.log('[getCart] 👤 User check', {
+      hasUser: !!user,
+      userId: user?.userId,
+      email: user?.email
+    })
+
     let cart
 
     if (user) {
+      console.log('[getCart] 🔍 Looking for user cart...', { userId: user.userId })
       cart = await db.query.carts.findFirst({
         where: and(
-          eq(carts.userId, user.id),
+          eq(carts.userId, user.userId),
           eq(carts.status, "active")
         ),
         with: {
@@ -165,9 +174,16 @@ export async function getCart() {
           }
         }
       })
+      console.log('[getCart] 📦 User cart result', {
+        found: !!cart,
+        cartId: cart?.id,
+        itemCount: cart?.items?.length || 0
+      })
     } else {
+      console.log('[getCart] 👻 Guest user - checking cookie')
       const cookieStore = await cookies()
       const cartId = cookieStore.get("cart_id")?.value
+      console.log('[getCart] 🍪 Cookie cart_id', { cartId })
 
       if (cartId) {
         cart = await db.query.carts.findFirst({
@@ -187,40 +203,71 @@ export async function getCart() {
             }
           }
         })
+        console.log('[getCart] 📦 Cookie cart result', {
+          found: !!cart,
+          itemCount: cart?.items?.length || 0
+        })
       }
     }
 
     return { success: true, data: cart }
   } catch (error) {
-    console.error("Failed to get cart:", error)
+    console.error('[getCart] ❌ Failed to get cart:', error)
     return { success: false, error: "Failed to get cart" }
   }
 }
 
 export async function addToCart(productId: string, quantity: number = 1) {
+  console.log('[addToCart] 🛒 Starting...', { productId, quantity })
+
   try {
+    // 1. Verify product exists first
+    const product = await db.query.products.findFirst({
+      where: eq(products.id, productId)
+    })
+
+    if (!product) {
+      console.error('[addToCart] ❌ Product not found', { productId })
+      return { success: false, error: "Product not found" }
+    }
+    console.log('[addToCart] ✅ Product found', { id: product.id, title: product.title })
+
+    // 2. Get current user
     const user = await getCurrentUser()
+    console.log('[addToCart] 👤 User check', {
+      hasUser: !!user,
+      userId: user?.userId,
+      email: user?.email
+    })
+
     let cart
 
     if (user) {
-      // Get or create active cart
+      // Get or create active cart for authenticated user
+      console.log('[addToCart] 🔍 Looking for existing cart...', { userId: user.userId })
       cart = await db.query.carts.findFirst({
         where: and(
-          eq(carts.userId, user.id),
+          eq(carts.userId, user.userId),
           eq(carts.status, "active")
         )
       })
+      console.log('[addToCart] 📦 Existing cart search result', { found: !!cart, cartId: cart?.id })
 
       if (!cart) {
+        console.log('[addToCart] 🆕 Creating new cart for user', { userId: user.userId })
         const [newCart] = await db.insert(carts).values({
-          userId: user.id,
+          userId: user.userId,
           status: "active"
         }).returning()
         cart = newCart
+        console.log('[addToCart] ✅ New cart created', { cartId: cart.id })
       }
     } else {
+      // Guest user - use cookie-based cart
+      console.log('[addToCart] 👻 Guest user - using cookie cart')
       const cookieStore = await cookies()
       const cartId = cookieStore.get("cart_id")?.value
+      console.log('[addToCart] 🍪 Cookie cart_id', { cartId })
 
       if (cartId) {
         cart = await db.query.carts.findFirst({
@@ -229,23 +276,27 @@ export async function addToCart(productId: string, quantity: number = 1) {
             eq(carts.status, "active")
           )
         })
+        console.log('[addToCart] 📦 Cookie cart found', { found: !!cart })
       }
 
       if (!cart) {
+        console.log('[addToCart] 🆕 Creating new guest cart')
         const [newCart] = await db.insert(carts).values({
           status: "active"
         }).returning()
         cart = newCart
-        
+
         cookieStore.set("cart_id", cart.id, {
           path: "/",
           maxAge: 60 * 60 * 24 * 30, // 30 days
           httpOnly: true,
         })
+        console.log('[addToCart] ✅ Guest cart created and cookie set', { cartId: cart.id })
       }
     }
 
-    // Check if item exists
+    // 3. Check if item already exists in cart
+    console.log('[addToCart] 🔍 Checking for existing item in cart', { cartId: cart.id, productId })
     const existingItem = await db.query.cartItems.findFirst({
       where: and(
         eq(cartItems.cartId, cart.id),
@@ -254,10 +305,15 @@ export async function addToCart(productId: string, quantity: number = 1) {
     })
 
     if (existingItem) {
+      console.log('[addToCart] 📝 Updating existing item quantity', {
+        existingQty: existingItem.quantity,
+        newQty: existingItem.quantity + quantity
+      })
       await db.update(cartItems)
         .set({ quantity: existingItem.quantity + quantity })
         .where(eq(cartItems.id, existingItem.id))
     } else {
+      console.log('[addToCart] ➕ Adding new item to cart')
       await db.insert(cartItems).values({
         cartId: cart.id,
         productId,
@@ -265,12 +321,16 @@ export async function addToCart(productId: string, quantity: number = 1) {
       })
     }
 
+    console.log('[addToCart] ✅ Item added to cart successfully', { cartId: cart.id, productId })
+
     revalidatePath("/cart")
     revalidatePath("/dashboard/cart")
-    return { success: true }
+    revalidatePath("/dashboard/checkout")
+
+    return { success: true, cartId: cart.id }
   } catch (error) {
-    console.error("Failed to add to cart:", error)
-    return { success: false, error: "Failed to add to cart" }
+    console.error('[addToCart] ❌ Failed to add to cart:', error)
+    return { success: false, error: error instanceof Error ? error.message : "Failed to add to cart" }
   }
 }
 
@@ -282,7 +342,7 @@ export async function removeFromCart(productId: string) {
     if (user) {
       const cart = await db.query.carts.findFirst({
         where: and(
-          eq(carts.userId, user.id),
+          eq(carts.userId, user.userId),
           eq(carts.status, "active")
         )
       })
@@ -324,7 +384,7 @@ export async function updateCartItemQuantity(productId: string, quantity: number
     if (user) {
       const cart = await db.query.carts.findFirst({
         where: and(
-          eq(carts.userId, user.id),
+          eq(carts.userId, user.userId),
           eq(carts.status, "active")
         )
       })
@@ -373,9 +433,9 @@ export async function processCheckout(cartId: string) {
       return { success: false, error: "Not authenticated" }
     }
 
-    console.log('[processCheckout] ✅ User authenticated', { 
-      userId: user.id, 
-      email: user.email 
+    console.log('[processCheckout] ✅ User authenticated', {
+      userId: user.userId,
+      email: user.email
     })
 
     // 1. Get Cart
@@ -383,7 +443,7 @@ export async function processCheckout(cartId: string) {
     const cart = await db.query.carts.findFirst({
       where: and(
         eq(carts.id, cartId),
-        eq(carts.userId, user.id),
+        eq(carts.userId, user.userId),
         eq(carts.status, "active")
       ),
       with: {
@@ -430,18 +490,18 @@ export async function processCheckout(cartId: string) {
       // 3. Create/Update Customer in Lago
       console.log('[processCheckout] 👤 Creating/Updating Lago customer')
       const customerInput = {
-        external_id: user.id,
-        name: user.name || user.email,
+        external_id: user.userId,
+        name: user.email, // JWT doesn't have 'name', use email
         email: user.email,
         currency: "USD",
       }
 
       try {
         await lago.customers.create({ customer: customerInput })
-        console.log('[processCheckout] ✅ Lago customer created', { external_id: user.id })
+        console.log('[processCheckout] ✅ Lago customer created', { external_id: user.userId })
       } catch (e) {
         // Ignore if customer exists
-        console.log('[processCheckout] ℹ️  Lago customer already exists (expected)', { external_id: user.id })
+        console.log('[processCheckout] ℹ️  Lago customer already exists (expected)', { external_id: user.userId })
       }
 
       // 4. Prepare Invoice Fees & Ensure Add-ons exist
@@ -477,7 +537,7 @@ export async function processCheckout(cartId: string) {
       try {
         invoiceResult = await lago.invoices.create({
           invoice: {
-            customer: { external_id: user.id },
+            customer: { external_id: user.userId },
             currency: "USD",
             fees: fees,
           }
@@ -515,7 +575,7 @@ export async function processCheckout(cartId: string) {
     })
     
     const [order] = await db.insert(orders).values({
-      userId: user.id,
+      userId: user.userId,
       companyId: user.companyId,
       orderNumber,
       totalAmount,
