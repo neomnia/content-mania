@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { CreditCard, Lock, Mail, Calendar, CheckCircle2, Zap, Shield, TrendingUp, Info, ShoppingBag } from "lucide-react"
+import { CreditCard, Lock, Mail, Calendar, CheckCircle2, Zap, Shield, TrendingUp, Info, ShoppingBag, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [showProfileAlert, setShowProfileAlert] = useState(false)
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [purchasing, setPurchasing] = useState<string | null>(null)
   const { addToCart } = useCart()
 
   useEffect(() => {
@@ -129,12 +130,31 @@ export default function DashboardPage() {
                   <Button 
                     className="w-full bg-[#1A1A1A] hover:bg-[#1A1A1A]/90"
                     onClick={async () => {
-                      await addToCart(product.id)
-                      router.push('/dashboard/checkout')
+                      setPurchasing(product.id)
+                      try {
+                        await addToCart(product.id)
+                        // Wait a brief moment for the cart to update
+                        await new Promise(resolve => setTimeout(resolve, 500))
+                        router.push('/dashboard/checkout')
+                      } catch (error) {
+                        console.error('[Dashboard] Failed to add to cart:', error)
+                      } finally {
+                        setPurchasing(null)
+                      }
                     }}
+                    disabled={purchasing === product.id}
                   >
-                    <ShoppingBag className="mr-2 h-4 w-4" />
-                    Purchase Now
+                    {purchasing === product.id ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="mr-2 h-4 w-4" />
+                        Purchase Now
+                      </>
+                    )}
                   </Button>
                 </div>
               </Card>

@@ -20,7 +20,6 @@ import {
   FileText,
   ShoppingBag,
   Calendar,
-  CalendarDays,
   HelpCircle,
   MessageSquare,
 } from "lucide-react"
@@ -37,7 +36,6 @@ import { usePlatformConfig } from "@/contexts/platform-config-context"
 const navItems = [
   { name: "Overview", href: "/dashboard", icon: Home },
   { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
-  { name: "Appointments", href: "/dashboard/appointments", icon: CalendarDays },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
   { name: "Company Management", href: "/dashboard/company-management", icon: Building2 },
   { name: "Profile", href: "/dashboard/profile", icon: User },
