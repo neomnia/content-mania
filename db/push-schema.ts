@@ -312,8 +312,8 @@ async function pushSchema() {
 
       // Create super admin user (no company_id - platform admin)
       await sql`
-        INSERT INTO users (email, password, first_name, last_name, company_id, is_active)
-        VALUES ('admin@exemple.com', ${hashedPassword}, 'Super', 'Admin', NULL, true)
+        INSERT INTO users (email, password, first_name, last_name, company_id, is_active, is_dpo, is_site_manager)
+        VALUES ('admin@exemple.com', ${hashedPassword}, 'Super', 'Admin', NULL, true, true, true)
         ON CONFLICT (email) DO NOTHING;
       `;
 

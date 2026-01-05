@@ -22,6 +22,7 @@ import { eq, and } from 'drizzle-orm'
 import { getLagoClient } from '@/lib/lago'
 import { createTestInvoice, createTestCustomer, shouldUseTestMode, simulateTestPayment } from './lago-test-mode'
 import { notifyTeamDigitalProductPurchase, notifyTeamAppointmentBooking } from './team-notifications'
+import { notifyAdminNewOrder, notifyAdminNewAppointment } from '@/lib/notifications/admin-notifications'
 import { syncAppointmentToCalendars } from '@/lib/calendar/sync'
 import { emailRouter } from '@/lib/email'
 import type { CheckoutResult, AppointmentBookingData, ProductType, TeamNotification } from './types'
@@ -337,6 +338,25 @@ async function processAppointmentCheckout(params: {
 
   await notifyTeamAppointmentBooking(teamNotification)
 
+  // 5b. Notifier l'admin via le système de chat
+  try {
+    await notifyAdminNewAppointment({
+      appointmentId: appointment.id,
+      userId,
+      userEmail,
+      userName,
+      productTitle: product.title,
+      startTime: appointmentData.startTime,
+      endTime: appointmentData.endTime,
+      attendeeName: appointmentData.attendeeName,
+      attendeeEmail: appointmentData.attendeeEmail
+    })
+    console.log('[Checkout] Admin notification sent for appointment')
+  } catch (notifError) {
+    console.error('[Checkout] Failed to send admin notification:', notifError)
+    // Non-blocking
+  }
+
   // 6. Envoyer email de confirmation au client
   try {
     await emailRouter.sendWithFallback({
@@ -512,6 +532,24 @@ async function processDigitalProductCheckout(params: {
   }
 
   await notifyTeamDigitalProductPurchase(teamNotification)
+
+  // 5b. Notifier l'admin via le système de chat
+  try {
+    await notifyAdminNewOrder({
+      orderId: order.id,
+      orderNumber,
+      userId,
+      userEmail,
+      userName,
+      totalAmount,
+      currency,
+      hasAppointment: false
+    })
+    console.log('[Checkout] Admin notification sent for digital product order')
+  } catch (notifError) {
+    console.error('[Checkout] Failed to send admin notification:', notifError)
+    // Non-blocking
+  }
 
   // 6. Envoyer email de confirmation au client
   try {

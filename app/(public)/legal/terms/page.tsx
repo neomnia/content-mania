@@ -8,17 +8,22 @@ export const metadata = {
 }
 
 export default async function TermsOfServicePage() {
-  const tos = await getLatestTos()
+  const tosResult = await getLatestTos()
   const config = await getPlatformConfig()
 
-  if (!tos) {
+  if (!tosResult.success || !tosResult.data) {
     return (
       <div className="prose dark:prose-invert max-w-none">
         <h1>Terms of Service</h1>
         <p>No terms of service have been published yet.</p>
+        <p className="text-sm text-muted-foreground">
+          If you are an administrator, please create and publish the Terms of Service from the admin panel.
+        </p>
       </div>
     )
   }
+
+  const tos = tosResult.data
 
   return (
     <div className="prose dark:prose-invert max-w-none">

@@ -110,7 +110,9 @@ async function seed() {
         password: hashedPassword,
         firstName: 'Super',
         lastName: 'Admin',
-        isActive: true
+        isActive: true,
+        isDpo: true,
+        isSiteManager: true
       }).returning();
 
       const superAdminRole = await getRole('super_admin');

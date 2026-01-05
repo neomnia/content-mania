@@ -15,6 +15,7 @@ import Link from "next/link"
 import { toast } from "sonner"
 import { getProductById, getCart, processCheckout, addToCart } from "@/app/actions/ecommerce"
 import { getPaymentMethods, getCustomerPortalUrl } from "@/app/actions/payments"
+import { AppointmentModal } from "@/components/checkout/appointment-modal"
 
 const plans = [
   {
@@ -62,6 +63,11 @@ export default function CheckoutPage() {
     email: string
     company?: string
   } | null>(null)
+  
+  // États pour la gestion des rendez-vous
+  const [appointmentModalOpen, setAppointmentModalOpen] = useState(false)
+  const [currentAppointmentProduct, setCurrentAppointmentProduct] = useState<any | null>(null)
+  const [appointmentsData, setAppointmentsData] = useState<Map<string, any>>(new Map())
 
   useEffect(() => {
     const moduleId = searchParams.get("module")
@@ -97,11 +103,12 @@ export default function CheckoutPage() {
               id: item.product.id,
               name: item.product.title,
               price: item.product.price / 100,
-              icon: ShoppingBag,
-              deliveryTime: "Instant Access",
+              icon: item.product.type === 'appointment' ? Calendar : ShoppingBag,
+              deliveryTime: item.product.type === 'appointment' ? 'Rendez-vous \u00e0 planifier' : 'Instant Access',
               description: item.product.description,
               quantity: item.quantity,
-              currency: item.product.currency
+              currency: item.product.currency,
+              type: item.product.type // Ajouter le type de produit
             }))
             setCartItems(items)
 
@@ -158,6 +165,25 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Vérifier s'il y a des produits de type "appointment" dans le panier
+    const appointmentProducts = cartItems.filter(item => item.type === 'appointment')
+    
+    if (appointmentProducts.length > 0) {
+      // Vérifier si tous les rendez-vous ont été sélectionnés
+      const missingAppointments = appointmentProducts.filter(
+        item => !appointmentsData.has(item.id)
+      )
+      
+      if (missingAppointments.length > 0) {
+        // Ouvrir la modale pour le premier rendez-vous manquant
+        setCurrentAppointmentProduct(missingAppointments[0])
+        setAppointmentModalOpen(true)
+        toast.info("Veuillez sélectionner un créneau pour votre rendez-vous")
+        return
+      }
+    }
+
     setIsProcessing(true)
 
     try {
@@ -168,7 +194,9 @@ export default function CheckoutPage() {
         return
       }
 
-      console.log('[Checkout] Processing order...', { cartId })
+      console.log('[Checkout] Processing order...', { cartId, appointments: Array.from(appointmentsData.entries()) })
+      
+      // Si nous avons des rendez-vous, les inclure dans le processus
       const result = await processCheckout(cartId)
       
       if (result.success) {
@@ -179,15 +207,28 @@ export default function CheckoutPage() {
       } else {
         console.error('[Checkout] ❌ Checkout failed:', result.error)
         toast.error(result.error || "Erreur lors du checkout")
-        // Ne pas bloquer l'utilisateur, le laisser sur la page
       }
     } catch (error) {
       console.error("Checkout error:", error)
       toast.error("Une erreur est survenue. Veuillez réessayer.")
-      // Ne pas bloquer l'utilisateur
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  const handleAppointmentBooked = async (appointmentData: any) => {
+    if (!currentAppointmentProduct) return
+    
+    // Sauvegarder les données du rendez-vous
+    setAppointmentsData(prev => {
+      const newMap = new Map(prev)
+      newMap.set(currentAppointmentProduct.id, appointmentData)
+      return newMap
+    })
+    
+    toast.success("Créneau sélectionné avec succès !")
+    setAppointmentModalOpen(false)
+    setCurrentAppointmentProduct(null)
   }
 
   const handleAddUpsell = async () => {
@@ -287,12 +328,43 @@ export default function CheckoutPage() {
                     <item.icon className="h-6 w-6 text-primary" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold">{item.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{item.name}</h3>
+                      {item.type === 'appointment' && (
+                        <Badge variant="outline" className="text-xs">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          Rendez-vous
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">{item.deliveryTime}</p>
                     <div className="flex justify-between mt-1">
                       <span className="text-sm text-muted-foreground">Qty: {item.quantity}</span>
                       <span className="font-medium">{currencySymbol}{item.price * item.quantity}</span>
                     </div>
+                    {item.type === 'appointment' && (
+                      <Button
+                        variant={appointmentsData.has(item.id) ? "secondary" : "outline"}
+                        size="sm"
+                        className="mt-2 w-full"
+                        onClick={() => {
+                          setCurrentAppointmentProduct(item)
+                          setAppointmentModalOpen(true)
+                        }}
+                      >
+                        {appointmentsData.has(item.id) ? (
+                          <>
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Cr\u00e9neau s\u00e9lectionn\u00e9
+                          </>
+                        ) : (
+                          <>
+                            <Calendar className="h-3 w-3 mr-1" />
+                            S\u00e9lectionner un cr\u00e9neau
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -457,6 +529,24 @@ export default function CheckoutPage() {
           </Card>
         </div>
       </div>
+
+      {/* Modal de s\u00e9lection de rendez-vous */}
+      {currentAppointmentProduct && (
+        <AppointmentModal
+          isOpen={appointmentModalOpen}
+          onClose={() => {
+            setAppointmentModalOpen(false)
+            setCurrentAppointmentProduct(null)
+          }}
+          product={{
+            id: currentAppointmentProduct.id,
+            title: currentAppointmentProduct.name,
+            price: currentAppointmentProduct.price,
+            currency: currentAppointmentProduct.currency || 'EUR'
+          }}
+          onAppointmentBooked={handleAppointmentBooked}
+        />
+      )}
     </div>
   )
 }

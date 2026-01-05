@@ -734,6 +734,75 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   })
 }))
 
+// =============================================================================
+// DISCOUNT COUPONS - Système de tickets de réduction
+// =============================================================================
+
+/**
+ * Coupons - Codes de réduction pour les produits
+ */
+export const coupons = pgTable("coupons", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  code: text("code").notNull().unique(), // Code unique (ex: PROMO2024)
+  description: text("description"), // Description du coupon
+  discountType: text("discount_type").notNull(), // 'percentage' | 'fixed_amount'
+  discountValue: integer("discount_value").notNull(), // Pourcentage (ex: 20 pour 20%) ou montant en centimes
+  currency: text("currency").default("EUR"), // Devise pour les réductions fixes
+  minPurchaseAmount: integer("min_purchase_amount"), // Montant minimum d'achat en centimes
+  maxDiscountAmount: integer("max_discount_amount"), // Montant maximum de réduction en centimes
+  usageLimit: integer("usage_limit"), // Nombre total d'utilisations autorisées (null = illimité)
+  usageCount: integer("usage_count").default(0).notNull(), // Nombre d'utilisations actuelles
+  perUserLimit: integer("per_user_limit"), // Limite par utilisateur (null = illimité)
+  startDate: timestamp("start_date"), // Date de début de validité
+  endDate: timestamp("end_date"), // Date de fin de validité
+  applicableProducts: json("applicable_products"), // Array d'IDs de produits (null = tous les produits)
+  excludedProducts: json("excluded_products"), // Array d'IDs de produits exclus
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+/**
+ * Coupon Usage - Historique d'utilisation des coupons
+ */
+export const couponUsage = pgTable("coupon_usage", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  couponId: uuid("coupon_id").references(() => coupons.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
+  discountAmount: integer("discount_amount").notNull(), // Montant de la réduction appliquée en centimes
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+// Relations pour les coupons
+export const couponsRelations = relations(coupons, ({ one, many }) => ({
+  createdByUser: one(users, {
+    fields: [coupons.createdBy],
+    references: [users.id],
+  }),
+  usages: many(couponUsage),
+}))
+
+export const couponUsageRelations = relations(couponUsage, ({ one }) => ({
+  coupon: one(coupons, {
+    fields: [couponUsage.couponId],
+    references: [coupons.id],
+  }),
+  user: one(users, {
+    fields: [couponUsage.userId],
+    references: [users.id],
+  }),
+  order: one(orders, {
+    fields: [couponUsage.orderId],
+    references: [orders.id],
+  }),
+}))
+
+// =============================================================================
+// CARTS & ORDERS
+// =============================================================================
+
 export const carts = pgTable("carts", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }), // Nullable for guest carts
@@ -828,6 +897,12 @@ export const productLeadsRelations = relations(productLeads, ({ one }) => ({
 
 export type Company = typeof companies.$inferSelect
 export type NewCompany = typeof companies.$inferInsert
+
+export type Coupon = typeof coupons.$inferSelect
+export type NewCoupon = typeof coupons.$inferInsert
+
+export type CouponUsage = typeof couponUsage.$inferSelect
+export type NewCouponUsage = typeof couponUsage.$inferInsert
 
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert

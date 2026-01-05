@@ -23,6 +23,9 @@ Bienvenue dans la documentation principale du projet.
 - [Système de gestion des produits](./PRODUCTS_UNIFIED_PANEL.md)
 - [Améliorations du tableau de produits](./PRODUCTS_TABLE_IMPROVEMENTS.md)
 - [Flux de checkout](./CHECKOUT_FLOW.md)
+- [**Tunnel de vente avec rendez-vous**](./APPOINTMENT_BOOKING_CHECKOUT_FLOW.md) - Intégration du système de réservation dans le checkout (⭐ NOUVEAU)
+- [**Système d'Upsell & Coupons**](./UPSELL_COUPON_SYSTEM.md) - Produits complémentaires et codes de réduction (⭐ NOUVEAU)
+- [**Résumé des implémentations**](./IMPLEMENTATION_SUMMARY.md) - État des fonctionnalités récentes (⭐ NOUVEAU)
 
 ## Administration
 - [**Patterns UX pour l'interface admin**](./ADMIN_UX_PATTERNS.md) - Sheet vs Dialog, formulaires, actions (⭐ LECTURE OBLIGATOIRE)
@@ -34,6 +37,9 @@ Bienvenue dans la documentation principale du projet.
 - [Format d'import CSV](./CSV_IMPORT_FORMAT.md) - Format pour import Users et Companies
 - [Configuration HTTP Headers](./HTTP_HEADERS_CONFIG.md) - En-têtes de sécurité et configuration
 - [Configuration Google Tag Manager](./GTM_CONFIGURATION.md) - Validation et injection GTM
+
+## Conformité & Légal
+- [**Système RGPD & DPO**](./RGPD_DPO_SYSTEM.md) - Gestion automatique du Data Protection Officer et conformité RGPD (⭐ NOUVEAU)
 
 Pour plus d’informations sur l’authentification, consultez le dossier [`app/api/auth/`](../app/api/auth/).
 Pour la configuration serveur et base de données, voir [`SERVER/`](../SERVER/).

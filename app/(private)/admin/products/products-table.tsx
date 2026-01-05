@@ -168,6 +168,7 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
     icon: string;
     focusAreas: string;
     deliverables: string;
+    upsellProductId: string | null;
   }>({ 
     title: '', 
     subtitle: '',
@@ -181,7 +182,8 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
     isFeatured: false,
     icon: 'ShoppingBag',
     focusAreas: '',
-    deliverables: ''
+    deliverables: '',
+    upsellProductId: null
   })
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({})
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -246,7 +248,8 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
         isFeatured: detailsProduct.isFeatured || false,
         icon: detailsProduct.icon || 'ShoppingBag',
         focusAreas: focusAreasText,
-        deliverables: deliverablesText
+        deliverables: deliverablesText,
+        upsellProductId: (detailsProduct as any).upsellProductId || null
       })
       setIsEditingInPanel(false)
       setIsNewProduct(false)
@@ -269,7 +272,8 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
       isFeatured: false,
       icon: 'ShoppingBag',
       focusAreas: '',
-      deliverables: ''
+      deliverables: '',
+      upsellProductId: null
     })
     setIsNewProduct(true)
     setIsEditingInPanel(true)
@@ -761,6 +765,7 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
         isPublished: editValues.isPublished,
         isFeatured: editValues.isFeatured,
         icon: editValues.icon,
+        upsellProductId: editValues.upsellProductId || null,
         features: {
           focusAreas,
           deliverables
@@ -1813,6 +1818,45 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
                             )}
                           </button>
                         </div>
+
+                        {/* Upsell Product Selection - Only shows when 2+ products exist */}
+                        {products.length >= 2 && (
+                          <div className="space-y-2">
+                            <Label className="text-xs">💼 Upsell Product (Optional)</Label>
+                            <Select
+                              value={editValues.upsellProductId || "none"}
+                              onValueChange={(value) => setEditValues({...editValues, upsellProductId: value === "none" ? null : value})}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="No upsell product" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">
+                                  <div className="flex items-center gap-2">
+                                    <X className="h-3 w-3" />
+                                    <span>No upsell</span>
+                                  </div>
+                                </SelectItem>
+                                {products
+                                  .filter(p => p.id !== (isNewProduct ? null : detailsProduct?.id))
+                                  .map(product => (
+                                    <SelectItem key={product.id} value={product.id}>
+                                      <div className="flex items-center gap-2">
+                                        <Plus className="h-3 w-3" />
+                                        <span>{product.title}</span>
+                                        <span className="text-muted-foreground text-xs">
+                                          ({(product.price / 100).toFixed(2)} €)
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-[10px] text-muted-foreground">
+                              Product shown as an optional addition in the cart
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
 

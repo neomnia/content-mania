@@ -2,6 +2,21 @@
 
 Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
 
+## [2026-01-05] - Correction Redirection Première Connexion
+
+### Fix : Redirection vers Page Entreprise
+- **Problème** : Lors de la première connexion sans entreprise assignée, l'utilisateur était redirigé vers `/dashboard/enterprise` (404)
+- **Solution** : Correction de la redirection vers `/dashboard/company-management` (page existante)
+- **Fichiers Modifiés** :
+  - `app/auth/login/page.tsx` : Correction de la redirection lors de l'onboarding
+  - `docs/ACTION_LOG.md` : Mise à jour de la référence à la page
+
+### Comportement Onboarding
+- Si l'utilisateur n'a **pas de companyId** → Redirection vers `/dashboard/company-management` pour configurer l'entreprise
+- Si l'utilisateur a **un companyId** → Redirection vers `/dashboard` (tableau de bord principal)
+
+---
+
 ## [2026-01-02] - Réorganisation Admin et Améliorations UX
 
 ### Page Admin Settings - Réorganisation des Modules
@@ -504,7 +519,7 @@ Ce document retrace l'historique des modifications, des nouvelles fonctionnalit�
 | `db/schema.ts` | Ajout `emailVerified` et table `verificationTokens` |
 | `app/api/auth/register/route.ts` | Génération token + envoi email validation |
 | `app/auth/verify/page.tsx` | Nouvelle page de validation de compte |
-| `app/(private)/dashboard/enterprise/page.tsx` | Ajout champ Code Postal |
+| `app/(private)/dashboard/company-management/page.tsx` | Ajout champ Code Postal |
 
 ### Impact Déploiement
 - Les modifications de schéma sont prises en charge par le script `build-with-db.sh` via `db:hard-reset` (ou `db:push` si configuré autrement).

@@ -8,6 +8,7 @@ Bienvenue dans la documentation complète de NeoSaaS. Cette documentation est or
 Guides pratiques pour démarrer et utiliser NeoSaaS :
 
 - **[Quick Start](./guides/QUICK_START.md)** - Démarrage rapide du projet
+- **[Authentication & Onboarding](./AUTHENTICATION_ONBOARDING.md)** - Système d'authentification et onboarding utilisateur
 - **[Authentication Setup](./guides/AUTHENTICATION_SETUP.md)** - Configuration de l'authentification
 - **[Auto Database Setup](./guides/AUTO_DATABASE_SETUP.md)** - Configuration automatique de la base de données
 - **[Automated Setup](./guides/SETUP_AUTOMATED.md)** - Setup automatisé complet
@@ -36,6 +37,14 @@ Système d'administration et e-commerce :
 - **[Debugging & Logging System](./DEBUGGING_LOGGING_SYSTEM.md)** - Système de logs détaillés
 - **[Checkout Flow](./CHECKOUT_FLOW.md)** - Documentation du tunnel d'achat avec Lago
 - **[Checkout Testing System](./CHECKOUT_TESTING_SYSTEM.md)** - Système de test du tunnel d'achat
+- **[Appointment Booking Checkout Flow](./APPOINTMENT_BOOKING_CHECKOUT_FLOW.md)** - 📅 Tunnel de vente avec prise de rendez-vous intégrée
+- **[Upsell & Coupon System](./UPSELL_COUPON_SYSTEM.md)** - 💼🎟️ Système d'upsell et coupons de réduction
+- **[Implementation Summary](./IMPLEMENTATION_SUMMARY.md)** - ✅ Résumé des implémentations récentes
+
+### 🔐 [Conformité & Légal](./legal/)
+Système de conformité RGPD et pages légales :
+
+- **[RGPD & DPO System](./RGPD_DPO_SYSTEM.md)** - 🛡️ Système RGPD et gestion du Data Protection Officer (DPO)
 
 ### 🔄 [Workflows](./workflows/)
 
@@ -98,4 +107,4 @@ Pour toute question ou suggestion concernant la documentation :
 
 ---
 
-**Dernière mise à jour** : 2025-11-27
+**Dernière mise à jour** : 2026-01-05

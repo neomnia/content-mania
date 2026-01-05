@@ -58,7 +58,7 @@ export default function LoginPage() {
 
       // Check if user needs onboarding (no company assigned)
       if (!data.user.companyId) {
-        router.push('/dashboard/enterprise');
+        router.push('/dashboard/company-management');
       } else {
         // Redirect to dashboard
         router.push('/dashboard');
