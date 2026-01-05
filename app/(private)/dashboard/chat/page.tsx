@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { format, formatDistanceToNow } from "date-fns"
-import { fr } from "date-fns/locale"
+import { enUS } from "date-fns/locale"
 import {
   MessageSquare,
   Send,
@@ -69,10 +69,10 @@ interface ChatConversation {
 }
 
 const statusConfig = {
-  open: { label: "Ouvert", variant: "default" as const, icon: Clock },
-  pending: { label: "En attente de réponse", variant: "warning" as const, icon: Clock },
-  resolved: { label: "Résolu", variant: "success" as const, icon: CheckCircle },
-  closed: { label: "Fermé", variant: "secondary" as const, icon: XCircle },
+  open: { label: "Open", variant: "default" as const, icon: Clock },
+  pending: { label: "Pending response", variant: "warning" as const, icon: Clock },
+  resolved: { label: "Resolved", variant: "success" as const, icon: CheckCircle },
+  closed: { label: "Closed", variant: "secondary" as const, icon: XCircle },
 }
 
 export default function UserChatPage() {
@@ -137,7 +137,7 @@ export default function UserChatPage() {
 
       const data = await response.json()
       if (data.success) {
-        toast.success("Conversation créée")
+        toast.success("Conversation created")
         setNewChatOpen(false)
         setNewSubject("")
         setNewContent("")
@@ -145,11 +145,11 @@ export default function UserChatPage() {
         setSelectedConversation(data.data.conversation)
         setMessages([data.data.message])
       } else {
-        toast.error("Erreur lors de la création")
+        toast.error("Failed to create")
       }
     } catch (error) {
       console.error("Failed to create conversation:", error)
-      toast.error("Erreur de connexion")
+      toast.error("Connection error")
     } finally {
       setCreating(false)
     }
@@ -177,11 +177,11 @@ export default function UserChatPage() {
             : c
         ))
       } else {
-        toast.error("Erreur lors de l'envoi du message")
+        toast.error("Failed to send message")
       }
     } catch (error) {
       console.error("Failed to send message:", error)
-      toast.error("Erreur de connexion")
+      toast.error("Connection error")
     } finally {
       setSending(false)
     }
@@ -211,15 +211,15 @@ export default function UserChatPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
               <MessageSquare className="h-6 w-6" />
-              Mes Conversations
+              My Conversations
             </h1>
             <p className="text-muted-foreground">
-              Discutez avec notre équipe support
+              Chat with our support team
             </p>
           </div>
           <Button onClick={() => setNewChatOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Nouvelle conversation
+            Start a conversation
           </Button>
         </div>
       </div>
@@ -235,18 +235,18 @@ export default function UserChatPage() {
             <ScrollArea className="flex-1">
               {loading ? (
                 <div className="p-8 text-center text-muted-foreground">
-                  Chargement...
+                  Loading...
                 </div>
               ) : conversations.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                  <p>Aucune conversation</p>
+                  <p>No conversations</p>
                   <Button
                     variant="outline"
                     className="mt-4"
                     onClick={() => setNewChatOpen(true)}
                   >
-                    Démarrer une conversation
+                    Start a conversation
                   </Button>
                 </div>
               ) : (
@@ -266,7 +266,7 @@ export default function UserChatPage() {
                           <p className="text-sm text-muted-foreground mt-1">
                             {formatDistanceToNow(new Date(conv.lastMessageAt), {
                               addSuffix: true,
-                              locale: fr
+                              locale: enUS
                             })}
                           </p>
                         </div>
@@ -306,7 +306,7 @@ export default function UserChatPage() {
                       </Badge>
                       {selectedConversation.assignedAdmin && (
                         <span className="text-sm text-muted-foreground">
-                          Assigné à {selectedConversation.assignedAdmin.firstName}
+                          Assigned to {selectedConversation.assignedAdmin.firstName}
                         </span>
                       )}
                     </div>
@@ -317,7 +317,7 @@ export default function UserChatPage() {
                 <ScrollArea className="flex-1 p-4">
                   {messagesLoading ? (
                     <div className="flex items-center justify-center h-full text-muted-foreground">
-                      Chargement des messages...
+                      Loading messages...
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -361,7 +361,7 @@ export default function UserChatPage() {
                                     ? "text-primary-foreground/70"
                                     : "text-muted-foreground"
                                 )}>
-                                  {format(new Date(message.createdAt), "HH:mm", { locale: fr })}
+                                  {format(new Date(message.createdAt), "HH:mm", { locale: enUS })}
                                 </p>
                               </div>
                             </div>
@@ -378,7 +378,7 @@ export default function UserChatPage() {
                   <div className="border-t p-4">
                     <div className="flex gap-2">
                       <Textarea
-                        placeholder="Écrire un message..."
+                        placeholder="Type a message..."
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyDown={(e) => {
@@ -402,7 +402,7 @@ export default function UserChatPage() {
 
                 {selectedConversation.status === 'closed' && (
                   <div className="border-t p-4 text-center text-muted-foreground">
-                    Cette conversation est fermée
+                    This conversation is closed
                   </div>
                 )}
               </>
@@ -410,8 +410,8 @@ export default function UserChatPage() {
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 <div className="text-center">
                   <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                  <p>Sélectionnez une conversation</p>
-                  <p className="text-sm mt-2">ou créez-en une nouvelle</p>
+                  <p>Select a conversation</p>
+                  <p className="text-sm mt-2">or create a new one</p>
                 </div>
               </div>
             )}
@@ -423,17 +423,17 @@ export default function UserChatPage() {
       <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nouvelle conversation</DialogTitle>
+            <DialogTitle>New Conversation</DialogTitle>
             <DialogDescription>
-              Décrivez votre question ou problème, notre équipe vous répondra rapidement.
+              Describe your question or issue, our team will respond quickly.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="subject">Sujet</Label>
+              <Label htmlFor="subject">Subject</Label>
               <Input
                 id="subject"
-                placeholder="Ex: Question sur mon compte"
+                placeholder="e.g: Question about my account"
                 value={newSubject}
                 onChange={(e) => setNewSubject(e.target.value)}
               />
@@ -442,7 +442,7 @@ export default function UserChatPage() {
               <Label htmlFor="message">Message</Label>
               <Textarea
                 id="message"
-                placeholder="Décrivez votre demande..."
+                placeholder="Describe your request..."
                 value={newContent}
                 onChange={(e) => setNewContent(e.target.value)}
                 className="min-h-[120px]"
@@ -451,13 +451,13 @@ export default function UserChatPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewChatOpen(false)}>
-              Annuler
+              Cancel
             </Button>
             <Button
               onClick={createConversation}
               disabled={creating || !newSubject.trim() || !newContent.trim()}
             >
-              {creating ? "Envoi..." : "Envoyer"}
+              {creating ? "Sending..." : "Send"}
             </Button>
           </DialogFooter>
         </DialogContent>

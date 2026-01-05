@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { format, formatDistanceToNow } from "date-fns"
-import { fr } from "date-fns/locale"
+import { enUS } from "date-fns/locale"
 import {
   MessageSquare,
   Search,
@@ -110,17 +110,17 @@ interface ChatStats {
 }
 
 const statusConfig = {
-  open: { label: "Ouvert", variant: "default" as const, color: "bg-green-500" },
-  pending: { label: "En attente", variant: "warning" as const, color: "bg-yellow-500" },
-  resolved: { label: "Résolu", variant: "secondary" as const, color: "bg-blue-500" },
-  closed: { label: "Fermé", variant: "outline" as const, color: "bg-gray-500" },
+  open: { label: "Open", variant: "default" as const, color: "bg-green-500" },
+  pending: { label: "Pending", variant: "warning" as const, color: "bg-yellow-500" },
+  resolved: { label: "Resolved", variant: "secondary" as const, color: "bg-blue-500" },
+  closed: { label: "Closed", variant: "outline" as const, color: "bg-gray-500" },
 }
 
 const priorityConfig = {
-  low: { label: "Basse", color: "text-gray-500" },
-  normal: { label: "Normale", color: "text-blue-500" },
-  high: { label: "Haute", color: "text-orange-500" },
-  urgent: { label: "Urgente", color: "text-red-500" },
+  low: { label: "Low", color: "text-gray-500" },
+  normal: { label: "Normal", color: "text-blue-500" },
+  high: { label: "High", color: "text-orange-500" },
+  urgent: { label: "Urgent", color: "text-red-500" },
 }
 
 export default function AdminChatPage() {
@@ -151,11 +151,11 @@ export default function AdminChatPage() {
         setConversations(data.data)
         setStats(data.stats)
       } else {
-        toast.error("Erreur lors du chargement des conversations")
+        toast.error("Failed to load conversations")
       }
     } catch (error) {
       console.error("Failed to fetch conversations:", error)
-      toast.error("Erreur de connexion")
+      toast.error("Connection error")
     } finally {
       setLoading(false)
     }
@@ -178,7 +178,7 @@ export default function AdminChatPage() {
       }
     } catch (error) {
       console.error("Failed to fetch messages:", error)
-      toast.error("Erreur lors du chargement des messages")
+      toast.error("Failed to load messages")
     } finally {
       setMessagesLoading(false)
     }
@@ -206,11 +206,11 @@ export default function AdminChatPage() {
             : c
         ))
       } else {
-        toast.error("Erreur lors de l'envoi du message")
+        toast.error("Failed to send message")
       }
     } catch (error) {
       console.error("Failed to send message:", error)
-      toast.error("Erreur de connexion")
+      toast.error("Connection error")
     } finally {
       setSending(false)
     }
@@ -225,14 +225,14 @@ export default function AdminChatPage() {
       })
 
       if (response.ok) {
-        toast.success(`Statut mis à jour: ${statusConfig[status as keyof typeof statusConfig]?.label}`)
+        toast.success(`Status updated: ${statusConfig[status as keyof typeof statusConfig]?.label}`)
         fetchConversations()
         if (selectedConversation?.id === id) {
           setSelectedConversation(prev => prev ? { ...prev, status: status as any } : null)
         }
       }
     } catch (error) {
-      toast.error("Erreur lors de la mise à jour")
+      toast.error("Failed to update")
     }
   }
 
@@ -245,14 +245,14 @@ export default function AdminChatPage() {
       })
 
       if (response.ok) {
-        toast.success("Conversation assignée")
+        toast.success("Conversation assigned")
         fetchConversations()
         if (selectedConversation?.id === id) {
           fetchMessages(id)
         }
       }
     } catch (error) {
-      toast.error("Erreur lors de l'assignation")
+      toast.error("Failed to assign")
     }
   }
 
@@ -265,11 +265,11 @@ export default function AdminChatPage() {
       })
 
       if (response.ok) {
-        toast.success("Assignation retirée")
+        toast.success("Assignment removed")
         fetchConversations()
       }
     } catch (error) {
-      toast.error("Erreur")
+      toast.error("Error")
     }
   }
 
@@ -294,7 +294,7 @@ export default function AdminChatPage() {
     if (conv.user) {
       return `${conv.user.firstName} ${conv.user.lastName}`
     }
-    return conv.guestName || conv.guestEmail || 'Visiteur'
+    return conv.guestName || conv.guestEmail || 'Visitor'
   }
 
   const getContactEmail = (conv: ChatConversation) => {
@@ -327,13 +327,13 @@ export default function AdminChatPage() {
               Chat Support
             </h1>
             <p className="text-muted-foreground">
-              Gérez les conversations avec les visiteurs et clients
+              Manage conversations with visitors and customers
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => fetchConversations()}>
               <RefreshCw className="h-4 w-4 mr-2" />
-              Actualiser
+              Refresh
             </Button>
           </div>
         </div>
@@ -343,7 +343,7 @@ export default function AdminChatPage() {
           <Card className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Ouvertes</p>
+                <p className="text-sm text-muted-foreground">Open</p>
                 <p className="text-2xl font-bold text-green-600">{stats.open}</p>
               </div>
               <Inbox className="h-8 w-8 text-green-600 opacity-20" />
@@ -352,7 +352,7 @@ export default function AdminChatPage() {
           <Card className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">En attente</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
                 <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
               </div>
               <Clock className="h-8 w-8 text-yellow-600 opacity-20" />
@@ -361,7 +361,7 @@ export default function AdminChatPage() {
           <Card className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Non assignées</p>
+                <p className="text-sm text-muted-foreground">Unassigned</p>
                 <p className="text-2xl font-bold text-orange-600">{stats.unassigned}</p>
               </div>
               <UserPlus className="h-8 w-8 text-orange-600 opacity-20" />
@@ -391,7 +391,7 @@ export default function AdminChatPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -399,14 +399,14 @@ export default function AdminChatPage() {
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Filtrer par statut" />
+                <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="open">Ouvert</SelectItem>
-                <SelectItem value="pending">En attente</SelectItem>
-                <SelectItem value="resolved">Résolu</SelectItem>
-                <SelectItem value="closed">Fermé</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -415,12 +415,12 @@ export default function AdminChatPage() {
           <ScrollArea className="flex-1">
             {loading ? (
               <div className="p-8 text-center text-muted-foreground">
-                Chargement...
+                Loading...
               </div>
             ) : filteredConversations.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
                 <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                <p>Aucune conversation</p>
+                <p>No conversations</p>
               </div>
             ) : (
               <div className="divide-y">
@@ -448,7 +448,7 @@ export default function AdminChatPage() {
                           <span className="text-xs text-muted-foreground whitespace-nowrap">
                             {formatDistanceToNow(new Date(conv.lastMessageAt), {
                               addSuffix: true,
-                              locale: fr
+                              locale: enUS
                             })}
                           </span>
                         </div>
@@ -466,7 +466,7 @@ export default function AdminChatPage() {
                           )}
                           {!conv.assignedAdminId && (
                             <Badge variant="outline" className="text-xs text-orange-500">
-                              Non assigné
+                              Unassigned
                             </Badge>
                           )}
                         </div>
@@ -520,10 +520,10 @@ export default function AdminChatPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="open">Ouvert</SelectItem>
-                      <SelectItem value="pending">En attente</SelectItem>
-                      <SelectItem value="resolved">Résolu</SelectItem>
-                      <SelectItem value="closed">Fermé</SelectItem>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
                     </SelectContent>
                   </Select>
                   <DropdownMenu>
@@ -536,12 +536,12 @@ export default function AdminChatPage() {
                       {!selectedConversation.assignedAdminId ? (
                         <DropdownMenuItem onClick={() => assignToMe(selectedConversation.id)}>
                           <UserPlus className="h-4 w-4 mr-2" />
-                          Prendre en charge
+                          Take over
                         </DropdownMenuItem>
                       ) : selectedConversation.assignedAdminId === user?.id ? (
                         <DropdownMenuItem onClick={() => unassign(selectedConversation.id)}>
                           <XCircle className="h-4 w-4 mr-2" />
-                          Retirer l'assignation
+                          Remove assignment
                         </DropdownMenuItem>
                       ) : null}
                       <DropdownMenuSeparator />
@@ -550,7 +550,7 @@ export default function AdminChatPage() {
                         className="text-destructive"
                       >
                         <XCircle className="h-4 w-4 mr-2" />
-                        Fermer la conversation
+                        Close conversation
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -561,7 +561,7 @@ export default function AdminChatPage() {
               <ScrollArea className="flex-1 p-4">
                 {messagesLoading ? (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
-                    Chargement des messages...
+                    Loading messages...
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -591,7 +591,7 @@ export default function AdminChatPage() {
                                 ? "text-primary-foreground/70"
                                 : "text-muted-foreground"
                             )}>
-                              {format(new Date(message.createdAt), "HH:mm", { locale: fr })}
+                              {format(new Date(message.createdAt), "HH:mm", { locale: enUS })}
                             </p>
                           </div>
                         )}
@@ -607,7 +607,7 @@ export default function AdminChatPage() {
                 <div className="border-t p-4">
                   <div className="flex gap-2">
                     <Textarea
-                      placeholder="Écrire un message..."
+                      placeholder="Type a message..."
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyDown={(e) => {
@@ -633,7 +633,7 @@ export default function AdminChatPage() {
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <div className="text-center">
                 <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                <p>Sélectionnez une conversation</p>
+                <p>Select a conversation</p>
               </div>
             </div>
           )}

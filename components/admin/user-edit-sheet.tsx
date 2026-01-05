@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -79,6 +79,14 @@ export function UserEditSheet({ user, open, onOpenChange, onSave, companies, isL
   const [selectedCompany, setSelectedCompany] = useState(user?.companyId || "none")
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(user?.profileImage || null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Synchroniser l'état local quand user change
+  useEffect(() => {
+    if (user) {
+      setSelectedCompany(user.companyId || "none")
+      setProfileImagePreview(user.profileImage || null)
+    }
+  }, [user])
 
   if (!user) return null
 

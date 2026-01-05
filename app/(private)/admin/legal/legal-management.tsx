@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -63,7 +63,7 @@ export function LegalManagement({
   
   const [showCookieLogo, setShowCookieLogo] = useState<boolean>(initialConfig.showCookieLogo || false)
   const [cookieEnabled, setCookieEnabled] = useState<boolean>(initialConfig.cookieConsentEnabled !== false)
-  const [cookieMessage, setCookieMessage] = useState<string>(initialConfig.cookieConsentMessage || "Nous utilisons des cookies pour améliorer votre expérience sur notre site. En continuant à naviguer, vous acceptez notre utilisation des cookies.")
+  const [cookieMessage, setCookieMessage] = useState<string>(initialConfig.cookieConsentMessage || "We use cookies to enhance your experience on our site. By continuing to browse, you accept our use of cookies.")
   const [cookiePosition, setCookiePosition] = useState<"bottom-left" | "bottom-right">(initialConfig.cookiePosition || "bottom-left")
   
   // Hosting Settings
@@ -72,9 +72,97 @@ export function LegalManagement({
   const [hostingContact, setHostingContact] = useState(initialConfig.hostingProvider?.contact || "")
   const [isSavingHosting, setIsSavingHosting] = useState(false)
 
-  const [isSavingConfig, setIsSavingConfig] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
+
+  // Debounce timers for autosave
+  const cookieSettingsTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const hostingSettingsTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [isSavingCookie, setIsSavingCookie] = useState(false)
+
+  // Auto-save cookie settings with debounce
+  const autoSaveCookieSettings = useCallback(async () => {
+    setIsSavingCookie(true)
+    try {
+      const result = await updateCookieSettings({
+        showLogo: showCookieLogo,
+        enabled: cookieEnabled,
+        message: cookieMessage,
+        position: cookiePosition
+      })
+      
+      if (result.success) {
+        toast({
+          title: "Auto-saved",
+          description: "Cookie settings saved",
+        })
+      }
+    } catch (error) {
+      // Silent fail for autosave to avoid disrupting user
+      console.error("Autosave failed:", error)
+    } finally {
+      setIsSavingCookie(false)
+    }
+  }, [showCookieLogo, cookieEnabled, cookieMessage, cookiePosition, toast])
+
+  // Auto-save hosting settings with debounce
+  const autoSaveHostingSettings = useCallback(async () => {
+    setIsSavingHosting(true)
+    try {
+      const result = await updateHostingSettings({
+        name: hostingName,
+        address: hostingAddress,
+        contact: hostingContact
+      })
+      
+      if (result.success) {
+        toast({
+          title: "Auto-saved",
+          description: "Hosting settings saved",
+        })
+      }
+    } catch (error) {
+      console.error("Autosave failed:", error)
+    } finally {
+      setIsSavingHosting(false)
+    }
+  }, [hostingName, hostingAddress, hostingContact, toast])
+
+  // Effect for auto-saving cookie settings
+  useEffect(() => {
+    // Clear existing timer
+    if (cookieSettingsTimerRef.current) {
+      clearTimeout(cookieSettingsTimerRef.current)
+    }
+
+    // Set new timer for debounced autosave (500ms after last change)
+    cookieSettingsTimerRef.current = setTimeout(() => {
+      autoSaveCookieSettings()
+    }, 500)
+
+    return () => {
+      if (cookieSettingsTimerRef.current) {
+        clearTimeout(cookieSettingsTimerRef.current)
+      }
+    }
+  }, [showCookieLogo, cookieEnabled, cookieMessage, cookiePosition, autoSaveCookieSettings])
+
+  // Effect for auto-saving hosting settings
+  useEffect(() => {
+    if (hostingSettingsTimerRef.current) {
+      clearTimeout(hostingSettingsTimerRef.current)
+    }
+
+    hostingSettingsTimerRef.current = setTimeout(() => {
+      autoSaveHostingSettings()
+    }, 500)
+
+    return () => {
+      if (hostingSettingsTimerRef.current) {
+        clearTimeout(hostingSettingsTimerRef.current)
+      }
+    }
+  }, [hostingName, hostingAddress, hostingContact, autoSaveHostingSettings])
 
   // Filter and search consents
   const filteredConsents = useMemo(() => {
@@ -195,73 +283,6 @@ export function LegalManagement({
     document.body.removeChild(link)
   }
 
-  async function handleSaveConfig() {
-    setIsSavingConfig(true)
-    try {
-      const result = await updateCookieSettings({
-        showLogo: showCookieLogo,
-        enabled: cookieEnabled,
-        message: cookieMessage,
-        position: cookiePosition
-      })
-      
-      if (result.success) {
-        toast({
-          title: "Saved",
-          description: "Cookie settings updated successfully",
-        })
-        router.refresh()
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: result.error || "Failed to save settings",
-        })
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Something went wrong",
-      })
-    } finally {
-      setIsSavingConfig(false)
-    }
-  }
-
-  async function handleSaveHosting() {
-    setIsSavingHosting(true)
-    try {
-      const result = await updateHostingSettings({
-        name: hostingName,
-        address: hostingAddress,
-        contact: hostingContact
-      })
-      
-      if (result.success) {
-        toast({
-          title: "Saved",
-          description: "Hosting settings updated successfully",
-        })
-        router.refresh()
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: result.error || "Failed to save hosting settings",
-        })
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Something went wrong",
-      })
-    } finally {
-      setIsSavingHosting(false)
-    }
-  }
-
   return (
     <div className="space-y-6">
       <Tabs defaultValue="config" className="w-full">
@@ -339,11 +360,18 @@ export function LegalManagement({
                     </p>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button onClick={handleSaveConfig} disabled={isSavingConfig}>
-                    {isSavingConfig && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Changes
-                  </Button>
+                <CardFooter className="text-sm text-muted-foreground flex items-center gap-2">
+                  {isSavingCookie ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 text-green-600" />
+                      <span className="text-green-600">Auto-saved</span>
+                    </>
+                  )}
                 </CardFooter>
               </Card>
 
@@ -386,11 +414,18 @@ export function LegalManagement({
                     />
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button onClick={handleSaveHosting} disabled={isSavingHosting}>
-                    {isSavingHosting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Hosting Details
-                  </Button>
+                <CardFooter className="text-sm text-muted-foreground flex items-center gap-2">
+                  {isSavingHosting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 text-green-600" />
+                      <span className="text-green-600">Auto-saved</span>
+                    </>
+                  )}
                 </CardFooter>
               </Card>
 

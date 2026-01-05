@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { format } from "date-fns"
-import { fr } from "date-fns/locale"
+import { enUS } from "date-fns/locale"
 import {
   MessageCircle,
   X,
@@ -325,12 +325,12 @@ export function ChatWidget() {
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                     <MessageCircle className="h-8 w-8 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Bienvenue !</h3>
+                  <h3 className="text-lg font-semibold mb-2">Welcome!</h3>
                   <p className="text-muted-foreground text-sm mb-6">
-                    Nous sommes là pour vous aider. Démarrez une conversation avec notre équipe.
+                    We're here to help. Start a conversation with our team.
                   </p>
                   <Button onClick={handleStartChat} className="w-full">
-                    Démarrer une conversation
+                    Start a conversation
                   </Button>
                 </div>
               )}
@@ -342,20 +342,20 @@ export function ChatWidget() {
                     {!user && !guestInfo && (
                       <>
                         <div>
-                          <Label htmlFor="guest-name">Votre nom</Label>
+                          <Label htmlFor="guest-name">Your name</Label>
                           <Input
                             id="guest-name"
-                            placeholder="Jean Dupont"
+                            placeholder="John Doe"
                             value={guestName}
                             onChange={(e) => setGuestName(e.target.value)}
                           />
                         </div>
                         <div>
-                          <Label htmlFor="guest-email">Votre email</Label>
+                          <Label htmlFor="guest-email">Your email</Label>
                           <Input
                             id="guest-email"
                             type="email"
-                            placeholder="jean@example.com"
+                            placeholder="john@example.com"
                             value={guestEmail}
                             onChange={(e) => setGuestEmail(e.target.value)}
                           />
@@ -363,10 +363,10 @@ export function ChatWidget() {
                       </>
                     )}
                     <div>
-                      <Label htmlFor="subject">Sujet</Label>
+                      <Label htmlFor="subject">Subject</Label>
                       <Input
                         id="subject"
-                        placeholder="De quoi avez-vous besoin ?"
+                        placeholder="What do you need help with?"
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
                       />
@@ -375,7 +375,7 @@ export function ChatWidget() {
                       <Label htmlFor="message">Message</Label>
                       <Textarea
                         id="message"
-                        placeholder="Décrivez votre demande..."
+                        placeholder="Describe your request..."
                         value={initialMessage}
                         onChange={(e) => setInitialMessage(e.target.value)}
                         className="min-h-[100px]"
@@ -388,7 +388,7 @@ export function ChatWidget() {
                       disabled={creating || !subject.trim() || !initialMessage.trim() || (!user && !guestInfo && (!guestEmail.trim() || !guestName.trim()))}
                       className="w-full"
                     >
-                      {creating ? "Envoi..." : "Envoyer"}
+                      {creating ? "Sending..." : "Send"}
                     </Button>
                     {conversations.length > 0 && (
                       <Button
@@ -396,7 +396,7 @@ export function ChatWidget() {
                         onClick={() => setView('list')}
                         className="w-full"
                       >
-                        Voir mes conversations
+                        View my conversations
                       </Button>
                     )}
                   </div>
@@ -413,13 +413,13 @@ export function ChatWidget() {
                       onClick={() => setView('form')}
                       className="w-full"
                     >
-                      + Nouvelle conversation
+                      + New conversation
                     </Button>
                   </div>
                   <ScrollArea className="flex-1">
                     {conversations.length === 0 ? (
                       <div className="p-6 text-center text-muted-foreground">
-                        <p>Aucune conversation</p>
+                        <p>No conversations</p>
                       </div>
                     ) : (
                       <div className="divide-y">
@@ -431,7 +431,7 @@ export function ChatWidget() {
                           >
                             <p className="font-medium text-sm truncate">{conv.subject}</p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              {format(new Date(conv.lastMessageAt), "d MMM à HH:mm", { locale: fr })}
+                              {format(new Date(conv.lastMessageAt), "MMM d 'at' HH:mm", { locale: enUS })}
                             </p>
                           </button>
                         ))}
@@ -509,7 +509,7 @@ export function ChatWidget() {
                     <div className="p-3 border-t">
                       <div className="flex gap-2">
                         <Input
-                          placeholder="Votre message..."
+                          placeholder="Your message..."
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
                           onKeyDown={(e) => {

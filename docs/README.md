@@ -22,7 +22,10 @@ Documentation technique sur l'architecture et les décisions de conception :
 
 ### � [E-Commerce & Admin](./admin/)
 Système d'administration et e-commerce :
-
+#### Interface Admin & UX 🎨
+- **[Admin UX Patterns](./ADMIN_UX_PATTERNS.md)** - 🎯 Règles UX pour l'interface admin (Sheet vs Dialog, Tables, Formulaires)
+- **[Admin Users & Companies Tables](./ADMIN_USERS_COMPANIES_TABLES.md)** - 👥🏢 Documentation des tableaux Users et Companies (tri, filtres, édition)
+- **[Admin Tables Responsive Rules](./ADMIN_TABLES_RESPONSIVE_RULES.md)** - 📱 Règles responsive pour les tableaux admin
 #### Gestion des Produits (v2.0 - Panneau Unifié) 🆕
 - **[Products Summary](./PRODUCTS_SUMMARY.md)** - 📋 Résumé exécutif des modifications
 - **[Products Unified Panel](./PRODUCTS_UNIFIED_PANEL.md)** - ⭐ Documentation complète du panneau unifié

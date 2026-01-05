@@ -263,7 +263,9 @@ import {
 
 ## 3. Tables Responsives
 
-Voir documentation complète : [ADMIN_TABLES_RESPONSIVE_RULES.md](./ADMIN_TABLES_RESPONSIVE_RULES.md)
+Voir documentation complète : 
+- [ADMIN_TABLES_RESPONSIVE_RULES.md](./ADMIN_TABLES_RESPONSIVE_RULES.md)
+- [ADMIN_USERS_COMPANIES_TABLES.md](./ADMIN_USERS_COMPANIES_TABLES.md)
 
 ### Résumé des Règles
 
@@ -282,6 +284,139 @@ Voir documentation complète : [ADMIN_TABLES_RESPONSIVE_RULES.md](./ADMIN_TABLES
 ```
 
 **Breakpoint :** `md:` (768px)
+
+### Colonnes Standard pour Tables Admin
+
+Toutes les tables admin doivent inclure les colonnes suivantes :
+
+```tsx
+// Colonne ID (première colonne)
+<TableHead className="w-[100px]">ID</TableHead>
+<TableCell className="font-mono text-xs text-muted-foreground">
+  {item.id.substring(0, 8)}...
+</TableCell>
+
+// Colonnes de dates (dernières colonnes)
+<TableHead>Created</TableHead>
+<TableCell className="text-xs text-muted-foreground">
+  <div>{formatDate(item.createdAt)}</div>
+  <div className="text-[10px] opacity-70">{formatTime(item.createdAt)}</div>
+</TableCell>
+
+<TableHead>Updated</TableHead>
+<TableCell className="text-xs text-muted-foreground">
+  <div>{formatDate(item.updatedAt)}</div>
+  <div className="text-[10px] opacity-70">{formatTime(item.updatedAt)}</div>
+</TableCell>
+```
+
+### Tri des Colonnes
+
+**Toutes les colonnes doivent être triables**
+
+```tsx
+// State pour le tri
+const [sortField, setSortField] = useState<string | null>(null)
+const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
+// Fonction de tri
+const handleSort = (field: string) => {
+  if (sortField === field) {
+    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+  } else {
+    setSortField(field)
+    setSortDirection('asc')
+  }
+}
+
+// Header avec tri
+<TableHead>
+  <Button
+    variant="ghost"
+    onClick={() => handleSort('name')}
+    className="hover:bg-transparent"
+  >
+    Name
+    {sortField === 'name' && (
+      <span className="ml-2">
+        {sortDirection === 'asc' ? '↑' : '↓'}
+      </span>
+    )}
+  </Button>
+</TableHead>
+
+// Implémentation du tri
+const sortedItems = React.useMemo(() => {
+  if (!sortField) return filteredItems
+  
+  return [...filteredItems].sort((a, b) => {
+    const aValue = a[sortField]
+    const bValue = b[sortField]
+    
+    // Tri numérique
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
+    }
+    
+    // Tri date
+    if (aValue instanceof Date && bValue instanceof Date) {
+      return sortDirection === 'asc' 
+        ? aValue.getTime() - bValue.getTime()
+        : bValue.getTime() - aValue.getTime()
+    }
+    
+    // Tri texte
+    const aStr = String(aValue).toLowerCase()
+    const bStr = String(bValue).toLowerCase()
+    return sortDirection === 'asc'
+      ? aStr.localeCompare(bStr)
+      : bStr.localeCompare(aStr)
+  })
+}, [filteredItems, sortField, sortDirection])
+```
+
+### Actions en Ligne (Icônes Directes)
+
+**Privilégier les icônes directes au lieu de dropdown menus**
+
+```tsx
+// ❌ ÉVITER - Dropdown menu (trop de clics)
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="ghost" size="icon">
+      <MoreVertical className="h-4 w-4" />
+    </Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent>
+    <DropdownMenuItem onClick={handleEdit}>Edit</DropdownMenuItem>
+    <DropdownMenuItem onClick={handleDelete}>Delete</DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
+
+// ✅ PRÉFÉRER - Icônes directes (1 clic)
+<TableCell className="text-right">
+  <div className="flex justify-end gap-2">
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setEditing(item)}
+      title="Edit"
+    >
+      <Pencil className="h-4 w-4" />
+    </Button>
+    
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => handleDelete(item.id)}
+      title="Delete"
+      className="text-red-600 hover:text-red-700"
+    >
+      <Trash2 className="h-4 w-4" />
+    </Button>
+  </div>
+</TableCell>
+```
 
 ---
 
@@ -471,6 +606,19 @@ const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
    - Upload d'images
    - Formulaire multi-sections
    - **Référence principale pour Sheet**
+
+2. **User Edit Sheet** : [components/admin/user-edit-sheet.tsx](../components/admin/user-edit-sheet.tsx)
+   - Édition utilisateur
+   - Upload d'image de profil
+   - Recherche d'entreprise avec Combobox
+   - Métadonnées (dates de création/modification)
+   - **Référence pour Sheet avec upload et search**
+
+3. **Company Edit Sheet** : [components/admin/company-edit-sheet.tsx](../components/admin/company-edit-sheet.tsx)
+   - Édition entreprise
+   - Formulaire multi-champs (coordonnées, adresse, SIRET, TVA)
+   - Métadonnées
+   - **Référence pour Sheet avec formulaire business**
 
 ### Dialog (Confirmations)
 

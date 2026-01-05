@@ -44,7 +44,7 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<Array<SearchElement & { score: number }>>([])
   const [isSearching, setIsSearching] = useState(false)
-  const [searchCatalog, setSearchCatalog] = useState<SearchElement[]>([])
+  const [catalogItems, setCatalogItems] = useState<SearchElement[]>([])
 
   // Load search catalog from API
   useEffect(() => {
@@ -53,7 +53,7 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
         const response = await fetch('/api/search/catalog')
         if (response.ok) {
           const data = await response.json()
-          setSearchCatalog(data.catalog || [])
+          setCatalogItems(data.catalog || [])
         }
       } catch (error) {
         console.error('[HEADER] Failed to load search catalog:', error)
@@ -122,11 +122,11 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
   }, [])
 
   useEffect(() => {
-    if (searchQuery.length > 0 && searchCatalog.length > 0) {
+    if (searchQuery.length > 0 && catalogItems.length > 0) {
       setIsSearching(true)
       const timer = setTimeout(() => {
         // Utiliser la fonction de recherche centralisée
-        const results = searchCatalog(searchQuery, searchCatalog)
+        const results = searchCatalog(searchQuery, catalogItems)
         setSearchResults(results)
         setIsSearching(false)
       }, 300)
@@ -136,7 +136,7 @@ export function PrivateHeader({ onMenuClick }: PrivateHeaderProps) {
       setSearchResults([])
       setIsSearching(false)
     }
-  }, [searchQuery, searchCatalog])
+  }, [searchQuery, catalogItems])
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName[0]}${lastName[0]}`.toUpperCase()
