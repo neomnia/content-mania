@@ -1,19 +1,127 @@
-import { getProducts } from "@/app/actions/ecommerce"
-import { PricingGrid } from "./pricing-grid"
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Download } from "lucide-react"
+import { Download, Check, Info, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { getProducts, addToCart } from "@/app/actions/ecommerce"
+import { toast } from "sonner"
 
-export const metadata = {
-  title: "Pricing",
-  description: "Choose the plan that fits your needs. Download NeoSaaS for free or let our experts help you with professional services.",
-  keywords: ["pricing", "plans", "subscription", "free", "download"],
-}
+// Define static plans that can be shown even without database products
+const staticPlans = [
+  {
+    id: "starter",
+    name: "Starter",
+    price: 199,
+    description: "Ideal for solo devs or small teams",
+    features: [
+      "2-hours live walkthrough",
+      "Docker setup",
+      "CLI usage & deployment",
+      "Environment configuration",
+    ],
+    deliverables: ["Setup notes and checklist"],
+    popular: false,
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: 699,
+    description: "Perfect for teams building core modules",
+    features: [
+      "In-depth onboarding",
+      "AWS & CDK walkthrough",
+      "Branching strategies",
+      "Stripe/ CMS setup",
+    ],
+    deliverables: ["Recorded sessions", "Setup documentation"],
+    popular: true,
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    price: 2999,
+    description: "Designed for full production SaaS",
+    features: [
+      "Architecture review",
+      "Advanced customization",
+      "CI/CD fine-tuning",
+      "Performance review",
+    ],
+    deliverables: ["Recorded sessions", "Custom documentation", "Technical recommendations"],
+    popular: false,
+  },
+  {
+    id: "custom",
+    name: "Custom",
+    price: 120,
+    description: "Best for customized implementations",
+    isHourly: true,
+    features: [
+      "Debugging complex issues",
+      "Third-party integrations",
+      "Multitenancy",
+      "Stripe customization",
+    ],
+    deliverables: ["Quick kickoff", "Flexible work", "Weekly updates", "Pause anytime"],
+    popular: false,
+  },
+]
 
-export default async function PricingPage() {
-  const { data: products } = await getProducts({ isPublished: true })
+export default function PricingPage() {
+  const router = useRouter()
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const { data } = await getProducts({ isPublished: true })
+        setProducts(data || [])
+      } catch (error) {
+        console.error("Failed to load products:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadProducts()
+  }, [])
+
+  const handlePurchase = async (planId: string) => {
+    setIsLoading(planId)
+    try {
+      // Find corresponding product from database if it exists
+      const product = products.find(p =>
+        p.title?.toLowerCase().includes(planId) ||
+        p.slug === planId ||
+        p.id === planId
+      )
+
+      if (product) {
+        // Add to cart and redirect to checkout
+        const result = await addToCart(product.id)
+        if (result.success) {
+          toast.success("Produit ajouté au panier")
+          router.push("/dashboard/checkout")
+        } else {
+          toast.error(result.error || "Erreur lors de l'ajout au panier")
+        }
+      } else {
+        // Redirect to contact/booking page for static plans
+        toast.info("Redirection vers la page de contact...")
+        router.push(`/contact?plan=${planId}`)
+      }
+    } catch (error) {
+      console.error("Purchase error:", error)
+      toast.error("Une erreur est survenue")
+    } finally {
+      setIsLoading(null)
+    }
+  }
 
   return (
     <div className="container py-12 md:py-24">
@@ -59,254 +167,129 @@ export default async function PricingPage() {
         </Card>
       </div>
 
-      <div className="mx-auto mt-16 grid max-w-6xl gap-8 md:grid-cols-2 lg:grid-cols-4">
-        {/* Starter Plan */}
-        <Card className="flex flex-col border-2">
-          <CardHeader>
-            <CardTitle className="text-2xl">Starter</CardTitle>
-            <CardDescription className="mt-2">Ideal for solo devs or small teams</CardDescription>
-            <div className="mt-6 flex items-baseline gap-1">
-              <span className="text-4xl font-bold">$199</span>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Info className="h-4 w-4" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 space-y-4">
-            <Button
-              className="w-full bg-transparent"
-              variant="outline"
-              onClick={() => handlePurchase("starter")}
-              disabled={isLoading === "starter"}
-            >
-              {isLoading === "starter" ? "Loading..." : "Get started"}
-            </Button>
-
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">Possible focus areas:</p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>2-hours live walkthrough</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>Docker setup</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>CLI usage & deployment</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>Environment configuration</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="space-y-2 pt-4 border-t">
-              <p className="text-sm font-semibold">You'll receive:</p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <span>Setup notes and checklist</span>
-                </li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pro Plan */}
-        <Card className="flex flex-col border-2 border-[#22C55E] relative">
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-            <Badge className="bg-[#22C55E] text-white">Most popular</Badge>
+      {/* Dynamic Products from Database */}
+      {!loading && products.length > 0 && (
+        <div className="mx-auto mt-16">
+          <h2 className="text-2xl font-bold text-center mb-8">Nos offres</h2>
+          <div className="grid max-w-6xl mx-auto gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {products.map((product) => (
+              <Card key={product.id} className="flex flex-col border-2 relative">
+                {product.isFeatured && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-[#22C55E] text-white">Populaire</Badge>
+                  </div>
+                )}
+                <CardHeader>
+                  <CardTitle className="text-2xl">{product.title}</CardTitle>
+                  <CardDescription className="mt-2">{product.description}</CardDescription>
+                  <div className="mt-6 flex items-baseline gap-1">
+                    <span className="text-4xl font-bold">
+                      {product.price ? `${(product.price / 100).toFixed(0)}€` : 'Sur demande'}
+                    </span>
+                    {product.type === 'appointment' && (
+                      <span className="text-muted-foreground text-sm ml-2">/ session</span>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1">
+                  <Button
+                    className="w-full bg-[#CD7F32] hover:bg-[#B26B27]"
+                    onClick={() => handlePurchase(product.id)}
+                    disabled={isLoading === product.id}
+                  >
+                    {isLoading === product.id ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Chargement...
+                      </>
+                    ) : product.type === 'appointment' ? (
+                      "Prendre rendez-vous"
+                    ) : (
+                      "Acheter maintenant"
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-          <CardHeader>
-            <CardTitle className="text-2xl">Pro</CardTitle>
-            <CardDescription className="mt-2">Perfect for teams building core modules</CardDescription>
-            <div className="mt-6 flex items-baseline gap-1">
-              <span className="text-4xl font-bold">$699</span>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Info className="h-4 w-4" />
+        </div>
+      )}
+
+      {/* Static Plans */}
+      <div className="mx-auto mt-16 grid max-w-6xl gap-8 md:grid-cols-2 lg:grid-cols-4">
+        {staticPlans.map((plan) => (
+          <Card
+            key={plan.id}
+            className={`flex flex-col border-2 ${plan.popular ? 'border-[#22C55E] relative' : ''}`}
+          >
+            {plan.popular && (
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <Badge className="bg-[#22C55E] text-white">Most popular</Badge>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 space-y-4">
-            <Button
-              className="w-full bg-[#22C55E] hover:bg-[#22C55E]/90"
-              onClick={() => handlePurchase("pro")}
-              disabled={isLoading === "pro"}
-            >
-              {isLoading === "pro" ? "Loading..." : "Get started"}
-            </Button>
-
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">Potential session topics:</p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>In-depth onboarding</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>AWS & CDK walkthrough</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>Branching strategies</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>Stripe/ CMS setup</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="space-y-2 pt-4 border-t">
-              <p className="text-sm font-semibold">You'll receive:</p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <span>Recorded sessions</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <span>Setup documentation</span>
-                </li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Enterprise Plan */}
-        <Card className="flex flex-col border-2">
-          <CardHeader>
-            <CardTitle className="text-2xl">Enterprise</CardTitle>
-            <CardDescription className="mt-2">Designed for full production SaaS</CardDescription>
-            <div className="mt-6 flex items-baseline gap-1">
-              <span className="text-4xl font-bold">$2,999</span>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Info className="h-4 w-4" />
+            )}
+            <CardHeader>
+              <CardTitle className="text-2xl">{plan.name}</CardTitle>
+              <CardDescription className="mt-2">{plan.description}</CardDescription>
+              <div className="mt-6 flex items-baseline gap-1">
+                <span className="text-4xl font-bold">${plan.price}</span>
+                {plan.isHourly && (
+                  <span className="text-muted-foreground">/hour</span>
+                )}
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Info className="h-4 w-4" />
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 space-y-4">
-            <Button
-              className="w-full bg-transparent"
-              variant="outline"
-              onClick={() => handlePurchase("enterprise")}
-              disabled={isLoading === "enterprise"}
-            >
-              {isLoading === "enterprise" ? "Loading..." : "Get started"}
-            </Button>
+            </CardHeader>
+            <CardContent className="flex-1 space-y-4">
+              <Button
+                className={`w-full ${plan.popular ? 'bg-[#22C55E] hover:bg-[#22C55E]/90' : 'bg-transparent'}`}
+                variant={plan.popular ? "default" : "outline"}
+                onClick={() => handlePurchase(plan.id)}
+                disabled={isLoading === plan.id}
+              >
+                {isLoading === plan.id ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : plan.id === 'custom' ? (
+                  "Contact us"
+                ) : (
+                  "Get started"
+                )}
+              </Button>
 
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">Areas we could address:</p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>Architecture review</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>Advanced customization</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>CI/CD fine-tuning</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>Performance review</span>
-                </li>
-              </ul>
-            </div>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">
+                  {plan.id === 'starter' ? 'Possible focus areas:' :
+                   plan.id === 'pro' ? 'Potential session topics:' :
+                   plan.id === 'enterprise' ? 'Areas we could address:' :
+                   'We typically assist with:'}
+                </p>
+                <ul className="space-y-2 text-sm">
+                  {plan.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-            <div className="space-y-2 pt-4 border-t">
-              <p className="text-sm font-semibold">You'll receive:</p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <span>Recorded sessions</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <span>Custom documentation</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <span>Technical recommendations</span>
-                </li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Custom Plan */}
-        <Card className="flex flex-col border-2">
-          <CardHeader>
-            <CardTitle className="text-2xl">Custom</CardTitle>
-            <CardDescription className="mt-2">Best for customized implementations</CardDescription>
-            <div className="mt-6 flex items-baseline gap-1">
-              <span className="text-4xl font-bold">$120</span>
-              <span className="text-muted-foreground">/hour</span>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 space-y-4">
-            <Button
-              className="w-full bg-transparent"
-              variant="outline"
-              onClick={() => handlePurchase("custom")}
-              disabled={isLoading === "custom"}
-            >
-              {isLoading === "custom" ? "Loading..." : "Contact us"}
-            </Button>
-
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">We typically assist with:</p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>Debugging complex issues</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>Third-party integrations</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>Multitenancy</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#CD7F32] mt-0.5 shrink-0" />
-                  <span>Stripe customization</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="space-y-2 pt-4 border-t">
-              <p className="text-sm font-semibold">You'll receive:</p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <span>Quick kickoff</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <span>Flexible work</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <span>Weekly updates</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <span>Pause anytime</span>
-                </li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="space-y-2 pt-4 border-t">
+                <p className="text-sm font-semibold">You'll receive:</p>
+                <ul className="space-y-2 text-sm">
+                  {plan.deliverables.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   )

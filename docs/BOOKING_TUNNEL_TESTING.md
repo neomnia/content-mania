@@ -219,8 +219,51 @@ Add to your GitHub Actions workflow:
 | `/app/api/bookings/test/route.ts` | Test booking API endpoint |
 | `/app/(public)/book/[productId]/page.tsx` | Public booking page with Neomia branding |
 | `/app/(private)/dashboard/checkout/confirmation/page.tsx` | Booking confirmation page |
+| `/app/(public)/pricing/page.tsx` | Pricing page with dynamic products |
+| `/app/(public)/store/page.tsx` | Store page with product catalog |
+| `/app/(private)/dashboard/checkout/page.tsx` | Checkout flow with cart management |
 | `/cypress/e2e/booking-tunnel.cy.ts` | E2E test suite |
 | `/cypress/support/commands.ts` | Custom Cypress commands |
+
+## Order Tunnel Flow
+
+### From Pricing Page
+1. User visits `/pricing`
+2. Clicks "Get started" or "Acheter maintenant" on a product
+3. Product is added to cart via `addToCart()` server action
+4. User is redirected to `/dashboard/checkout`
+5. Checkout displays cart items with totals
+6. For appointment products, user must select a time slot
+7. Payment is processed and order confirmed
+
+### From Store Page
+1. User visits `/store`
+2. Browses products by type (appointment, free, digital)
+3. Clicks action button:
+   - Appointment → redirects to `/book/{productId}`
+   - Free → redirects to `/docs`
+   - Other → adds to cart and redirects to checkout
+
+### Empty Cart Handling
+- Checkout page displays a friendly message when cart is empty
+- Links to `/store` and `/dashboard/cart` are provided
+- No automatic redirects that break the flow
+
+## Changelog
+
+### 2026-01-05
+- **Fixed**: `/pricing` page 500 error - converted from Server to Client component
+- **Fixed**: Missing `Check` and `Info` icon imports in pricing page
+- **Fixed**: Added `handlePurchase` function for adding products to cart
+- **Fixed**: `/store` page buttons now functional with proper routing
+- **Added**: Dynamic products section in pricing page
+- **Added**: Loading states with Loader2 spinner
+- **Improved**: Empty cart UX in checkout page
+
+### Previous
+- Implemented isolated booking tunnel with Neomia Studio branding
+- Created Cypress E2E test suite
+- Added test booking API endpoint
 
 ## Support
 
