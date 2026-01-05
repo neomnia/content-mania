@@ -24,29 +24,6 @@ export default function AppointmentsRedirect() {
     </div>
   )
 }
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled" }),
-      })
-
-      if (response.ok) {
-        toast.success("Rendez-vous annulé")
-        fetchAppointments()
-      } else {
-        toast.error("Erreur lors de l'annulation")
-      }
-    } catch (error) {
-      toast.error("Erreur de connexion")
-    }
-  }
-
-  const handleConfirm = async (id: string) => {
-    try {
-      const response = await fetch(`/api/appointments/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "confirmed" }),
-      })
 
       if (response.ok) {
         toast.success("Rendez-vous confirmé")
