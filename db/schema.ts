@@ -1073,3 +1073,129 @@ export type NewAppointmentSlot = typeof appointmentSlots.$inferInsert
 export type AppointmentException = typeof appointmentExceptions.$inferSelect
 export type NewAppointmentException = typeof appointmentExceptions.$inferInsert
 
+// =============================================================================
+// LIVE CHAT MODULE - Guest & User Support Chat System
+// =============================================================================
+
+/**
+ * Chat Conversations - Container for chat threads
+ * Supports both guests (via email) and registered users
+ */
+export const chatConversations = pgTable("chat_conversations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }), // Nullable for guests
+  guestEmail: text("guest_email"), // For guest conversations
+  guestName: text("guest_name"), // Guest display name
+  guestSessionId: text("guest_session_id"), // Browser session ID for guest tracking
+  subject: text("subject").notNull(),
+  status: text("status").notNull().default("open"), // 'open' | 'pending' | 'resolved' | 'closed'
+  priority: text("priority").default("normal"), // 'low' | 'normal' | 'high' | 'urgent'
+  assignedAdminId: uuid("assigned_admin_id").references(() => users.id, { onDelete: "set null" }), // Admin assigned to this conversation
+  lastMessageAt: timestamp("last_message_at").defaultNow(),
+  closedAt: timestamp("closed_at"),
+  closedBy: uuid("closed_by").references(() => users.id, { onDelete: "set null" }),
+  metadata: jsonb("metadata"), // Additional context (page URL, browser info, etc.)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+/**
+ * Chat Messages - Individual messages within a conversation
+ */
+export const chatMessages = pgTable("chat_messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  conversationId: uuid("conversation_id")
+    .references(() => chatConversations.id, { onDelete: "cascade" })
+    .notNull(),
+  senderId: uuid("sender_id").references(() => users.id, { onDelete: "set null" }), // Nullable for guest messages
+  senderType: text("sender_type").notNull(), // 'guest' | 'user' | 'admin' | 'system'
+  senderName: text("sender_name"), // Display name (for guests or system)
+  senderEmail: text("sender_email"), // Sender email
+  content: text("content").notNull(),
+  messageType: text("message_type").default("text"), // 'text' | 'image' | 'file' | 'system'
+  attachmentUrl: text("attachment_url"), // URL to attached file
+  attachmentName: text("attachment_name"), // Original filename
+  isRead: boolean("is_read").default(false).notNull(),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+/**
+ * Chat Quick Responses - Predefined responses for admins
+ */
+export const chatQuickResponses = pgTable("chat_quick_responses", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(), // Short title for selection
+  content: text("content").notNull(), // Full response text
+  category: text("category"), // Category for organization
+  shortcut: text("shortcut"), // Keyboard shortcut (e.g., "/greeting")
+  usageCount: integer("usage_count").default(0).notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+/**
+ * Chat Settings - Configuration for the chat system
+ */
+export const chatSettings = pgTable("chat_settings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  key: text("key").notNull().unique(), // Setting key
+  value: text("value"), // Setting value (can be JSON)
+  description: text("description"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+// Chat Conversations Relations
+export const chatConversationsRelations = relations(chatConversations, ({ one, many }) => ({
+  user: one(users, {
+    fields: [chatConversations.userId],
+    references: [users.id],
+  }),
+  assignedAdmin: one(users, {
+    fields: [chatConversations.assignedAdminId],
+    references: [users.id],
+    relationName: "assignedAdmin",
+  }),
+  closedByUser: one(users, {
+    fields: [chatConversations.closedBy],
+    references: [users.id],
+    relationName: "closedBy",
+  }),
+  messages: many(chatMessages),
+}))
+
+// Chat Messages Relations
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatMessages.conversationId],
+    references: [chatConversations.id],
+  }),
+  sender: one(users, {
+    fields: [chatMessages.senderId],
+    references: [users.id],
+  }),
+}))
+
+// Chat Quick Responses Relations
+export const chatQuickResponsesRelations = relations(chatQuickResponses, ({ one }) => ({
+  creator: one(users, {
+    fields: [chatQuickResponses.createdBy],
+    references: [users.id],
+  }),
+}))
+
+// Chat Types
+export type ChatConversation = typeof chatConversations.$inferSelect
+export type NewChatConversation = typeof chatConversations.$inferInsert
+
+export type ChatMessage = typeof chatMessages.$inferSelect
+export type NewChatMessage = typeof chatMessages.$inferInsert
+
+export type ChatQuickResponse = typeof chatQuickResponses.$inferSelect
+export type NewChatQuickResponse = typeof chatQuickResponses.$inferInsert
+
+export type ChatSetting = typeof chatSettings.$inferSelect
+export type NewChatSetting = typeof chatSettings.$inferInsert
+
