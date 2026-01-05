@@ -1199,3 +1199,84 @@ export type NewChatQuickResponse = typeof chatQuickResponses.$inferInsert
 export type ChatSetting = typeof chatSettings.$inferSelect
 export type NewChatSetting = typeof chatSettings.$inferInsert
 
+// =============================================================================
+// LLM API KEYS - External AI Provider Keys (Mistral, OpenAI, etc.)
+// =============================================================================
+
+/**
+ * LLM API Keys - Store encrypted API keys for AI providers
+ * Supports: Mistral, OpenAI, Anthropic, etc.
+ * Keys are encrypted using AES-256-GCM before storage
+ */
+export const llmApiKeys = pgTable("llm_api_keys", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  provider: text("provider").notNull(), // 'mistral' | 'openai' | 'anthropic' | 'groq'
+  name: text("name").notNull(), // Display name for the key
+  encryptedKey: text("encrypted_key").notNull(), // AES-256-GCM encrypted API key
+  keyPrefix: text("key_prefix"), // First few chars for identification (e.g., "sk-proj-***")
+  isActive: boolean("is_active").default(true).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(), // Default key for this provider
+  lastUsedAt: timestamp("last_used_at"),
+  usageCount: integer("usage_count").default(0).notNull(),
+  metadata: jsonb("metadata"), // Provider-specific settings (model preferences, limits, etc.)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+/**
+ * LLM Usage Logs - Track AI API usage for billing and analytics
+ */
+export const llmUsageLogs = pgTable("llm_usage_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  keyId: uuid("key_id")
+    .references(() => llmApiKeys.id, { onDelete: "cascade" })
+    .notNull(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "set null" }),
+  provider: text("provider").notNull(),
+  model: text("model"), // e.g., 'gpt-4', 'mistral-large'
+  promptTokens: integer("prompt_tokens"),
+  completionTokens: integer("completion_tokens"),
+  totalTokens: integer("total_tokens"),
+  estimatedCost: integer("estimated_cost"), // In cents
+  latencyMs: integer("latency_ms"),
+  status: text("status").notNull(), // 'success' | 'error' | 'rate_limited'
+  errorMessage: text("error_message"),
+  conversationId: uuid("conversation_id").references(() => chatConversations.id, { onDelete: "set null" }), // Optional link to chat
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+// LLM API Keys Relations
+export const llmApiKeysRelations = relations(llmApiKeys, ({ one, many }) => ({
+  user: one(users, {
+    fields: [llmApiKeys.userId],
+    references: [users.id],
+  }),
+  usageLogs: many(llmUsageLogs),
+}))
+
+export const llmUsageLogsRelations = relations(llmUsageLogs, ({ one }) => ({
+  key: one(llmApiKeys, {
+    fields: [llmUsageLogs.keyId],
+    references: [llmApiKeys.id],
+  }),
+  user: one(users, {
+    fields: [llmUsageLogs.userId],
+    references: [users.id],
+  }),
+  conversation: one(chatConversations, {
+    fields: [llmUsageLogs.conversationId],
+    references: [chatConversations.id],
+  }),
+}))
+
+// LLM Types
+export type LlmApiKey = typeof llmApiKeys.$inferSelect
+export type NewLlmApiKey = typeof llmApiKeys.$inferInsert
+
+export type LlmUsageLog = typeof llmUsageLogs.$inferSelect
+export type NewLlmUsageLog = typeof llmUsageLogs.$inferInsert
+

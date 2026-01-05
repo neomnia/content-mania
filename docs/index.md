@@ -8,6 +8,15 @@ Bienvenue dans la documentation principale du projet.
 - [Guide de dépannage](./TROUBLESHOOTING.md)
 - [README principal](./README.md)
 
+## Modules Principaux
+
+### Chat & Support
+- [**Module de Chat Support**](./LIVE_CHAT_MODULE.md) - Chat en direct pour visiteurs et utilisateurs (⭐ NOUVEAU)
+- [**Intégration LLM**](./LLM_INTEGRATION.md) - Réponses automatiques avec Mistral, OpenAI, Anthropic (⭐ NOUVEAU)
+
+### Calendrier & Rendez-vous
+- [**Module Calendrier & Rendez-vous**](./CALENDAR_APPOINTMENTS_MODULE.md) - Gestion des rendez-vous et synchronisation calendriers
+
 ## E-commerce & Produits
 
 - [Gestion des images de produits](./PRODUCT_IMAGE_MANAGEMENT.md) - Système SVG pour dimensions cohérentes
