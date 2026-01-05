@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import { getProductById, getCart, processCheckout, addToCart } from "@/app/actions/ecommerce"
 import { getPaymentMethods, getCustomerPortalUrl } from "@/app/actions/payments"
 import { AppointmentModal } from "@/components/checkout/appointment-modal"
+import { useCart } from "@/contexts/cart-context"
 
 const plans = [
   {
@@ -52,6 +53,7 @@ const plans = [
 export default function CheckoutPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { clearCart, refreshCart } = useCart()
   const [cartItems, setCartItems] = useState<any[]>([])
   const [upsellProduct, setUpsellProduct] = useState<any | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -195,15 +197,28 @@ export default function CheckoutPage() {
       }
 
       console.log('[Checkout] Processing order...', { cartId, appointments: Array.from(appointmentsData.entries()) })
-      
+
       // Si nous avons des rendez-vous, les inclure dans le processus
       const result = await processCheckout(cartId)
-      
+
       if (result.success) {
         toast.success("Commande traitée avec succès !")
         console.log('[Checkout] ✅ Order completed successfully')
-        // Rediriger vers le panier pour voir la confirmation
-        router.push("/dashboard/cart")
+
+        // Vider le panier dans le contexte pour mettre à jour le header
+        clearCart()
+
+        // Vérifier si on a des produits de type appointment
+        const hasAppointments = cartItems.some(item => item.type === 'appointment')
+
+        if (hasAppointments) {
+          // Rediriger vers le calendrier pour planifier le rendez-vous
+          toast.info("Vous pouvez maintenant planifier votre rendez-vous")
+          router.push("/dashboard/calendar")
+        } else {
+          // Rediriger vers la page de confirmation avec l'ID de commande
+          router.push(`/dashboard/checkout/confirmation?orderId=${result.orderId}`)
+        }
       } else {
         console.error('[Checkout] ❌ Checkout failed:', result.error)
         toast.error(result.error || "Erreur lors du checkout")
