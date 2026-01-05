@@ -1,103 +1,29 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { format } from "date-fns"
-import { fr } from "date-fns/locale"
-import {
-  Calendar,
-  Plus,
-  Clock,
-  MapPin,
-  Video,
-  User,
-  DollarSign,
-  MoreVertical,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  CalendarDays,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { toast } from "sonner"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
 
-interface Appointment {
-  id: string
-  title: string
-  description?: string
-  location?: string
-  meetingUrl?: string
-  startTime: string
-  endTime: string
-  timezone: string
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'
-  type: 'free' | 'paid'
-  price: number
-  currency: string
-  isPaid: boolean
-  attendeeEmail?: string
-  attendeeName?: string
-  createdAt: string
-}
-
-const statusConfig = {
-  pending: { label: "En attente", variant: "warning" as const, icon: AlertCircle },
-  confirmed: { label: "Confirmé", variant: "success" as const, icon: CheckCircle },
-  cancelled: { label: "Annulé", variant: "destructive" as const, icon: XCircle },
-  completed: { label: "Terminé", variant: "secondary" as const, icon: CheckCircle },
-  no_show: { label: "Absent", variant: "destructive" as const, icon: XCircle },
-}
-
-export default function AppointmentsPage() {
-  const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [typeFilter, setTypeFilter] = useState<string>("all")
-
-  const fetchAppointments = async () => {
-    try {
-      const params = new URLSearchParams()
-      if (statusFilter !== "all") params.set("status", statusFilter)
-      if (typeFilter !== "all") params.set("type", typeFilter)
-
-      const response = await fetch(`/api/appointments?${params}`)
-      const data = await response.json()
-
-      if (data.success) {
-        setAppointments(data.data)
-      } else {
-        toast.error("Erreur lors du chargement des rendez-vous")
-      }
-    } catch (error) {
-      console.error("Failed to fetch appointments:", error)
-      toast.error("Erreur de connexion")
-    } finally {
-      setLoading(false)
-    }
-  }
+/**
+ * Appointments page - redirects to Calendar
+ * The calendar page now handles both calendar view and appointments list
+ */
+export default function AppointmentsRedirect() {
+  const router = useRouter()
 
   useEffect(() => {
-    fetchAppointments()
-  }, [statusFilter, typeFilter])
+    router.replace("/dashboard/calendar")
+  }, [router])
 
-  const handleCancel = async (id: string) => {
-    try {
-      const response = await fetch(`/api/appointments/${id}`, {
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+        <p className="text-muted-foreground">Redirecting to Calendar...</p>
+      </div>
+    </div>
+  )
+}
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "cancelled" }),

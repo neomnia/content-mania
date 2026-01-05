@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { format } from "date-fns"
-import { fr } from "date-fns/locale"
+import { enUS } from "date-fns/locale"
 import {
   ArrowLeft,
   Calendar,
@@ -64,7 +64,8 @@ const providerInfo = {
         />
       </svg>
     ),
-    description: "Synchronisez vos rendez-vous avec Google Calendar",
+    description: "Sync your appointments with Google Calendar",
+    type: "oauth" as const,
   },
   microsoft: {
     name: "Microsoft Outlook",
@@ -75,7 +76,19 @@ const providerInfo = {
         <path fill="#fff" d="M5.5 8.5a3 3 0 100 6 3 3 0 000-6z" />
       </svg>
     ),
-    description: "Synchronisez vos rendez-vous avec Microsoft Outlook",
+    description: "Sync your appointments with Microsoft Outlook",
+    type: "oauth" as const,
+  },
+  calendly: {
+    name: "Calendly",
+    icon: (
+      <svg className="h-6 w-6" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" fill="#006BFF" />
+        <path fill="#fff" d="M12 6v6l4 2" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    ),
+    description: "Connect your Calendly account",
+    type: "apikey" as const,
   },
 }
 
@@ -108,19 +121,21 @@ export default function CalendarSettingsPage() {
     const error = searchParams.get("error")
 
     if (success === "google") {
-      toast.success("Google Calendar connecté avec succès")
+      toast.success("Google Calendar connected successfully")
     } else if (success === "microsoft") {
-      toast.success("Microsoft Outlook connecté avec succès")
+      toast.success("Microsoft Outlook connected successfully")
+    } else if (success === "calendly") {
+      toast.success("Calendly connected successfully")
     } else if (error) {
       const errorMessages: Record<string, string> = {
-        missing_params: "Paramètres manquants",
-        invalid_state: "Session expirée, veuillez réessayer",
-        state_expired: "Session expirée, veuillez réessayer",
-        storage_failed: "Erreur lors de l'enregistrement",
-        callback_failed: "Erreur lors de la connexion",
-        access_denied: "Accès refusé",
+        missing_params: "Missing parameters",
+        invalid_state: "Session expired, please try again",
+        state_expired: "Session expired, please try again",
+        storage_failed: "Storage error",
+        callback_failed: "Connection error",
+        access_denied: "Access denied",
       }
-      toast.error(errorMessages[error] || `Erreur: ${error}`)
+      toast.error(errorMessages[error] || `Error: ${error}`)
     }
   }, [searchParams])
 
@@ -150,17 +165,17 @@ export default function CalendarSettingsPage() {
       })
 
       if (response.ok) {
-        toast.success(`${providerInfo[provider as keyof typeof providerInfo].name} déconnecté`)
+        toast.success(`${providerInfo[provider as keyof typeof providerInfo].name} disconnected`)
         fetchConnections()
       } else {
-        toast.error("Erreur lors de la déconnexion")
+        toast.error("Failed to disconnect")
       }
     } catch (error) {
-      toast.error("Erreur de connexion")
+      toast.error("Connection error")
     }
   }
 
-  const getConnectionByProvider = (provider: "google" | "microsoft") => {
+  const getConnectionByProvider = (provider: "google" | "microsoft" | "calendly") => {
     return connections.find(c => c.provider === provider)
   }
 
@@ -173,9 +188,9 @@ export default function CalendarSettingsPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Paramètres du calendrier</h1>
+          <h1 className="text-2xl font-bold">Calendar Settings</h1>
           <p className="text-muted-foreground">
-            Connectez vos calendriers externes pour synchroniser vos rendez-vous
+            Connect your external calendars to sync your appointments
           </p>
         </div>
       </div>
@@ -183,16 +198,16 @@ export default function CalendarSettingsPage() {
       {/* Info Alert */}
       <Alert>
         <Calendar className="h-4 w-4" />
-        <AlertTitle>Synchronisation automatique</AlertTitle>
+        <AlertTitle>Automatic Synchronization</AlertTitle>
         <AlertDescription>
-          Une fois connectés, vos rendez-vous seront automatiquement synchronisés avec vos calendriers externes.
-          Les événements créés ici apparaîtront dans Google Calendar ou Microsoft Outlook.
+          Once connected, your appointments will be automatically synchronized with your external calendars.
+          Events created here will appear in Google Calendar, Microsoft Outlook, or Calendly.
         </AlertDescription>
       </Alert>
 
       {/* Calendar Connections */}
       <div className="space-y-4">
-        {(["google", "microsoft"] as const).map((provider) => {
+        {(["google", "microsoft", "calendly"] as const).map((provider) => {
           const info = providerInfo[provider]
           const connection = getConnectionByProvider(provider)
           const isConnecting = connectingProvider === provider
@@ -210,7 +225,7 @@ export default function CalendarSettingsPage() {
                       {connection?.isActive && (
                         <Badge variant="outline" className="text-green-600">
                           <CheckCircle className="mr-1 h-3 w-3" />
-                          Connecté
+                          Connected
                         </Badge>
                       )}
                     </h3>
@@ -219,7 +234,7 @@ export default function CalendarSettingsPage() {
                     </p>
                     {connection?.lastSyncAt && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Dernière sync: {format(new Date(connection.lastSyncAt), "d MMM yyyy à HH:mm", { locale: fr })}
+                        Last sync: {format(new Date(connection.lastSyncAt), "MMM d, yyyy 'at' HH:mm", { locale: enUS })}
                       </p>
                     )}
                   </div>
@@ -230,21 +245,21 @@ export default function CalendarSettingsPage() {
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" size="sm">
                         <Unlink className="mr-2 h-4 w-4" />
-                        Déconnecter
+                        Disconnect
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Déconnecter {info.name} ?</AlertDialogTitle>
+                        <AlertDialogTitle>Disconnect {info.name}?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Les rendez-vous ne seront plus synchronisés avec ce calendrier.
-                          Les événements existants ne seront pas supprimés.
+                          Appointments will no longer be synchronized with this calendar.
+                          Existing events will not be deleted.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={() => handleDisconnect(connection.id, provider)}>
-                          Déconnecter
+                          Disconnect
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -257,12 +272,12 @@ export default function CalendarSettingsPage() {
                     {isConnecting ? (
                       <>
                         <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                        Connexion...
+                        Connecting...
                       </>
                     ) : (
                       <>
                         <Link2 className="mr-2 h-4 w-4" />
-                        Connecter
+                        Connect
                       </>
                     )}
                   </Button>
@@ -278,10 +293,10 @@ export default function CalendarSettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5" />
-            Configuration requise
+            Required Configuration
           </CardTitle>
           <CardDescription>
-            Pour activer la synchronisation des calendriers, les variables d'environnement suivantes doivent être configurées :
+            To enable calendar synchronization, the following environment variables must be configured:
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -291,7 +306,7 @@ export default function CalendarSettingsPage() {
               <ul className="text-sm text-muted-foreground mt-1 space-y-1">
                 <li><code className="bg-muted px-1 rounded">GOOGLE_CLIENT_ID</code></li>
                 <li><code className="bg-muted px-1 rounded">GOOGLE_CLIENT_SECRET</code></li>
-                <li><code className="bg-muted px-1 rounded">GOOGLE_REDIRECT_URI</code> (optionnel)</li>
+                <li><code className="bg-muted px-1 rounded">GOOGLE_REDIRECT_URI</code> (optional)</li>
               </ul>
             </div>
             <div>
@@ -299,7 +314,13 @@ export default function CalendarSettingsPage() {
               <ul className="text-sm text-muted-foreground mt-1 space-y-1">
                 <li><code className="bg-muted px-1 rounded">MICROSOFT_CLIENT_ID</code></li>
                 <li><code className="bg-muted px-1 rounded">MICROSOFT_CLIENT_SECRET</code></li>
-                <li><code className="bg-muted px-1 rounded">MICROSOFT_REDIRECT_URI</code> (optionnel)</li>
+                <li><code className="bg-muted px-1 rounded">MICROSOFT_REDIRECT_URI</code> (optional)</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-medium">Calendly</h4>
+              <ul className="text-sm text-muted-foreground mt-1 space-y-1">
+                <li><code className="bg-muted px-1 rounded">CALENDLY_API_KEY</code></li>
               </ul>
             </div>
           </div>
@@ -311,27 +332,27 @@ export default function CalendarSettingsPage() {
         <CardHeader>
           <CardTitle>Permissions</CardTitle>
           <CardDescription>
-            L'application demande les permissions suivantes :
+            The application requests the following permissions:
           </CardDescription>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2 text-sm">
             <li className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-500" />
-              Lecture et écriture des événements du calendrier
+              Read and write calendar events
             </li>
             <li className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-500" />
-              Accès à votre adresse email (pour identification)
+              Access to your email address (for identification)
             </li>
             <li className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-500" />
-              Synchronisation automatique des nouveaux rendez-vous
+              Automatic synchronization of new appointments
             </li>
           </ul>
           <p className="text-xs text-muted-foreground mt-4">
-            Vos données sont sécurisées et les tokens d'accès sont chiffrés.
-            Vous pouvez révoquer l'accès à tout moment.
+            Your data is secure and access tokens are encrypted.
+            You can revoke access at any time.
           </p>
         </CardContent>
       </Card>
