@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from "@/db"
-import { products, carts, cartItems, orders, orderItems, outlookIntegrations } from "@/db/schema"
+import { products, carts, cartItems, orders, orderItems, appointments, outlookIntegrations } from "@/db/schema"
 import { eq, and, desc, asc, isNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getCurrentUser } from "@/lib/auth"
@@ -826,6 +826,36 @@ export async function processCheckout(cartId: string) {
             status: appointment.status,
             paymentStatus: appointment.paymentStatus
           })
+
+          // Envoyer les notifications email pour le rendez-vous
+          try {
+            const { sendAllAppointmentNotifications } = await import('@/lib/notifications/appointment-notifications')
+            console.log('[processCheckout] 📧 Sending appointment notifications')
+            
+            const notifResults = await sendAllAppointmentNotifications({
+              appointmentId: appointment.id,
+              productTitle: item.product.title,
+              startTime: new Date(appointmentData.startTime),
+              endTime: new Date(appointmentData.endTime),
+              timezone: appointmentData.timezone,
+              attendeeName: appointmentData.attendeeName,
+              attendeeEmail: appointmentData.attendeeEmail,
+              attendeePhone: appointmentData.attendeePhone,
+              price: price,
+              currency: item.product.currency || 'EUR',
+              notes: appointmentData.notes,
+              userId: user.userId
+            })
+
+            console.log('[processCheckout] ✅ Appointment notifications sent:', {
+              clientEmail: notifResults.clientEmail.success,
+              adminEmail: notifResults.adminEmail.success,
+              adminChat: notifResults.adminChat.success
+            })
+          } catch (emailError) {
+            console.error('[processCheckout] ⚠️ Failed to send appointment notifications:', emailError)
+            // Non-blocking - continuer le checkout
+          }
         }
       }
     }
