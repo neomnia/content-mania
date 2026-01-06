@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { db } from '@/db'
-import { users } from '@/db/schema'
+import { users, companies } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
 export async function GET() {
@@ -15,9 +15,12 @@ export async function GET() {
       )
     }
 
-    // Try to get full user profile from database
+    // Try to get full user profile from database with company info
     const dbUser = await db.query.users.findFirst({
-      where: eq(users.id, user.userId)
+      where: eq(users.id, user.userId),
+      with: {
+        company: true
+      }
     })
 
     if (dbUser) {
@@ -27,7 +30,8 @@ export async function GET() {
         firstName: dbUser.firstName,
         lastName: dbUser.lastName,
         phone: dbUser.phone,
-        company: dbUser.companyId, // Or fetch company name if needed
+        company: dbUser.company?.name || null, // Return company NAME not ID
+        companyId: dbUser.companyId,
         avatarUrl: dbUser.avatarUrl,
       })
     }
@@ -39,7 +43,8 @@ export async function GET() {
       firstName: '',
       lastName: '',
       phone: '',
-      company: user.companyId,
+      company: null,
+      companyId: user.companyId,
       avatarUrl: '',
     })
   } catch (error) {

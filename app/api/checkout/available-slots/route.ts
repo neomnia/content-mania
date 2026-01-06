@@ -16,6 +16,26 @@ interface TimeSlot {
   available: boolean
 }
 
+interface SlotConfig {
+  startTime: string
+  endTime: string
+  duration: number
+  bufferBefore: number
+  bufferAfter: number
+  maxAppointments: number
+}
+
+// Default slots when none configured in DB (weekdays 9:00-18:00)
+const DEFAULT_SLOTS: Record<number, SlotConfig[]> = {
+  0: [], // Sunday - closed
+  1: [{ startTime: '09:00', endTime: '18:00', duration: 60, bufferBefore: 0, bufferAfter: 15, maxAppointments: 1 }], // Monday
+  2: [{ startTime: '09:00', endTime: '18:00', duration: 60, bufferBefore: 0, bufferAfter: 15, maxAppointments: 1 }], // Tuesday
+  3: [{ startTime: '09:00', endTime: '18:00', duration: 60, bufferBefore: 0, bufferAfter: 15, maxAppointments: 1 }], // Wednesday
+  4: [{ startTime: '09:00', endTime: '18:00', duration: 60, bufferBefore: 0, bufferAfter: 15, maxAppointments: 1 }], // Thursday
+  5: [{ startTime: '09:00', endTime: '18:00', duration: 60, bufferBefore: 0, bufferAfter: 15, maxAppointments: 1 }], // Friday
+  6: [], // Saturday - closed
+}
+
 /**
  * Generate time slots for a given day based on availability rules
  */
@@ -24,10 +44,12 @@ function generateTimeSlots(
   slots: typeof appointmentSlots.$inferSelect[],
   exceptions: typeof appointmentExceptions.$inferSelect[],
   existingAppointments: typeof appointments.$inferSelect[],
-  duration: number = 60
+  duration: number = 60,
+  useDefaultSlots: boolean = false
 ): TimeSlot[] {
   const dayOfWeek = date.getDay()
   const dateStr = date.toISOString().split('T')[0]
+  const now = new Date()
 
   // Check for exceptions on this date
   const dayException = exceptions.find(e => {
@@ -40,27 +62,36 @@ function generateTimeSlots(
     return []
   }
 
-  // Get slots for this day of week
+  // Get slots for this day of week from DB
   const daySlots = slots.filter(s => s.dayOfWeek === dayOfWeek && s.isActive)
 
   // If exception provides override times, use those
-  const effectiveSlots = dayException?.isAvailable && dayException.startTime && dayException.endTime
-    ? [{
-        startTime: dayException.startTime,
-        endTime: dayException.endTime,
-        duration: duration,
-        bufferBefore: 0,
-        bufferAfter: 0,
-        maxAppointments: 1
-      }]
-    : daySlots.map(s => ({
-        startTime: s.startTime,
-        endTime: s.endTime,
-        duration: s.duration,
-        bufferBefore: s.bufferBefore || 0,
-        bufferAfter: s.bufferAfter || 0,
-        maxAppointments: s.maxAppointments || 1
-      }))
+  let effectiveSlots: SlotConfig[]
+
+  if (dayException?.isAvailable && dayException.startTime && dayException.endTime) {
+    effectiveSlots = [{
+      startTime: dayException.startTime,
+      endTime: dayException.endTime,
+      duration: duration,
+      bufferBefore: 0,
+      bufferAfter: 0,
+      maxAppointments: 1
+    }]
+  } else if (daySlots.length > 0) {
+    effectiveSlots = daySlots.map(s => ({
+      startTime: s.startTime,
+      endTime: s.endTime,
+      duration: s.duration,
+      bufferBefore: s.bufferBefore || 0,
+      bufferAfter: s.bufferAfter || 0,
+      maxAppointments: s.maxAppointments || 1
+    }))
+  } else if (useDefaultSlots) {
+    // Use default slots when no slots configured in DB
+    effectiveSlots = DEFAULT_SLOTS[dayOfWeek] || []
+  } else {
+    effectiveSlots = []
+  }
 
   if (effectiveSlots.length === 0) {
     return []
@@ -86,6 +117,12 @@ function generateTimeSlots(
 
       const slotEnd = new Date(slotStart)
       slotEnd.setMinutes(slotEnd.getMinutes() + slotDuration)
+
+      // Skip slots in the past (for today)
+      if (slotStart <= now) {
+        currentMinutes += slotDuration + slot.bufferAfter
+        continue
+      }
 
       // Check if this slot conflicts with existing appointments
       const isConflicting = existingAppointments.some(appt => {
@@ -164,6 +201,9 @@ export async function GET(request: NextRequest) {
       )
     })
 
+    // Determine if we should use default slots (when no slots configured)
+    const useDefaultSlots = slots.length === 0
+
     // Get exceptions in the date range
     const exceptions = await db.query.appointmentExceptions.findMany({
       where: and(
@@ -191,7 +231,8 @@ export async function GET(request: NextRequest) {
         slots,
         exceptions,
         existingAppointments,
-        60 // Default 1 hour duration
+        60, // Default 1 hour duration
+        useDefaultSlots
       )
     }
 
@@ -203,7 +244,8 @@ export async function GET(request: NextRequest) {
         productPrice: product.hourlyRate || product.price,
         currency: product.currency,
         timezone,
-        slots: availableSlots
+        slots: availableSlots,
+        usingDefaultSlots: useDefaultSlots
       }
     })
 

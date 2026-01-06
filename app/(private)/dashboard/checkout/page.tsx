@@ -519,7 +519,7 @@ export default function CheckoutPage() {
                   )}
                   <div className="mt-4">
                     <Button variant="outline" size="sm" asChild>
-                      <Link href="/dashboard/settings">
+                      <Link href="/dashboard/profile">
                         Modifier mes informations
                       </Link>
                     </Button>
