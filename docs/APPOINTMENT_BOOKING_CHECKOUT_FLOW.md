@@ -110,7 +110,82 @@ Endpoint pour récupérer les détails d'une commande avec ses articles.
 }
 ```
 
-#### 3. Système de Notifications Admin
+#### 5. Système de Notifications Email pour Rendez-vous
+**Fichier:** `lib/notifications/appointment-notifications.ts`
+
+Système complet d'envoi d'emails pour les rendez-vous confirmés.
+
+**Fonctions:**
+
+##### `sendAppointmentConfirmationToClient()`
+Envoie un email HTML de confirmation au client avec les détails du rendez-vous.
+
+**Contenu de l'email:**
+- En-tête avec branding (gradient bronze #CD7F32)
+- Détails du rendez-vous (service, date, heure, prix)
+- Notes du client si présentes
+- Bouton CTA "Voir mes rendez-vous"
+- Footer avec copyright
+
+##### `sendAppointmentNotificationToAdmin()`
+Envoie un email HTML de notification à l'admin pour chaque nouveau rendez-vous.
+
+**Contenu de l'email:**
+- En-tête avec branding vert (#10B981)
+- Informations client (nom, email, téléphone)
+- Détails du rendez-vous
+- Notes du client
+- Bouton CTA "Voir le calendrier"
+
+##### `sendAllAppointmentNotifications()`
+Fonction combinée qui envoie en parallèle:
+1. Email de confirmation au client
+2. Email de notification à l'admin
+3. Notification chat à l'admin
+
+**Utilisation:**
+```typescript
+import { sendAllAppointmentNotifications } from '@/lib/notifications/appointment-notifications'
+
+const results = await sendAllAppointmentNotifications({
+  appointmentId: "uuid",
+  productTitle: "Consultation",
+  startTime: new Date("2026-01-20T10:00:00"),
+  endTime: new Date("2026-01-20T11:00:00"),
+  timezone: "Europe/Paris",
+  attendeeName: "Jean Dupont",
+  attendeeEmail: "jean@example.com",
+  attendeePhone: "+33612345678",
+  price: 9900,
+  currency: "EUR",
+  notes: "Question sur...",
+  userId: "uuid"
+})
+// results = { clientEmail, adminEmail, adminChat }
+```
+
+#### 6. API Endpoint - Envoi Notifications
+**Fichier:** `app/api/appointments/[id]/notify/route.ts`
+
+Endpoint pour déclencher l'envoi des notifications après création d'un rendez-vous.
+
+**Méthode:** `POST /api/appointments/:id/notify`
+
+**Authentification:** Requise (vérifie que l'utilisateur est propriétaire du rendez-vous)
+
+**Réponse:**
+```json
+{
+  "success": true,
+  "results": {
+    "clientEmail": { "success": true },
+    "adminEmail": { "success": true },
+    "adminChat": { "success": true }
+  }
+}
+```
+
+#### 7. Système de Notifications Admin (Chat)
 **Fichier:** `lib/notifications/admin-notifications.ts`
 
 Fonctions principales :
@@ -254,8 +329,10 @@ Après validation de la commande, si des produits de type "appointment" sont pr�
 2. Redirection vers page de planification
 3. Création du rendez-vous dans `appointments` (lors de la sélection)
 4. Synchronisation avec le calendrier
-5. **Envoi de notification admin via `/chat`**
-6. Envoi d'email de confirmation au client
+5. **Appel à `/api/appointments/:id/notify`** qui déclenche:
+   - Email de confirmation au client (via Scaleway TEM)
+   - Email de notification à l'admin (via Scaleway TEM)
+   - Notification chat admin (via système de chat interne)
 
 ### 8. Page de confirmation
 **Fichier:** `app/(private)/dashboard/checkout/confirmation/page.tsx`
@@ -335,16 +412,42 @@ L'admin accède à `/admin/chat` pour voir toutes les notifications :
 
 ## Emails de validation
 
-### Email client - Rendez-vous
-Template : `appointment-confirmation`
+### Email client - Rendez-vous confirmé
+**Fichier:** `lib/notifications/appointment-notifications.ts` → `sendAppointmentConfirmationToClient()`
 
-**Contenu:**
-- Nom du produit/service
-- Date et heure du rendez-vous
-- Fuseau horaire
-- Informations de paiement
-- Instructions de préparation
-- Lien de modification/annulation
+**Template HTML avec:**
+- En-tête gradient bronze (#CD7F32 → #B8860B)
+- Titre "Rendez-vous confirmé !"
+- Message personnalisé avec nom du client
+- Tableau récapitulatif:
+  - Service (nom du produit)
+  - Date complète en français (ex: "lundi 20 janvier 2026 à 10:00")
+  - Heure de fin
+  - Prix (formaté ou "Gratuit")
+- Section notes si présentes (fond jaune)
+- Bouton CTA "Voir mes rendez-vous" → `/dashboard/appointments`
+- Footer avec copyright
+
+**Envoi via:** Scaleway TEM (`emailRouter.sendEmail()`)
+
+### Email admin - Nouveau rendez-vous
+**Fichier:** `lib/notifications/appointment-notifications.ts` → `sendAppointmentNotificationToAdmin()`
+
+**Template HTML avec:**
+- En-tête gradient vert (#10B981 → #059669)
+- Titre "Nouveau rendez-vous !"
+- Section informations client (fond bleu clair):
+  - Nom
+  - Email
+  - Téléphone (si fourni)
+- Tableau détails du rendez-vous:
+  - Service
+  - Date/heure
+  - Prix
+- Notes du client si présentes
+- Bouton CTA "Voir le calendrier" → `/admin/calendar`
+
+**Envoi via:** Scaleway TEM (`emailRouter.sendEmail()`)
 
 ### Email client - Commande
 Template : `order-confirmation`
@@ -370,11 +473,14 @@ Template : `order-confirmation`
 8. **Redirection automatique vers `/dashboard/appointments/book?orderId=xxx`**
 9. Sélectionner une date disponible
 10. Sélectionner un créneau horaire
-11. Remplir les informations participant
+11. Vérifier que les informations participant sont pré-remplies depuis le profil
 12. Confirmer la réservation
-13. **Voir le récapitulatif des rendez-vous confirmés**
-14. Cliquer sur "Terminer"
-15. Vérifier dans `/admin/chat` la nouvelle notification
+13. **Vérifier le toast "Rendez-vous confirmé ! Un email de confirmation vous a été envoyé."**
+14. **Voir le récapitulatif des rendez-vous confirmés**
+15. Cliquer sur "Terminer"
+16. **Vérifier la réception de l'email client** (boîte de réception)
+17. **Vérifier la réception de l'email admin** (boîte admin)
+18. Vérifier dans `/admin/chat` la nouvelle notification
 
 ### Test avec plusieurs rendez-vous
 
@@ -399,13 +505,28 @@ Template : `order-confirmation`
 
 ## Logs de débogage
 
-Tous les logs sont préfixés par `[Checkout]` ou `[AdminNotification]`
+Tous les logs sont préfixés pour faciliter le débogage.
+
+**Préfixes disponibles:**
+- `[Checkout]` - Page de checkout
+- `[BookAppointment]` - Page de planification post-achat
+- `[API /appointments]` - API création rendez-vous
+- `[API /appointments/notify]` - API envoi notifications
+- `[AppointmentNotifications]` - Système d'envoi emails
+- `[AdminNotification]` - Notifications chat admin
 
 **Exemples:**
 ```
-[Checkout] Appointment created: { appointmentId, isPaid, price }
-[Checkout] Admin notification sent for appointment
+[API /appointments] Creating appointment: { title, startTime, endTime, type, isPaid }
+[API /appointments] Appointment created successfully: uuid
+[BookAppointment] Sending notifications for appointment: uuid
+[API /appointments/notify] Sending notifications for appointment: uuid
+[AppointmentNotifications] Sending confirmation email to client: client@example.com
+[AppointmentNotifications] Client email result: { success: true }
+[AppointmentNotifications] Sending notification email to admin: admin@neomia.net
+[AppointmentNotifications] Admin email result: { success: true }
 [AdminNotification] ✅ Notification sent { conversationId, type, subject }
+[BookAppointment] Notification result: { success: true, results: {...} }
 ```
 
 ## Variables d'environnement
