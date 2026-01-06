@@ -19,11 +19,13 @@ const appointmentSchema = z.object({
   price: z.number().int().min(0).default(0),
   currency: z.string().default("EUR"),
   productId: z.string().uuid().optional().nullable(),
+  orderId: z.string().uuid().optional().nullable(), // Link to order
   attendeeEmail: z.string().email().optional(),
   attendeeName: z.string().optional(),
   attendeePhone: z.string().optional(),
   notes: z.string().optional(),
   syncToCalendar: z.boolean().optional().default(true),
+  isPaid: z.boolean().optional(), // Allow explicit isPaid setting
 })
 
 // GET /api/appointments - List appointments
@@ -128,6 +130,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Determine isPaid: use explicit value if provided, otherwise base on type
+    const isPaid = validated.isPaid !== undefined ? validated.isPaid : (validated.type === 'free')
+    const paymentStatus = isPaid ? 'paid' : 'pending'
+
+    console.log('[API /appointments] Creating appointment:', {
+      title: validated.title,
+      startTime: validated.startTime,
+      endTime: validated.endTime,
+      type: validated.type,
+      isPaid,
+      paymentStatus,
+      productId: validated.productId,
+      attendeeName: validated.attendeeName,
+      attendeeEmail: validated.attendeeEmail
+    })
+
     const [result] = await db.insert(appointments).values({
       userId: user.userId,
       title: validated.title,
@@ -146,9 +164,11 @@ export async function POST(request: NextRequest) {
       attendeeName: validated.attendeeName || null,
       attendeePhone: validated.attendeePhone || null,
       notes: validated.notes || null,
-      isPaid: validated.type === 'free',
-      paymentStatus: validated.type === 'free' ? 'paid' : 'pending',
+      isPaid,
+      paymentStatus,
     }).returning()
+
+    console.log('[API /appointments] Appointment created successfully:', result.id)
 
     // Sync to external calendars if requested
     if (validated.syncToCalendar) {

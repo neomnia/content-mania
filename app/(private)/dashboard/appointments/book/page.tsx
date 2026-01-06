@@ -114,12 +114,12 @@ export default function BookAppointmentPage() {
 
     try {
       // Create the appointment via API
+      console.log('[BookAppointment] Creating appointment for:', currentItem.itemName)
       const res = await fetch('/api/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId: currentItem.itemId,
-          orderId: orderId,
           title: currentItem.itemName,
           description: currentItem.itemDescription || '',
           startTime: data.startTime,
@@ -131,8 +131,10 @@ export default function BookAppointmentPage() {
           notes: data.notes,
           price: currentItem.unitPrice,
           currency: order?.currency || 'EUR',
+          type: 'paid', // Paid appointment from checkout
           status: 'confirmed',
-          isPaid: true
+          isPaid: true,
+          syncToCalendar: true
         })
       })
 

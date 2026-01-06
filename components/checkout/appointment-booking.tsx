@@ -48,6 +48,12 @@ interface AppointmentBookingProps {
     notes?: string
   }) => Promise<void>
   onCancel?: () => void
+  // Optional: Pre-fill form data
+  initialAttendeeInfo?: {
+    name?: string
+    email?: string
+    phone?: string
+  }
 }
 
 type Step = 'select-date' | 'select-time' | 'fill-info' | 'confirm'
@@ -58,7 +64,8 @@ export function AppointmentBooking({
   productPrice,
   currency,
   onBook,
-  onCancel
+  onCancel,
+  initialAttendeeInfo
 }: AppointmentBookingProps) {
   const [step, setStep] = useState<Step>('select-date')
   const [loading, setLoading] = useState(false)
@@ -70,13 +77,54 @@ export function AppointmentBooking({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
 
-  // Form state
+  // Form state - initialized with initial values if provided
   const [formData, setFormData] = useState({
-    attendeeName: '',
-    attendeeEmail: '',
-    attendeePhone: '',
+    attendeeName: initialAttendeeInfo?.name || '',
+    attendeeEmail: initialAttendeeInfo?.email || '',
+    attendeePhone: initialAttendeeInfo?.phone || '',
     notes: ''
   })
+
+  // Load user profile if no initial info provided
+  useEffect(() => {
+    async function loadUserProfile() {
+      // Don't load if we already have initial info
+      if (initialAttendeeInfo?.name && initialAttendeeInfo?.email) {
+        return
+      }
+
+      try {
+        // Try localStorage first
+        const storedProfile = localStorage.getItem('userProfile')
+        if (storedProfile) {
+          const profile = JSON.parse(storedProfile)
+          setFormData(prev => ({
+            ...prev,
+            attendeeName: prev.attendeeName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || '',
+            attendeeEmail: prev.attendeeEmail || profile.email || '',
+            attendeePhone: prev.attendeePhone || profile.phone || ''
+          }))
+          return
+        }
+
+        // Fallback to API
+        const res = await fetch('/api/user/profile')
+        if (res.ok) {
+          const profile = await res.json()
+          setFormData(prev => ({
+            ...prev,
+            attendeeName: prev.attendeeName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || '',
+            attendeeEmail: prev.attendeeEmail || profile.email || '',
+            attendeePhone: prev.attendeePhone || profile.phone || ''
+          }))
+        }
+      } catch (err) {
+        console.error('[AppointmentBooking] Failed to load user profile:', err)
+      }
+    }
+
+    loadUserProfile()
+  }, [initialAttendeeInfo])
 
   // Booking state
   const [booking, setBooking] = useState(false)
