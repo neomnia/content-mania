@@ -46,7 +46,9 @@ Modifications apportées :
 - ✅ Bouton "Sélectionner un créneau" pour chaque produit avec rendez-vous
 - ✅ Chargement dynamique des méthodes de paiement selon le mode Lago
 - ✅ Support du mode DEV (Lago bypassed)
-- ✅ Redirection vers page de planification post-achat pour les rendez-vous
+- ✅ **Création automatique des rendez-vous pendant le checkout**
+- ✅ **Envoi automatique des emails de confirmation**
+- ✅ Redirection vers page de confirmation avec récapitulatif complet
 
 **États ajoutés:**
 ```tsx
@@ -59,6 +61,12 @@ const [paymentConfig, setPaymentConfig] = useState({
   paypalEnabled: false
 })
 ```
+
+**Nouveau comportement:**
+- Les rendez-vous sont maintenant créés **directement dans la base de données** lors du processus de checkout
+- Les données de rendez-vous (`appointmentsData`) sont passées à la fonction `processCheckout`
+- Plus besoin de page de planification post-achat séparée
+- Envoi automatique des notifications email (client + admin) après création
 
 #### 3. Page de Planification Post-Achat
 **Fichier:** `app/(private)/dashboard/appointments/book/page.tsx`
@@ -85,7 +93,7 @@ const [currentItemIndex, setCurrentItemIndex] = useState(0)
 #### 4. API Endpoint - Récupération Commande
 **Fichier:** `app/api/orders/[id]/route.ts`
 
-Endpoint pour récupérer les détails d'une commande avec ses articles.
+Endpoint pour récupérer les détails d'une commande avec ses articles **et ses rendez-vous**.
 
 **Méthode:** `GET /api/orders/:id`
 
@@ -106,10 +114,28 @@ Endpoint pour récupérer les détails d'une commande avec ses articles.
         "quantity": 1,
         "unitPrice": 9900
       }
+    ],
+    "appointments": [
+      {
+        "id": "uuid",
+        "title": "Consultation",
+        "startTime": "2024-01-15T14:00:00Z",
+        "endTime": "2024-01-15T15:00:00Z",
+        "attendeeEmail": "client@example.com",
+        "attendeeName": "John Doe",
+        "attendeePhone": "+33612345678",
+        "status": "confirmed",
+        "paymentStatus": "paid"
+      }
     ]
   }
 }
 ```
+
+**Nouveauté:**
+- Le endpoint retourne maintenant un tableau `appointments` contenant tous les rendez-vous liés à la commande
+- Les rendez-vous sont filtrés via `metadata.orderId` qui correspond à l'ID de la commande
+- Permet d'afficher les rendez-vous sur la page de confirmation
 
 #### 5. Système de Notifications Email pour Rendez-vous
 **Fichier:** `lib/notifications/appointment-notifications.ts`
@@ -296,57 +322,134 @@ Navigation vers `/dashboard/checkout`
 
 ### 3. Affichage du panier
 - Les produits avec rendez-vous ont un badge 📅 "Rendez-vous"
-- Un bouton "Sélectionner un créneau" est affiché (optionnel - pré-sélection)
+- Un bouton "Sélectionner un créneau" est affiché pour chaque produit
 
-### 4. Pré-sélection du créneau (Optionnel)
+### 4. Sélection du créneau (OBLIGATOIRE)
 - Click sur "Sélectionner un créneau" dans le récapitulatif
 - Ouverture de la modale `AppointmentModal`
 - Sélection de la date et de l'heure
-- Remplissage des informations participant
+- Remplissage des informations participant (nom, email, téléphone, notes)
 - Validation
+- **Les données sont stockées dans `appointmentsData` Map**
 
 ### 5. Validation de la commande
 - Click sur "Payer X€" (ou "Valider la commande" en mode DEV)
-- Traitement du checkout
-- Création de la commande
+- Appel à `processCheckout(cartId, appointmentsData)` avec les données de rendez-vous
+- **Création automatique de la commande ET des rendez-vous en base de données**
+- **Envoi automatique des notifications:**
+  - Email de confirmation au client
+  - Email de notification à l'admin
+  - Notification chat admin
 
-### 6. Page de planification post-achat
-**Fichier:** `app/(private)/dashboard/appointments/book/page.tsx`
+### 6. Traitement backend - Fonction `processCheckout`
+**Fichier:** `app/actions/ecommerce.ts`
 
-Après validation de la commande, si des produits de type "appointment" sont présents:
-- Redirection vers `/dashboard/appointments/book?orderId=xxx`
-- Affichage des produits avec rendez-vous à planifier
-- Barre de progression si plusieurs rendez-vous
-- Pour chaque produit:
-  - Affichage du composant `AppointmentBooking`
-  - Sélection de la date et de l'heure
-  - Remplissage des informations participant
-  - Création du rendez-vous via `/api/appointments`
-- Possibilité de terminer sans planifier tous les rendez-vous
-- Redirection finale vers la page de confirmation
+**Signature:**
+```typescript
+export async function processCheckout(
+  cartId: string,
+  appointmentsData?: Record<string, AppointmentData>
+)
+```
 
-### 7. Traitement backend
-1. Création de la commande
-2. Redirection vers page de planification
-3. Création du rendez-vous dans `appointments` (lors de la sélection)
-4. Synchronisation avec le calendrier
-5. **Appel à `/api/appointments/:id/notify`** qui déclenche:
-   - Email de confirmation au client (via Scaleway TEM)
-   - Email de notification à l'admin (via Scaleway TEM)
-   - Notification chat admin (via système de chat interne)
+**Paramètre `appointmentsData`:**
+```typescript
+Record<productId, {
+  startTime: Date,
+  endTime: Date,
+  timezone: string,
+  attendeeEmail: string,
+  attendeeName: string,
+  attendeePhone?: string,
+  notes?: string
+}>
+```
 
-### 8. Page de confirmation
+**Processus:**
+1. Récupération du panier et de l'utilisateur
+2. Création de la commande dans `orders`
+3. Création des `orderItems` pour chaque produit
+4. **Si `appointmentsData` fourni:**
+   - Pour chaque produit de type "appointment":
+     - Création du rendez-vous dans la table `appointments`
+     - Liaison via `metadata.orderId`
+     - Appel à `sendAllAppointmentNotifications()` pour envoyer:
+       * Email client (HTML formaté)
+       * Email admin (HTML formaté)
+       * Notification chat admin
+5. Vidage du panier
+6. Retour de `orderId` pour redirection
+
+### 7. Page de confirmation
 **Fichier:** `app/(private)/dashboard/checkout/confirmation/page.tsx`
 
-- Récapitulatif de tous les rendez-vous confirmés
-- Liens vers le calendrier et le dashboard
-- Message de confirmation avec détails
+- URL: `/dashboard/checkout/confirmation?orderId=xxx`
+- Appel API à `/api/orders/:id` qui retourne:
+  - Détails de la commande
+  - Liste des articles
+  - **Liste des rendez-vous associés** (via `metadata.orderId`)
+- Affichage:
+  - Numéro de commande
+  - Statut de paiement
+  - Liste des produits
+  - **Section rendez-vous avec:**
+    - Icône calendrier
+    - Date et heure formatées
+    - Nom et email du participant
+    - Téléphone (si fourni)
+    - Badge statut (confirmé, en attente, etc.)
+    - Badge paiement (payé, gratuit, etc.)
+    - Notes (si fournies)
+  - Message "Des emails de confirmation ont été envoyés"
+  - Boutons "Voir mon calendrier" et "Retour au dashboard"
 
-### 9. Notification admin
+### 8. Notification admin
 L'admin reçoit une notification dans `/admin/chat` :
 - Type : "appointment" (priorité haute)
 - Contenu : Détails du rendez-vous
 - Lien direct vers le calendrier
+
+## Schéma technique - Liaison commande/rendez-vous
+
+Les rendez-vous créés lors du checkout sont liés à la commande via le champ `metadata.orderId`:
+
+```typescript
+// Création du rendez-vous
+const appointment = await db.insert(appointments).values({
+  id: uuidv4(),
+  userId: userId,
+  title: product.title,
+  startTime: appointmentData.startTime,
+  endTime: appointmentData.endTime,
+  timezone: appointmentData.timezone,
+  attendeeEmail: appointmentData.attendeeEmail,
+  attendeeName: appointmentData.attendeeName,
+  attendeePhone: appointmentData.attendeePhone,
+  notes: appointmentData.notes,
+  status: 'confirmed',
+  paymentStatus: 'paid',
+  metadata: {
+    orderId: orderId,        // ← Liaison avec la commande
+    productId: productId,
+    price: product.price,
+    currency: product.currency
+  }
+})
+```
+
+**Récupération des rendez-vous d'une commande:**
+```typescript
+// Dans /api/orders/[id]
+const orderAppointments = await db
+  .select()
+  .from(appointments)
+  .where(eq(appointments.userId, order.userId))
+
+// Filtrage côté applicatif
+const filteredAppointments = orderAppointments.filter(appt => 
+  appt.metadata?.orderId === orderId
+)
+```
 
 ## Tables de base de données utilisées
 
@@ -470,6 +573,35 @@ Template : `order-confirmation`
 4. Ajouter le produit au panier depuis `/store` ou `/dashboard`
 5. Aller au checkout `/dashboard/checkout`
 6. Vérifier le badge "Rendez-vous" sur le produit
+7. **Cliquer sur "Sélectionner un créneau"**
+8. **Dans la modale:**
+   - Choisir une date et heure
+   - Remplir nom, email, téléphone (optionnel)
+   - Ajouter des notes (optionnel)
+   - Valider
+9. **Valider la commande** (bouton "Valider la commande (Test)" en mode DEV)
+10. **Vérifier la redirection** vers `/dashboard/checkout/confirmation?orderId=xxx`
+11. **Sur la page de confirmation, vérifier:**
+   - Affichage du numéro de commande
+   - Liste des produits commandés
+   - **Section "Vos rendez-vous" avec:**
+     - Date et heure du rendez-vous
+     - Nom et email du participant
+     - Téléphone (si fourni)
+     - Notes (si fournies)
+     - Badge statut "Confirmé"
+     - Badge paiement "Payé"
+   - Message "Des emails de confirmation ont été envoyés"
+12. **Vérifier les emails reçus:**
+   - Email client avec récapitulatif du rendez-vous
+   - Email admin avec détails client et rendez-vous
+13. **Vérifier la notification admin:**
+   - Aller sur `/admin/chat`
+   - Voir la notification de nouveau rendez-vous
+14. **Vérifier la base de données:**
+   - Table `orders`: commande créée
+   - Table `order_items`: produit lié à la commande
+   - Table `appointments`: rendez-vous créé avec `metadata.orderId`
 7. Cliquer sur "Valider la commande (Test)"
 8. **Redirection automatique vers `/dashboard/appointments/book?orderId=xxx`**
 9. Sélectionner une date disponible

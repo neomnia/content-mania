@@ -29,39 +29,30 @@ Le tunnel d'achat permet aux utilisateurs authentifiés de finaliser leurs comma
 │(/dashboard/checkout)
 │                 │
 │ - Billing info  │
+│ - Appointment   │
+│   slot selection│
 │ - Payment method│
 │ - Order summary │
 └────────┬────────┘
          │ Click "Payer" / "Valider" (DEV mode)
          ▼
 ┌─────────────────┐
-│  Payment (Lago) │
-│  (Skip in DEV)  │
-│ - Invoice created
-│ - Payment processed
+│  processCheckout│
+│  Server Action  │
+│                 │
+│ - Create order  │
+│ - Create appts  │
+│ - Send emails   │
 └────────┬────────┘
          │
          ▼
-    ┌────┴────┐
-    │Has Appts?│
-    └────┬────┘
-     YES │ NO
-    ┌────┼────┐
-    ▼         ▼
-┌───────────┐  ┌───────────┐
-│ Book Page │  │Confirmation│
-│(/appointments│ │  Page     │
-│  /book)    │  │           │
-│            │  │           │
-│ - Select   │  │           │
-│   date/time│  │           │
-│ - Confirm  │  │           │
-└─────┬──────┘  └───────────┘
-      │
-      ▼
 ┌─────────────────┐
-│  Order Success  │
-│  + Email sent   │
+│  Confirmation   │
+│      Page       │
+│                 │
+│ - Order details │
+│ - Appointments  │
+│ - Email sent ✓  │
 └─────────────────┘
 ```
 
@@ -258,7 +249,8 @@ Affichage dynamique selon la configuration Lago:
                   │
                   ▼
 ┌─────────────────────────────────────────┐
-│  ACTION: processCheckout()              │
+│  ACTION: processCheckout(cartId,        │
+│          appointmentsData?)              │
 ├─────────────────────────────────────────┤
 │  Étape 1: Authentification              │
 │  • Vérifier session utilisateur         │
@@ -299,12 +291,29 @@ Affichage dynamique selon la configuration Lago:
 │    - INSERT INTO order_items            │
 │    - orderId, productId, qty, price     │
 │                                          │
-│  Étape 9: Email Confirmation            │
+│  Étape 9: Créer Rendez-vous (DB) ✨     │
+│  • Si appointmentsData fourni:          │
+│    - Pour chaque produit "appointment": │
+│      * INSERT INTO appointments         │
+│      * metadata.orderId = orderId       │
+│      * status = "confirmed"             │
+│      * paymentStatus = "paid"           │
+│      * startTime, endTime, timezone     │
+│      * attendeeEmail, attendeeName      │
+│      * attendeePhone?, notes?           │
+│                                          │
+│  Étape 10: Email Notifications ✨       │
+│  • Pour chaque rendez-vous créé:        │
+│    - sendAppointmentConfirmationToClient│
+│    - sendAppointmentNotificationToAdmin │
+│    - notifyAdminNewAppointment (chat)   │
+│                                          │
+│  Étape 11: Email Confirmation Commande  │
 │  • sendEmailTemplate()                  │
 │  • Template: order_confirmation         │
 │  • Variables: orderNumber, items, total │
 │                                          │
-│  Étape 10: Convertir Panier             │
+│  Étape 12: Convertir Panier             │
 │  • UPDATE carts SET converted = true    │
 │  • revalidatePath("/dashboard/cart")    │
 └─────────────────┬───────────────────────┘
@@ -313,17 +322,18 @@ Affichage dynamique selon la configuration Lago:
 ┌─────────────────────────────────────────┐
 │  4. REDIRECTION                         │
 ├─────────────────────────────────────────┤
-│  • Si succès avec rendez-vous:          │
-│    → /dashboard/appointments/book?      │
-│      orderId=xxx                        │
-│    → Planification des créneaux         │
-│                                          │
-│  • Si succès sans rendez-vous:          │
+│  • Toujours vers:                       │
 │    → /dashboard/checkout/confirmation?  │
 │      orderId=xxx                        │
 │                                          │
+│  • Sur la page de confirmation:         │
+│    - Récapitulatif commande             │
+│    - Liste des produits                 │
+│    - Liste des rendez-vous créés ✨     │
+│    - Message "Emails envoyés" ✨        │
+│                                          │
 │  • Toast: "Commande validée !"          │
-│  • Email envoyé automatiquement         │
+│  • Emails envoyés automatiquement ✨    │
 │                                          │
 │  • Si erreur: reste sur /checkout       │
 │  • Toast: message d'erreur              │
@@ -851,7 +861,79 @@ for (const item of cart.items) {
 
 ---
 
-### 9. Envoi de l'Email de Confirmation
+### 9. Création des Rendez-vous (Nouveau) ✨
+
+**Fichier:** `app/actions/ecommerce.ts` - `processCheckout()`
+
+Si des données de rendez-vous ont été collectées (`appointmentsData`), création automatique des rendez-vous en base de données.
+
+```typescript
+// appointmentsData structure
+Record<productId, {
+  startTime: Date,
+  endTime: Date,
+  timezone: string,
+  attendeeEmail: string,
+  attendeeName: string,
+  attendeePhone?: string,
+  notes?: string
+}>
+
+// Pour chaque produit de type "appointment"
+if (appointmentsData && appointmentsData[item.product.id]) {
+  const appointmentData = appointmentsData[item.product.id]
+  
+  const [appointment] = await db.insert(appointments).values({
+    id: uuidv4(),
+    userId: user.id,
+    title: item.product.title,
+    startTime: appointmentData.startTime,
+    endTime: appointmentData.endTime,
+    timezone: appointmentData.timezone,
+    attendeeEmail: appointmentData.attendeeEmail,
+    attendeeName: appointmentData.attendeeName,
+    attendeePhone: appointmentData.attendeePhone,
+    notes: appointmentData.notes,
+    status: 'confirmed',
+    paymentStatus: 'paid',
+    metadata: {
+      orderId: order.id,           // ← Lien avec la commande
+      productId: item.product.id,
+      price: item.product.price,
+      currency: item.product.currency
+    }
+  }).returning()
+  
+  // Envoi des notifications email
+  await sendAllAppointmentNotifications({
+    appointmentId: appointment.id,
+    productTitle: item.product.title,
+    startTime: appointmentData.startTime,
+    endTime: appointmentData.endTime,
+    timezone: appointmentData.timezone,
+    attendeeName: appointmentData.attendeeName,
+    attendeeEmail: appointmentData.attendeeEmail,
+    attendeePhone: appointmentData.attendeePhone,
+    price: item.product.price,
+    currency: item.product.currency,
+    notes: appointmentData.notes,
+    userId: user.id
+  })
+}
+```
+
+**Emails envoyés automatiquement:**
+1. **Email client** - Confirmation du rendez-vous avec détails
+2. **Email admin** - Notification de nouveau rendez-vous
+3. **Chat admin** - Notification dans l'interface d'administration
+
+**Logs:**
+- ✅ `[processCheckout] ✅ Appointment created { appointmentId, productTitle, startTime }`
+- ✅ `[processCheckout] ✅ Appointment notifications sent { clientEmail, adminEmail, adminChat }`
+
+---
+
+### 10. Envoi de l'Email de Confirmation Commande
 
 **Fichier:** `app/actions/ecommerce.ts` - `processCheckout()`
 
@@ -885,7 +967,7 @@ await emailRouter.sendEmail({
 
 ---
 
-### 10. Conversion du Panier
+### 11. Conversion du Panier
 
 **Fichier:** `app/actions/ecommerce.ts` - `processCheckout()`
 

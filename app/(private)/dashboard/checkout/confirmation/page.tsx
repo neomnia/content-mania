@@ -287,6 +287,51 @@ export default function ConfirmationPage() {
               </>
             )}
 
+            {/* Appointments Section */}
+            {order.appointments && order.appointments.length > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#CD7F32]" />
+                    Rendez-vous programmés
+                  </h3>
+                  {order.appointments.map((apt: any, idx: number) => (
+                    <div key={idx} className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <p className="font-medium text-amber-900">{apt.title}</p>
+                          <p className="text-sm text-amber-700">
+                            <Calendar className="w-3 h-3 inline mr-1" />
+                            {format(new Date(apt.startTime), "d MMMM yyyy 'à' HH:mm", { locale: fr })}
+                          </p>
+                          <p className="text-sm text-amber-700">
+                            <User className="w-3 h-3 inline mr-1" />
+                            {apt.attendeeName} ({apt.attendeeEmail})
+                          </p>
+                        </div>
+                        <Badge variant={apt.status === 'confirmed' ? 'default' : 'secondary'}>
+                          {apt.status}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-amber-200 flex items-center justify-between text-sm">
+                        <span className="text-amber-700">Statut de paiement</span>
+                        <span className={apt.isPaid ? "text-green-600 font-medium" : "text-orange-600"}>
+                          {apt.isPaid ? '✓ Payé' : 'En attente'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-800">
+                      <Mail className="w-4 h-4 inline mr-1" />
+                      Un email de confirmation avec les détails de vos rendez-vous vous a été envoyé.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+
             {order.totalAmount > 0 && (
               <>
                 <Separator />

@@ -531,9 +531,28 @@ export async function updateCartItemQuantity(productId: string, quantity: number
 }
 
 // --- Checkout ---
-
-export async function processCheckout(cartId: string) {
-  console.log('[processCheckout] 🛒 Starting checkout process', { cartId })
+/**
+ * Process checkout for a cart
+ * @param cartId - ID of the cart to process
+ * @param appointmentsData - Optional map of productId -> appointment data for appointment products
+ */
+export async function processCheckout(
+  cartId: string,
+  appointmentsData?: Record<string, {
+    startTime: string
+    endTime: string
+    timezone: string
+    attendeeEmail: string
+    attendeeName: string
+    attendeePhone?: string
+    notes?: string
+  }>
+) {
+  console.log('[processCheckout] 🛒 Starting checkout process', { 
+    cartId, 
+    hasAppointments: !!appointmentsData,
+    appointmentCount: appointmentsData ? Object.keys(appointmentsData).length : 0
+  })
 
   try {
     const user = await getCurrentUser()

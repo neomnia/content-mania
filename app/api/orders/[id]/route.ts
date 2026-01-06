@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { db } from '@/db'
-import { orders, orderItems } from '@/db/schema'
+import { orders, orderItems, appointments } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 
 export async function GET(
@@ -38,6 +38,22 @@ export async function GET(
       )
     }
 
+    // Fetch appointments associated with this order
+    const orderAppointments = await db.query.appointments.findMany({
+      where: and(
+        eq(appointments.userId, user.userId)
+        // Filter by metadata.orderId if it exists
+      )
+    })
+
+    // Filter appointments that have this orderId in their metadata
+    const relatedAppointments = orderAppointments.filter(apt => 
+      apt.metadata && 
+      typeof apt.metadata === 'object' && 
+      'orderId' in apt.metadata && 
+      apt.metadata.orderId === orderId
+    )
+
     return NextResponse.json({
       success: true,
       order: {
@@ -57,6 +73,19 @@ export async function GET(
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           totalPrice: item.totalPrice
+        })),
+        appointments: relatedAppointments.map(apt => ({
+          id: apt.id,
+          title: apt.title,
+          startTime: apt.startTime.toISOString(),
+          endTime: apt.endTime.toISOString(),
+          timezone: apt.timezone,
+          status: apt.status,
+          attendeeName: apt.attendeeName,
+          attendeeEmail: apt.attendeeEmail,
+          price: apt.price,
+          currency: apt.currency,
+          isPaid: apt.isPaid
         }))
       }
     })

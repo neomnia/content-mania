@@ -19,37 +19,79 @@ lib/checkout/
 ├── lago-test-mode.ts         # Mode test pour Lago
 └── team-notifications.ts     # Notifications email équipe
 
-app/api/checkout/
-├── route.ts                  # API principale de checkout
-├── simulate-payment/route.ts # Simulation de paiement (test)
-└── available-slots/route.ts  # Créneaux disponibles
+app/actions/
+└── ecommerce.ts              # Server actions (processCheckout)
+
+app/api/
+├── checkout/
+│   ├── route.ts              # API principale de checkout (ancienne)
+│   ├── simulate-payment/route.ts
+│   └── available-slots/route.ts
+└── orders/[id]/
+    └── route.ts              # Récupération commande + rendez-vous
 
 components/checkout/
 ├── index.ts                  # Export composants
-└── appointment-booking.tsx   # UI de réservation
+└── appointment-modal.tsx     # Modal de sélection de créneau
 
-app/(public)/book/[productId]/
-└── page.tsx                  # Page de réservation publique
+app/(private)/dashboard/
+├── checkout/
+│   ├── page.tsx              # Page de checkout
+│   └── confirmation/
+│       └── page.tsx          # Page de confirmation avec rendez-vous
+└── cart/
+    └── page.tsx              # Panier
 ```
 
-## Flux de Checkout
+## Flux de Checkout avec Rendez-vous (Nouveau)
 
-### 1. Produits de type "Appointment"
+### 1. Produits de type "Appointment" - Flux Intégré ✨
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Sélection      │ --> │  Informations   │ --> │  Paiement       │
-│  du créneau     │     │  client         │     │  (si requis)    │
+│  Ajout au       │ --> │  Page Checkout  │ --> │  Modal          │
+│  panier         │     │  Récapitulatif  │     │  Sélection      │
+│                 │     │  Badge "RDV" 📅 │     │  du créneau     │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                                                         │
                                                         v
                         ┌─────────────────────────────────────────────┐
-                        │  Actions automatiques:                      │
-                        │  1. Création du RDV dans DB                 │
-                        │  2. Sync avec calendrier Neosaas            │
-                        │  3. Création facture Lago (si payant)       │
-                        │  4. Email notification équipe               │
-                        │  5. Email confirmation client               │
+                        │  Données collectées dans appointmentsData:  │
+                        │  - startTime, endTime, timezone             │
+                        │  - attendeeEmail, attendeeName              │
+                        │  - attendeePhone (optionnel)                │
+                        │  - notes (optionnel)                        │
+                        └─────────────────┬───────────────────────────┘
+                                          │
+                                          v
+┌─────────────────┐     ┌─────────────────────────────────────────────┐
+│  Validation     │ --> │  processCheckout(cartId, appointmentsData)  │
+│  Commande       │     │                                             │
+│  (Payer/Test)   │     │  Actions automatiques:                      │
+└─────────────────┘     │  1. Création commande (orders)              │
+                        │  2. Création items (order_items)            │
+                        │  3. ✨ Création RDV (appointments)          │
+                        │     - metadata.orderId pour liaison         │
+                        │     - status = "confirmed"                  │
+                        │     - paymentStatus = "paid"                │
+                        │  4. ✨ Email client (confirmation RDV)      │
+                        │  5. ✨ Email admin (notification RDV)       │
+                        │  6. ✨ Chat admin (notification)            │
+                        │  7. Facture Lago (si configuré)             │
+                        │  8. Vidage du panier                        │
+                        └─────────────────┬───────────────────────────┘
+                                          │
+                                          v
+                        ┌─────────────────────────────────────────────┐
+                        │  Page Confirmation                          │
+                        │  - Numéro commande                          │
+                        │  - Liste produits                           │
+                        │  - ✨ Liste rendez-vous (via API)           │
+                        │    * Date/heure formatée                    │
+                        │    * Participant (nom, email, tel)          │
+                        │    * Badge statut + paiement                │
+                        │    * Notes si présentes                     │
+                        │  - Message "Emails envoyés" ✨              │
                         └─────────────────────────────────────────────┘
 ```
 
@@ -107,9 +149,11 @@ POST /api/checkout/simulate-payment
 
 ## API Endpoints
 
-### POST /api/checkout
+### ✨ POST /api/checkout (Ancienne méthode - Toujours disponible)
 
-Traite un checkout complet.
+Traite un checkout complet via l'API REST.
+
+**Note:** L'approche recommandée est maintenant d'utiliser la server action `processCheckout` directement depuis la page de checkout.
 
 **Body (panier):**
 ```json
@@ -144,6 +188,98 @@ Traite un checkout complet.
     "invoiceId": "test_inv_xxx",
     "requiresPayment": false,
     "testMode": true
+  }
+}
+```
+
+### ✨ Server Action: processCheckout (Méthode Recommandée)
+
+**Fichier:** `app/actions/ecommerce.ts`
+
+**Signature:**
+```typescript
+export async function processCheckout(
+  cartId: string,
+  appointmentsData?: Record<string, AppointmentData>
+): Promise<{ success: boolean; orderId?: string; error?: string }>
+```
+
+**Paramètres:**
+- `cartId`: ID du panier à traiter
+- `appointmentsData` (optionnel): Map des données de rendez-vous par productId
+
+**Structure appointmentsData:**
+```typescript
+Record<productId, {
+  startTime: Date,
+  endTime: Date,
+  timezone: string,
+  attendeeEmail: string,
+  attendeeName: string,
+  attendeePhone?: string,
+  notes?: string
+}>
+```
+
+**Exemple d'utilisation:**
+```typescript
+const result = await processCheckout(cart.id, {
+  'product-uuid-1': {
+    startTime: new Date('2024-01-15T10:00:00Z'),
+    endTime: new Date('2024-01-15T11:00:00Z'),
+    timezone: 'Europe/Paris',
+    attendeeEmail: 'client@example.com',
+    attendeeName: 'Jean Dupont',
+    attendeePhone: '+33612345678',
+    notes: 'Question sur le projet'
+  }
+})
+
+if (result.success) {
+  router.push(`/dashboard/checkout/confirmation?orderId=${result.orderId}`)
+}
+```
+
+**Processus:**
+1. Création de la commande (orders, order_items)
+2. **Création automatique des rendez-vous** pour les produits de type "appointment"
+3. **Envoi des notifications email:**
+   - Email client (confirmation rendez-vous)
+   - Email admin (notification rendez-vous)
+   - Chat admin (notification)
+4. Facture Lago (si configuré en mode production)
+5. Vidage du panier
+6. Retour de l'orderId pour redirection
+
+### GET /api/orders/[id] ✨
+
+Récupère les détails d'une commande avec ses articles **et ses rendez-vous**.
+
+**Nouveauté:** Retourne maintenant les rendez-vous associés.
+
+**Réponse:**
+```json
+{
+  "success": true,
+  "order": {
+    "id": "uuid",
+    "orderNumber": "ORD-xxx",
+    "status": "completed",
+    "items": [...],
+    "appointments": [
+      {
+        "id": "uuid",
+        "title": "Consultation",
+        "startTime": "2024-01-15T14:00:00Z",
+        "endTime": "2024-01-15T15:00:00Z",
+        "attendeeEmail": "client@example.com",
+        "attendeeName": "John Doe",
+        "attendeePhone": "+33612345678",
+        "status": "confirmed",
+        "paymentStatus": "paid",
+        "notes": "Question sur..."
+      }
+    ]
   }
 }
 ```
