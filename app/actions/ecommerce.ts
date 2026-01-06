@@ -6,7 +6,7 @@ import { eq, and, desc, asc } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getCurrentUser } from "@/lib/auth"
 import { z } from "zod"
-import { getLagoClient } from "@/lib/lago"
+import { getLagoClient, getLagoConfig, type LagoMode } from "@/lib/lago"
 import { emailRouter } from "@/lib/email"
 import { cookies } from "next/headers"
 
@@ -471,17 +471,26 @@ export async function processCheckout(cartId: string) {
       items: cart.items.map(i => ({ id: i.product.id, title: i.product.title, price: i.product.price, qty: i.quantity }))
     })
 
-    // 2. Initialize Lago (optionnel)
+    // 2. Initialize Lago based on mode (production/test/dev)
     console.log('[processCheckout] 💳 Checking Lago configuration')
+    const lagoConfig = await getLagoConfig()
+    console.log('[processCheckout] 📋 Lago mode:', lagoConfig.mode.toUpperCase())
+
     let lago
     let lagoEnabled = false
-    try {
-      lago = await getLagoClient()
-      lagoEnabled = true
-      console.log('[processCheckout] ✅ Lago client initialized - will process invoice')
-    } catch (e) {
-      console.log('[processCheckout] ℹ️  Lago not configured - proceeding without Lago integration')
-      console.log('[processCheckout] ℹ️  Order will be created without invoice generation')
+
+    if (lagoConfig.mode === 'dev') {
+      console.log('[processCheckout] 🔧 DEV MODE - Lago completely bypassed')
+      console.log('[processCheckout] ℹ️  Order will be created without Lago invoice')
+    } else {
+      try {
+        lago = await getLagoClient()
+        lagoEnabled = true
+        console.log(`[processCheckout] ✅ Lago client initialized in ${lagoConfig.mode.toUpperCase()} mode`)
+      } catch (e) {
+        console.log('[processCheckout] ⚠️  Lago not configured - proceeding without Lago integration')
+        console.log('[processCheckout] ℹ️  Order will be created without invoice generation')
+      }
     }
 
     let invoiceResult
@@ -581,11 +590,13 @@ export async function processCheckout(cartId: string) {
       totalAmount,
       status: "completed",
       paymentStatus: "pending",
-      metadata: invoiceResult ? { 
+      metadata: invoiceResult ? {
+        lago_mode: lagoConfig.mode,
         lago_invoice_id: invoiceResult.data.lago_invoice.lago_id,
         lago_invoice_number: invoiceResult.data.lago_invoice.number
       } : {
-        note: "Processed without Lago"
+        lago_mode: lagoConfig.mode,
+        note: lagoConfig.mode === 'dev' ? "DEV mode - Lago bypassed" : "Processed without Lago"
       }
     }).returning()
 

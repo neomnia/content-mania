@@ -61,8 +61,12 @@ export function AppointmentModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -72,7 +76,10 @@ export function AppointmentModal({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onClose}
+              onClick={(e) => {
+                e.stopPropagation()
+                onClose()
+              }}
               disabled={isBooking}
             >
               <X className="h-4 w-4" />
@@ -83,7 +90,7 @@ export function AppointmentModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-4">
+        <div className="mt-4" onClick={(e) => e.stopPropagation()}>
           <AppointmentBooking
             productId={product.id}
             productTitle={product.title}
