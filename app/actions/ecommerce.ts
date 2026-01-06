@@ -852,11 +852,27 @@ export async function processCheckout(
             const { sendAllAppointmentNotifications } = await import('@/lib/notifications/appointment-notifications')
             console.log('[processCheckout] 📧 Module loaded, sending appointment notifications')
             
+            // S'assurer que les dates sont des objets Date valides
+            const startDate = appointmentData.startTime instanceof Date 
+              ? appointmentData.startTime 
+              : new Date(appointmentData.startTime)
+            
+            const endDate = appointmentData.endTime instanceof Date 
+              ? appointmentData.endTime 
+              : new Date(appointmentData.endTime)
+            
+            console.log('[processCheckout] 📅 Date objects created:', {
+              startDate: startDate.toISOString(),
+              endDate: endDate.toISOString(),
+              isStartDateValid: !isNaN(startDate.getTime()),
+              isEndDateValid: !isNaN(endDate.getTime())
+            })
+            
             const notifResults = await sendAllAppointmentNotifications({
               appointmentId: appointment.id,
               productTitle: item.product.title,
-              startTime: new Date(appointmentData.startTime),
-              endTime: new Date(appointmentData.endTime),
+              startTime: startDate,
+              endTime: endDate,
               timezone: appointmentData.timezone,
               attendeeName: appointmentData.attendeeName,
               attendeeEmail: appointmentData.attendeeEmail,

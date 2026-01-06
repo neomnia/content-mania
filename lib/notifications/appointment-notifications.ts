@@ -24,6 +24,12 @@ interface AppointmentEmailParams {
  * Format date for French locale
  */
 function formatDateFR(date: Date, timezone: string = 'Europe/Paris'): string {
+  // S'assurer que date est un objet Date valide
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    console.error('[formatDateFR] Invalid date:', date)
+    return 'Date invalide'
+  }
+  
   return new Intl.DateTimeFormat('fr-FR', {
     weekday: 'long',
     year: 'numeric',

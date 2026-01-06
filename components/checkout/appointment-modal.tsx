@@ -54,7 +54,8 @@ export function AppointmentModal({
         productId: product.id,
         ...data
       })
-      // La modale sera fermée par le parent après le succès
+      // Fermer la modale après le succès
+      onClose()
     } finally {
       setIsBooking(false)
     }
@@ -90,7 +91,7 @@ export function AppointmentModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-4" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-4">
           <AppointmentBooking
             productId={product.id}
             productTitle={product.title}

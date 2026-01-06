@@ -299,16 +299,20 @@ export default function CheckoutPage() {
   const handleAppointmentBooked = async (appointmentData: any) => {
     if (!currentAppointmentProduct) return
     
+    console.log('[Checkout] Appointment data received:', appointmentData)
+    
     // Sauvegarder les données du rendez-vous
     setAppointmentsData(prev => {
       const newMap = new Map(prev)
       newMap.set(currentAppointmentProduct.id, appointmentData)
+      console.log('[Checkout] Appointments map updated:', Array.from(newMap.keys()))
       return newMap
     })
     
-    toast.success("Créneau sélectionné avec succès !")
+    // Fermer la modal immédiatement
     setAppointmentModalOpen(false)
     setCurrentAppointmentProduct(null)
+    toast.success("Créneau sélectionné avec succès !")
   }
 
   const handleAddUpsell = async () => {
