@@ -6,6 +6,10 @@ import { verifyAuth } from '@/lib/auth/server'
 import { z } from 'zod'
 import { syncAppointmentToCalendars } from '@/lib/calendar/sync'
 
+// Force dynamic to prevent caching issues
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const appointmentSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),

@@ -4,6 +4,10 @@ import { appointments, users } from '@/db/schema'
 import { eq, and, desc, gte, lte, sql } from 'drizzle-orm'
 import { verifyAuth } from '@/lib/auth/server'
 
+// Force dynamic to prevent caching issues
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET /api/admin/appointments - List ALL appointments (admin only)
 export async function GET(request: NextRequest) {
   try {
