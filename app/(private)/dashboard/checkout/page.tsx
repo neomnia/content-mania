@@ -59,7 +59,14 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [cartId, setCartId] = useState<string | null>(null)
-  const [selectedMethod, setSelectedMethod] = useState<"card" | "paypal">("card")
+  const [selectedMethod, setSelectedMethod] = useState<"card" | "paypal" | "dev">("card")
+
+  // Payment config state
+  const [paymentConfig, setPaymentConfig] = useState({
+    lagoMode: 'dev' as 'dev' | 'test' | 'production',
+    stripeEnabled: false,
+    paypalEnabled: false
+  })
   const [userInfo, setUserInfo] = useState<{
     name: string
     email: string
@@ -77,6 +84,30 @@ export default function CheckoutPage() {
 
     const loadData = async () => {
       try {
+        // Load payment configuration
+        try {
+          const configRes = await fetch('/api/admin/config')
+          if (configRes.ok) {
+            const config = await configRes.json()
+            const mode = config.lago_mode || 'dev'
+            setPaymentConfig({
+              lagoMode: mode,
+              stripeEnabled: config.lago_stripe_enabled === 'true',
+              paypalEnabled: config.lago_paypal_enabled === 'true'
+            })
+            // Set default payment method based on config
+            if (mode === 'dev') {
+              setSelectedMethod('dev')
+            } else if (config.lago_stripe_enabled === 'true') {
+              setSelectedMethod('card')
+            } else if (config.lago_paypal_enabled === 'true') {
+              setSelectedMethod('paypal')
+            }
+          }
+        } catch (e) {
+          console.log('[Checkout] Could not load payment config, using defaults')
+        }
+
         // If module ID is present, add it to cart first
         if (moduleId) {
           const addResult = await addToCart(moduleId)
@@ -471,62 +502,107 @@ export default function CheckoutPage() {
           <Card>
             <CardHeader>
               <CardTitle>Méthode de paiement</CardTitle>
-              <CardDescription>Sélectionnez votre mode de paiement sécurisé</CardDescription>
+              <CardDescription>
+                {paymentConfig.lagoMode === 'dev'
+                  ? 'Mode développement - Lago désactivé'
+                  : 'Sélectionnez votre mode de paiement sécurisé'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="font-semibold flex items-center">
-                    <Lock className="mr-2 h-4 w-4" />
-                    Mode de paiement
-                  </h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div 
-                      className={`cursor-pointer border rounded-lg p-4 flex items-center space-x-4 transition-all ${selectedMethod === 'card' ? 'border-[#CD7F32] bg-[#CD7F32]/5 ring-1 ring-[#CD7F32]' : 'border-border hover:border-[#CD7F32]/50'}`}
-                      onClick={() => setSelectedMethod('card')}
-                    >
-                      <CreditCard className={`h-6 w-6 ${selectedMethod === 'card' ? 'text-[#CD7F32]' : 'text-muted-foreground'}`} />
-                      <div>
-                        <p className="font-medium">Carte Bancaire</p>
-                        <p className="text-xs text-muted-foreground">Paiement sécurisé via Lago</p>
+                {/* Dev Mode - No payment methods */}
+                {paymentConfig.lagoMode === 'dev' ? (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 dark:bg-purple-950/30 dark:border-purple-800">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                        <Lock className="h-5 w-5 text-purple-600" />
                       </div>
-                    </div>
-                    
-                    <div 
-                      className={`cursor-pointer border rounded-lg p-4 flex items-center space-x-4 transition-all ${selectedMethod === 'paypal' ? 'border-[#CD7F32] bg-[#CD7F32]/5 ring-1 ring-[#CD7F32]' : 'border-border hover:border-[#CD7F32]/50'}`}
-                      onClick={() => setSelectedMethod('paypal')}
-                    >
-                      <svg className={`h-6 w-6 ${selectedMethod === 'paypal' ? 'text-[#003087]' : 'text-muted-foreground'}`} viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.946 5.438-3.158 7.12-6.594 7.12H10.5l-.962 6.032a.64.64 0 0 1-.632.537l-1.83.002v.002z" />
-                      </svg>
                       <div>
-                        <p className="font-medium">PayPal</p>
-                        <p className="text-xs text-muted-foreground">Compte PayPal</p>
+                        <p className="font-medium text-purple-900 dark:text-purple-100">Mode Développement</p>
+                        <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
+                          Lago est désactivé. La commande sera créée sans traitement de paiement réel.
+                          Idéal pour tester le tunnel de vente.
+                        </p>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="space-y-4">
+                      <h3 className="font-semibold flex items-center">
+                        <Lock className="mr-2 h-4 w-4" />
+                        Mode de paiement
+                      </h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {/* Stripe / Card */}
+                        {paymentConfig.stripeEnabled && (
+                          <div
+                            className={`cursor-pointer border rounded-lg p-4 flex items-center space-x-4 transition-all ${selectedMethod === 'card' ? 'border-[#CD7F32] bg-[#CD7F32]/5 ring-1 ring-[#CD7F32]' : 'border-border hover:border-[#CD7F32]/50'}`}
+                            onClick={() => setSelectedMethod('card')}
+                          >
+                            <CreditCard className={`h-6 w-6 ${selectedMethod === 'card' ? 'text-[#CD7F32]' : 'text-muted-foreground'}`} />
+                            <div>
+                              <p className="font-medium">Carte Bancaire</p>
+                              <p className="text-xs text-muted-foreground">Paiement sécurisé via Stripe</p>
+                            </div>
+                          </div>
+                        )}
 
-                <Separator />
+                        {/* PayPal */}
+                        {paymentConfig.paypalEnabled && (
+                          <div
+                            className={`cursor-pointer border rounded-lg p-4 flex items-center space-x-4 transition-all ${selectedMethod === 'paypal' ? 'border-[#CD7F32] bg-[#CD7F32]/5 ring-1 ring-[#CD7F32]' : 'border-border hover:border-[#CD7F32]/50'}`}
+                            onClick={() => setSelectedMethod('paypal')}
+                          >
+                            <svg className={`h-6 w-6 ${selectedMethod === 'paypal' ? 'text-[#003087]' : 'text-muted-foreground'}`} viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.946 5.438-3.158 7.12-6.594 7.12H10.5l-.962 6.032a.64.64 0 0 1-.632.537l-1.83.002v.002z" />
+                            </svg>
+                            <div>
+                              <p className="font-medium">PayPal</p>
+                              <p className="text-xs text-muted-foreground">Compte PayPal</p>
+                            </div>
+                          </div>
+                        )}
 
-                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                  <div className="flex items-start gap-2">
-                    <Lock className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                    <div className="text-sm">
-                      <p className="font-medium mb-1">Paiement 100% sécurisé</p>
-                      <p className="text-muted-foreground text-xs">
-                        Vos données de paiement sont cryptées et sécurisées via Lago. 
-                        Nous ne stockons aucune information bancaire.
-                      </p>
+                        {/* No payment methods enabled */}
+                        {!paymentConfig.stripeEnabled && !paymentConfig.paypalEnabled && (
+                          <div className="col-span-2 bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800 dark:bg-yellow-950/30 dark:border-yellow-800 dark:text-yellow-200">
+                            <p className="text-sm">
+                              Aucune méthode de paiement n'est configurée.
+                              Contactez l'administrateur.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
+
+                    <Separator />
+
+                    <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                      <div className="flex items-start gap-2">
+                        <Lock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                        <div className="text-sm">
+                          <p className="font-medium mb-1">Paiement 100% sécurisé</p>
+                          <p className="text-muted-foreground text-xs">
+                            Vos données de paiement sont cryptées et sécurisées.
+                            Nous ne stockons aucune information bancaire.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <Button type="submit" className="w-full" size="lg" disabled={isProcessing}>
                   {isProcessing ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Traitement en cours...
+                    </>
+                  ) : paymentConfig.lagoMode === 'dev' ? (
+                    <>
+                      Valider la commande (Test)
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </>
                   ) : (
                     <>
@@ -537,7 +613,7 @@ export default function CheckoutPage() {
                 </Button>
 
                 <p className="text-xs text-center text-muted-foreground">
-                  En cliquant sur "Payer", vous acceptez nos conditions générales de vente
+                  En cliquant sur "{paymentConfig.lagoMode === 'dev' ? 'Valider' : 'Payer'}", vous acceptez nos conditions générales de vente
                 </p>
               </form>
             </CardContent>

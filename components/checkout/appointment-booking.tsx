@@ -270,29 +270,35 @@ export function AppointmentBooking({
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : (
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-2" style={{ position: 'relative', zIndex: 50 }}>
                 {weekDays.map((day) => {
                   const dateKey = format(day, 'yyyy-MM-dd')
                   const daySlots = slots[dateKey] || []
                   const hasAvailable = daySlots.some((s) => s.available)
                   const isPast = day < new Date()
                   const isSelected = selectedDate && isSameDay(day, selectedDate)
+                  const isClickable = !isPast && hasAvailable
 
                   return (
                     <button
                       key={dateKey}
-                      onClick={() => {
-                        if (!isPast && hasAvailable) {
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        console.log('[AppointmentBooking] Date clicked:', dateKey, { isPast, hasAvailable })
+                        if (isClickable) {
                           setSelectedDate(day)
                           setStep('select-time')
                         }
                       }}
-                      disabled={isPast || !hasAvailable}
+                      disabled={!isClickable}
+                      style={{ pointerEvents: isClickable ? 'auto' : 'none' }}
                       className={cn(
-                        'p-3 rounded-lg text-center transition-all',
+                        'p-3 rounded-lg text-center transition-all cursor-pointer',
                         isSelected
                           ? 'bg-primary text-white'
-                          : hasAvailable && !isPast
+                          : isClickable
                           ? 'bg-green-50 hover:bg-green-100 text-green-700'
                           : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       )}
@@ -301,7 +307,7 @@ export function AppointmentBooking({
                         {format(day, 'EEE', { locale: fr })}
                       </div>
                       <div className="text-lg font-bold">{format(day, 'd')}</div>
-                      {hasAvailable && !isPast && (
+                      {isClickable && (
                         <div className="text-xs">
                           {daySlots.filter((s) => s.available).length} dispo
                         </div>
@@ -325,19 +331,24 @@ export function AppointmentBooking({
               {format(selectedDate, 'EEEE d MMMM yyyy', { locale: fr })}
             </p>
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2" style={{ position: 'relative', zIndex: 50 }}>
               {slotsForDate.map((slot, i) => (
                 <button
                   key={i}
-                  onClick={() => {
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('[AppointmentBooking] Time slot clicked:', slot)
                     if (slot.available) {
                       setSelectedSlot(slot)
                       setStep('fill-info')
                     }
                   }}
                   disabled={!slot.available}
+                  style={{ pointerEvents: slot.available ? 'auto' : 'none' }}
                   className={cn(
-                    'p-3 rounded-lg text-center transition-all',
+                    'p-3 rounded-lg text-center transition-all cursor-pointer',
                     selectedSlot?.startTime === slot.startTime
                       ? 'bg-primary text-white'
                       : slot.available
