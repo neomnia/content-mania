@@ -493,14 +493,25 @@ export const orders = pgTable("orders", {
   companyId: uuid("company_id")
     .references(() => companies.id, { onDelete: "cascade" }),
   orderNumber: varchar("order_number", { length: 50 }).notNull().unique(), // e.g., "ORD-2024-001234"
-  status: text("status").notNull().default("pending"), // pending, processing, completed, cancelled, refunded
+  status: text("status").notNull().default("pending"), // pending, processing, shipped, completed, cancelled, refunded
   totalAmount: integer("total_amount").notNull(), // Amount in cents (e.g., 29900 for $299.00)
-  currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+  currency: varchar("currency", { length: 3 }).notNull().default("EUR"),
   paymentMethod: varchar("payment_method", { length: 50 }), // stripe, paypal, bank_transfer, etc.
   paymentStatus: text("payment_status").notNull().default("pending"), // pending, paid, failed, refunded
   paymentIntentId: varchar("payment_intent_id", { length: 255 }), // Stripe/PayPal transaction ID
   paidAt: timestamp("paid_at"),
   notes: text("notes"), // Customer notes or admin notes
+
+  // Shipping Fields (for physical products)
+  requiresShipping: boolean("requires_shipping").default(false), // true if order contains physical products
+  shippingAddress: jsonb("shipping_address"), // { name, street, city, postalCode, country, phone }
+  shippingStatus: text("shipping_status"), // pending, processing, shipped, delivered
+  shippingTrackingNumber: text("shipping_tracking_number"),
+  shippingCarrier: text("shipping_carrier"), // colissimo, chronopost, ups, dhl, etc.
+  shippedAt: timestamp("shipped_at"),
+  deliveredAt: timestamp("delivered_at"),
+  shippingReminderSent: boolean("shipping_reminder_sent").default(false), // Admin reminder sent
+
   metadata: jsonb("metadata"), // Additional data (delivery details, etc.)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -701,15 +712,41 @@ export const products = pgTable("products", {
   subtitle: text("subtitle"),
   description: text("description"),
   features: json("features"), // Array of strings for checkmarks
-  price: integer("price").notNull().default(0), // in cents (0 for free/appointment types)
-  hourlyRate: integer("hourly_rate"), // Optional: hourly rate in cents (for appointment display only)
-  type: text("type").notNull().default("standard"), // 'standard' | 'free' | 'appointment'
-  fileUrl: text("file_url"), // S3 URL for digital/free products
+  price: integer("price").notNull().default(0), // in cents
+  hourlyRate: integer("hourly_rate"), // For consulting: hourly rate in cents (display only for hourly mode)
+
+  // Product Type System - NEW in v3.0
+  // 'physical' = produit physique (livraison courrier)
+  // 'digital' = produit numérique (téléchargement + licence optionnelle)
+  // 'consulting' = consulting/RDV (packagé ou horaire)
+  // 'standard' = produit standard générique
+  type: text("type").notNull().default("standard"), // 'physical' | 'digital' | 'consulting' | 'standard'
+
+  // Free Option - Any product type can be free
+  isFree: boolean("is_free").default(false).notNull(), // true = no payment required
+
+  // Digital Product Fields
+  fileUrl: text("file_url"), // Download URL for digital products
+  licenseKey: text("license_key"), // License key template (optional, e.g., "PROD-XXXX-XXXX")
+  licenseInstructions: text("license_instructions"), // Instructions for license activation
+
+  // Physical Product Fields
+  requiresShipping: boolean("requires_shipping").default(false), // true for physical products
+  weight: integer("weight"), // Weight in grams
+  dimensions: jsonb("dimensions"), // { length, width, height } in cm
+  stockQuantity: integer("stock_quantity"), // Inventory tracking
+  shippingNotes: text("shipping_notes"), // Special shipping instructions
+
+  // Consulting Product Fields
+  consultingMode: text("consulting_mode"), // 'packaged' | 'hourly' - packaged = paid upfront, hourly = post-billing
+  appointmentDuration: integer("appointment_duration"), // Duration in minutes (default: 60)
+
+  // Common Fields
   icon: text("icon"), // Lucide icon name
   imageUrl: text("image_url"), // Custom product image URL
-  vatRateId: uuid("vat_rate_id").references(() => vatRates.id), // Reference to VAT rate (not applicable for free/appointment)
+  vatRateId: uuid("vat_rate_id").references(() => vatRates.id), // Reference to VAT rate
   currency: text("currency").default("EUR").notNull(),
-  outlookEventTypeId: text("outlook_event_type_id"), // Optional: for appointment booking
+  outlookEventTypeId: text("outlook_event_type_id"), // For appointment booking
   isPublished: boolean("is_published").default(false).notNull(),
   isFeatured: boolean("is_featured").default(false).notNull(), // "Most Popular" badge
   upsellProductId: uuid("upsell_product_id"), // Self-reference for upsell

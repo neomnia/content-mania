@@ -380,16 +380,359 @@ export async function notifyTeamAppointmentBooking(
 }
 
 /**
+ * Génère le contenu HTML de l'email pour un produit physique
+ */
+function generatePhysicalProductEmailHtml(notification: TeamNotification): string {
+  const itemsList = notification.items
+    .map(item => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.name}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">
+          ${item.isFree ? 'Gratuit' : formatPrice(item.price, notification.currency)}
+        </td>
+      </tr>
+    `)
+    .join('')
+
+  const shippingInfo = notification.shippingAddress
+    ? `
+      <h2 style="color: #374151; margin: 24px 0 16px 0; font-size: 18px;">📦 Adresse de livraison</h2>
+      <div style="background-color: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+        <p style="margin: 0 0 8px 0; font-weight: 600;">${notification.shippingAddress.name}</p>
+        <p style="margin: 0 0 4px 0;">${notification.shippingAddress.street}</p>
+        <p style="margin: 0 0 4px 0;">${notification.shippingAddress.postalCode} ${notification.shippingAddress.city}</p>
+        <p style="margin: 0 0 4px 0;">${notification.shippingAddress.country}</p>
+        ${notification.shippingAddress.phone ? `<p style="margin: 8px 0 0 0; color: #6b7280;">📞 ${notification.shippingAddress.phone}</p>` : ''}
+      </div>
+    `
+    : ''
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6; margin: 0; padding: 20px;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+        <div style="background-color: #ea580c; padding: 24px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">📦 Nouvelle commande de produit physique</h1>
+        </div>
+
+        <div style="padding: 24px;">
+          <div style="background-color: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+            <p style="margin: 0; color: #c2410c; font-weight: 600;">
+              ⚡ ACTION REQUISE: Commande #${notification.orderNumber} - À expédier
+            </p>
+          </div>
+
+          <h2 style="color: #374151; margin: 0 0 16px 0; font-size: 18px;">Informations client</h2>
+          <table style="width: 100%; margin-bottom: 24px;">
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280;">Nom:</td>
+              <td style="padding: 8px 0; color: #111827; font-weight: 500;">${notification.customerName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280;">Email:</td>
+              <td style="padding: 8px 0; color: #111827;">
+                <a href="mailto:${notification.customerEmail}" style="color: #ea580c;">${notification.customerEmail}</a>
+              </td>
+            </tr>
+          </table>
+
+          ${shippingInfo}
+
+          <h2 style="color: #374151; margin: 0 0 16px 0; font-size: 18px;">Produits commandés</h2>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+            <thead>
+              <tr style="background-color: #f9fafb;">
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Produit</th>
+                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb;">Qté</th>
+                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Prix</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsList}
+            </tbody>
+            <tfoot>
+              <tr style="background-color: #f9fafb;">
+                <td colspan="2" style="padding: 12px; font-weight: 600;">Total</td>
+                <td style="padding: 12px; text-align: right; font-weight: 600; color: #ea580c;">
+                  ${notification.totalAmount > 0 ? formatPrice(notification.totalAmount, notification.currency) : 'Gratuit'}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div style="background-color: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px;">
+            <p style="margin: 0; color: #b91c1c; font-size: 14px;">
+              <strong>🚨 Important:</strong> Veuillez expédier cette commande dès que possible et mettre à jour le statut d'expédition dans l'admin.
+            </p>
+          </div>
+
+          <div style="margin-top: 24px; text-align: center;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || ''}/admin/orders" style="display: inline-block; background-color: #ea580c; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+              Gérer la commande
+            </a>
+          </div>
+        </div>
+
+        <div style="background-color: #f9fafb; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="margin: 0; color: #6b7280; font-size: 12px;">
+            Cet email a été envoyé automatiquement par Neosaas
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+/**
+ * Génère le contenu HTML de l'email pour un consulting
+ */
+function generateConsultingEmailHtml(notification: TeamNotification): string {
+  const appointmentInfo = notification.appointmentDetails
+    ? `
+      <h2 style="color: #374151; margin: 0 0 16px 0; font-size: 18px;">Détails du rendez-vous</h2>
+      <table style="width: 100%; margin-bottom: 24px; background-color: #f5f3ff; border-radius: 8px; padding: 16px;">
+        <tr>
+          <td style="padding: 8px 0; color: #6b7280;">Date et heure:</td>
+          <td style="padding: 8px 0; color: #111827; font-weight: 500;">
+            ${formatDate(notification.appointmentDetails.startTime, notification.appointmentDetails.timezone)}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #6b7280;">Fin prévue:</td>
+          <td style="padding: 8px 0; color: #111827;">
+            ${formatDate(notification.appointmentDetails.endTime, notification.appointmentDetails.timezone)}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #6b7280;">Mode:</td>
+          <td style="padding: 8px 0; color: #111827; font-weight: 500;">
+            ${notification.appointmentDetails.consultingMode === 'packaged' ? '📦 Forfait (payé)' : '⏱️ À l\'heure (facturation post-session)'}
+          </td>
+        </tr>
+        ${notification.appointmentDetails.hourlyRate ? `
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Taux horaire:</td>
+            <td style="padding: 8px 0; color: #111827;">${formatPrice(notification.appointmentDetails.hourlyRate, notification.currency)}/h</td>
+          </tr>
+        ` : ''}
+        ${notification.appointmentDetails.notes ? `
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Notes:</td>
+            <td style="padding: 8px 0; color: #111827;">${notification.appointmentDetails.notes}</td>
+          </tr>
+        ` : ''}
+      </table>
+    `
+    : ''
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6; margin: 0; padding: 20px;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+        <div style="background-color: #7c3aed; padding: 24px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">👥 Nouvelle réservation de consulting</h1>
+        </div>
+
+        <div style="padding: 24px;">
+          <div style="background-color: #f5f3ff; border: 1px solid #c4b5fd; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+            <p style="margin: 0; color: #6d28d9; font-weight: 600;">
+              Réservation #${notification.orderNumber}
+            </p>
+          </div>
+
+          <h2 style="color: #374151; margin: 0 0 16px 0; font-size: 18px;">Informations client</h2>
+          <table style="width: 100%; margin-bottom: 24px;">
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280;">Nom:</td>
+              <td style="padding: 8px 0; color: #111827; font-weight: 500;">${notification.customerName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280;">Email:</td>
+              <td style="padding: 8px 0; color: #111827;">
+                <a href="mailto:${notification.customerEmail}" style="color: #7c3aed;">${notification.customerEmail}</a>
+              </td>
+            </tr>
+          </table>
+
+          ${appointmentInfo}
+
+          <h2 style="color: #374151; margin: 0 0 16px 0; font-size: 18px;">Service réservé</h2>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+            <thead>
+              <tr style="background-color: #f9fafb;">
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Service</th>
+                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Prix</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${notification.items.map(item => `
+                <tr>
+                  <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.name}</td>
+                  <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                    ${item.isFree ? 'Gratuit' : item.price > 0 ? formatPrice(item.price, notification.currency) : 'Sur devis'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+            <tfoot>
+              <tr style="background-color: #f9fafb;">
+                <td style="padding: 12px; font-weight: 600;">Total</td>
+                <td style="padding: 12px; text-align: right; font-weight: 600; color: #7c3aed;">
+                  ${notification.totalAmount > 0 ? formatPrice(notification.totalAmount, notification.currency) : 'Gratuit / Sur devis'}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div style="background-color: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; padding: 16px;">
+            <p style="margin: 0; color: #1e40af; font-size: 14px;">
+              <strong>📌 Rappel:</strong> Le rendez-vous a été ajouté au calendrier. Pensez à confirmer avec le client si nécessaire.
+            </p>
+          </div>
+        </div>
+
+        <div style="background-color: #f9fafb; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="margin: 0; color: #6b7280; font-size: 12px;">
+            Cet email a été envoyé automatiquement par Neosaas
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+/**
+ * Envoie une notification à l'équipe pour un achat de produit physique
+ */
+export async function notifyTeamPhysicalProductPurchase(
+  notification: TeamNotification
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const adminEmails = await getAdminEmails()
+    const fallbackEmail = await getNotificationEmail()
+
+    const recipients = adminEmails.length > 0
+      ? adminEmails
+      : fallbackEmail
+        ? [fallbackEmail]
+        : []
+
+    if (recipients.length === 0) {
+      console.warn('[Team Notifications] No recipients configured for team notifications')
+      return { success: false, error: 'No recipients configured' }
+    }
+
+    const htmlContent = generatePhysicalProductEmailHtml(notification)
+    const subject = `[URGENT] Nouvelle commande physique à expédier #${notification.orderNumber}`
+
+    const result = await emailRouter.sendWithFallback({
+      to: recipients,
+      subject,
+      htmlContent,
+      textContent: `URGENT: Nouvelle commande physique #${notification.orderNumber} par ${notification.customerName} (${notification.customerEmail}). Total: ${formatPrice(notification.totalAmount, notification.currency)}. À expédier dès que possible.`,
+      tags: ['team-notification', 'physical-product', 'urgent', notification.orderNumber]
+    })
+
+    if (result.success) {
+      console.log('[Team Notifications] Physical product notification sent:', {
+        orderNumber: notification.orderNumber,
+        recipients: recipients.length,
+        messageId: result.messageId
+      })
+    } else {
+      console.error('[Team Notifications] Failed to send physical product notification:', result.error)
+    }
+
+    return { success: result.success, error: result.error }
+  } catch (error) {
+    console.error('[Team Notifications] Error sending physical product notification:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+/**
+ * Envoie une notification à l'équipe pour une réservation consulting
+ */
+export async function notifyTeamConsultingBooking(
+  notification: TeamNotification
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const adminEmails = await getAdminEmails()
+    const fallbackEmail = await getNotificationEmail()
+
+    const recipients = adminEmails.length > 0
+      ? adminEmails
+      : fallbackEmail
+        ? [fallbackEmail]
+        : []
+
+    if (recipients.length === 0) {
+      console.warn('[Team Notifications] No recipients configured for team notifications')
+      return { success: false, error: 'No recipients configured' }
+    }
+
+    const htmlContent = generateConsultingEmailHtml(notification)
+    const subject = `[Neosaas] Nouvelle réservation consulting #${notification.orderNumber}`
+
+    const result = await emailRouter.sendWithFallback({
+      to: recipients,
+      subject,
+      htmlContent,
+      textContent: `Nouvelle réservation consulting #${notification.orderNumber} par ${notification.customerName} (${notification.customerEmail}). ${notification.appointmentDetails ? `Date: ${formatDate(notification.appointmentDetails.startTime, notification.appointmentDetails.timezone)}` : ''}`,
+      tags: ['team-notification', 'consulting', notification.orderNumber]
+    })
+
+    if (result.success) {
+      console.log('[Team Notifications] Consulting notification sent:', {
+        orderNumber: notification.orderNumber,
+        recipients: recipients.length,
+        messageId: result.messageId
+      })
+    } else {
+      console.error('[Team Notifications] Failed to send consulting notification:', result.error)
+    }
+
+    return { success: result.success, error: result.error }
+  } catch (error) {
+    console.error('[Team Notifications] Error sending consulting notification:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+/**
  * Envoie une notification générique à l'équipe pour une nouvelle commande
  */
 export async function notifyTeamNewOrder(
   notification: TeamNotification
 ): Promise<{ success: boolean; error?: string }> {
   // Dispatcher vers le bon type de notification
+  const hasPhysicalProducts = notification.items.some(item => item.type === 'physical')
   const hasDigitalProducts = notification.items.some(item => item.type === 'digital')
+  const hasConsulting = notification.items.some(item => item.type === 'consulting')
   const hasAppointments = notification.items.some(item => item.type === 'appointment')
 
   const results: { success: boolean; error?: string }[] = []
+
+  if (hasPhysicalProducts) {
+    const physicalNotification = {
+      ...notification,
+      items: notification.items.filter(item => item.type === 'physical')
+    }
+    results.push(await notifyTeamPhysicalProductPurchase(physicalNotification))
+  }
 
   if (hasDigitalProducts) {
     const digitalNotification = {
@@ -399,12 +742,16 @@ export async function notifyTeamNewOrder(
     results.push(await notifyTeamDigitalProductPurchase(digitalNotification))
   }
 
+  if (hasConsulting) {
+    results.push(await notifyTeamConsultingBooking(notification))
+  }
+
   if (hasAppointments) {
     results.push(await notifyTeamAppointmentBooking(notification))
   }
 
   // Si pas de produits spéciaux, envoyer une notification générique
-  if (!hasDigitalProducts && !hasAppointments) {
+  if (!hasPhysicalProducts && !hasDigitalProducts && !hasConsulting && !hasAppointments) {
     // On peut utiliser le template digital product comme base
     results.push(await notifyTeamDigitalProductPurchase(notification))
   }

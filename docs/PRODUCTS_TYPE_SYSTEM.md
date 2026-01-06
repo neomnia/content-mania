@@ -1,339 +1,263 @@
-# Système de Types de Produits
+# Système de Types de Produits v3.0
 
 ## Vue d'ensemble
 
-Le système e-commerce supporte maintenant **4 types de produits distincts** pour une meilleure clarté et flexibilité :
+Le système e-commerce supporte maintenant **4 types de produits distincts** avec une option **gratuit** disponible pour tous les types :
 
-1. **Standard** (`standard`) - Produits payants classiques (icône Package 📦 - vert)
-2. **Digital** (`digital`) - Produits digitaux accessibles en ligne (icône Rocket 🚀 - bleu)
-3. **Gratuit** (`free`) - Produits téléchargeables gratuits (icône Download - amber)
-4. **Rendez-vous** (`appointment`) - Produits de prise de rendez-vous / génération de leads (icône Calendar 📅 - violet)
+1. **Physical** (`physical`) - Produits physiques expédiés par courrier (icône Box 📦 - orange)
+2. **Digital** (`digital`) - Produits numériques téléchargeables avec licence optionnelle (icône Monitor 💻 - bleu)
+3. **Consulting** (`consulting`) - Services de consulting avec rendez-vous (icône Users 👥 - violet)
+4. **Standard** (`standard`) - Produits génériques payants (icône Package - vert)
 
-> **Mise à jour du 2 janvier 2026** : Ajout du type `digital` pour distinguer les produits digitaux accessibles des produits standards.
+> **Mise à jour du 6 janvier 2026** : Refonte complète du système v3.0 avec nouveaux types physical et consulting.
 
 ---
 
-## 1. Produits Standard (`standard`)
+## Option Gratuit
+
+**Tous les types de produits peuvent être gratuits** via une case à cocher `isFree` dans le formulaire produit.
+
+Quand un produit est marqué comme gratuit :
+- Aucun paiement n'est collecté
+- Le client passe directement à la confirmation
+- Les produits digitaux donnent un accès immédiat
+- Les produits physiques nécessitent toujours une adresse de livraison
+- Le consulting permet une prise de rendez-vous directe
+
+---
+
+## 1. Produits Physiques (`physical`)
 
 ### Caractéristiques
-- ✅ **Prix unitaire** requis
-- ✅ **TVA** applicable
-- ✅ **Paiement** requis au checkout
-- ✅ **URL de téléchargement** optionnelle (fournie après achat)
+- 📦 **Livraison par courrier** requise
+- ⚡ **Notification urgente** à l'admin pour expédition
+- 📍 **Adresse de livraison** collectée au checkout
+- 📊 **Suivi** : poids, dimensions, stock
+- ✉️ **Email de validation** envoyé au client
 
-### Cas d'usage
-- Modules SaaS payants
-- Produits digitaux (ebooks, templates, etc.)
-- Services avec paiement immédiat
+### Workflow
+1. Client ajoute au panier
+2. Paiement (sauf si gratuit)
+3. Collecte adresse de livraison
+4. Page de confirmation
+5. Admin reçoit notification urgente par email
+6. Admin expédie et met à jour le statut
+7. Client notifié de l'expédition
 
 ### Configuration
 ```typescript
 {
-  type: "standard",
-  price: 9900,  // 99.00 EUR en centimes
-  vatRateId: "uuid-du-taux-tva",
-  fileUrl: "https://s3.../download-link" // Optionnel
+  type: "physical",
+  isFree: false,              // true = gratuit
+  price: 4900,                // 49.00 EUR en centimes
+  vatRateId: "uuid-tva",
+  requiresShipping: true,     // Toujours true
+  weight: 500,                // Poids en grammes
+  dimensions: {               // Dimensions en cm
+    length: 20,
+    width: 15,
+    height: 5
+  },
+  stockQuantity: 100,
+  shippingNotes: "Fragile - Manipuler avec soin"
 }
 ```
 
+### Statuts de commande
+- `pending` - En attente de traitement
+- `processing` - En cours de préparation
+- `shipped` - Expédié (numéro de suivi ajouté)
+- `delivered` - Livré
+
 ---
 
-## 2. Produits Digital (`digital`)
+## 2. Produits Numériques (`digital`)
 
 ### Caractéristiques
-- ✅ **Prix unitaire** requis
-- ✅ **TVA** applicable
-- ✅ **Paiement** requis au checkout
-- ✅ **URL de téléchargement** pour accès digital
-- 🚀 **Icône Rocket** pour identification rapide
+- 💻 **Lien de téléchargement** fourni après achat
+- 🔑 **Clé de licence** optionnelle
+- 📝 **Instructions d'activation** personnalisables
+- ⚡ **Livraison instantanée** après paiement
 
-### Cas d'usage
-- Produits digitaux accessibles en ligne
-- Accès à des plateformes SaaS
-- Contenu digital premium
-- Formations en ligne
+### Workflow
+1. Client ajoute au panier
+2. Paiement (sauf si gratuit)
+3. Page de confirmation avec lien de téléchargement
+4. Clé de licence affichée (si configurée)
+5. Email avec instructions envoyé
 
 ### Configuration
 ```typescript
 {
   type: "digital",
-  price: 4900,  // 49.00 EUR en centimes
-  vatRateId: "uuid-du-taux-tva",
-  fileUrl: "https://app.example.com/access" // URL d'accès
+  isFree: false,
+  price: 2900,                // 29.00 EUR
+  vatRateId: "uuid-tva",
+  fileUrl: "https://s3.../file.zip",
+  licenseKey: "PROD-XXXX-XXXX-XXXX",  // Template avec XXXX = aléatoire
+  licenseInstructions: "Entrez votre clé de licence dans Paramètres > Activation"
 }
 ```
 
-### Différence avec Standard
-- **Standard** : Produits physiques ou services classiques
-- **Digital** : Produits 100% digitaux avec accès en ligne
+---
+
+## 3. Produits Consulting (`consulting`)
+
+### Deux Modes
+
+#### Mode Forfait (`consultingMode: 'packaged'`)
+- 💰 **Prix fixe** payé d'avance
+- Le client paie puis prend rendez-vous
+- Paiement complet avant la session
+
+#### Mode Horaire (`consultingMode: 'hourly'`)
+- 📅 **Pas de paiement** initial
+- Le client prend rendez-vous directement
+- Taux horaire indicatif affiché
+- Facturation post-session selon temps réel
+
+### Caractéristiques
+- 👥 **Prise de rendez-vous** après achat (forfait) ou directement (horaire)
+- ⏱️ **Durée de session** configurable
+- 📆 **Intégration calendrier** (Outlook)
+- ✉️ **Notification équipe** avec détails du RDV
+
+### Workflow (Mode Forfait)
+1. Client ajoute au panier
+2. Paiement
+3. Modal de prise de rendez-vous
+4. Page de confirmation
+5. Événement calendrier créé
+6. Admin notifié
+
+### Workflow (Mode Horaire)
+1. Client ajoute au panier (pas de paiement)
+2. Modal de prise de rendez-vous
+3. Lead créé
+4. Admin notifié pour suivi
+5. Facturation post-session
+
+### Configuration
+```typescript
+// Mode Forfait
+{
+  type: "consulting",
+  consultingMode: "packaged",
+  isFree: false,
+  price: 29900,               // 299.00 EUR forfait
+  vatRateId: "uuid-tva",
+  appointmentDuration: 60,    // 60 minutes
+  outlookEventTypeId: "event-type-id"
+}
+
+// Mode Horaire
+{
+  type: "consulting",
+  consultingMode: "hourly",
+  isFree: false,              // Prix = 0, taux horaire indicatif
+  price: 0,
+  hourlyRate: 15000,          // 150.00 EUR/h indicatif
+  appointmentDuration: 60,
+  outlookEventTypeId: "event-type-id"
+}
+```
 
 ---
 
-## 3. Produits Gratuits (`free`)
+## 4. Produits Standard (`standard`)
 
 ### Caractéristiques
-- ✅ **Prix = 0** (automatiquement défini)
-- ❌ **Pas de TVA**
-- ❌ **Pas de paiement**
-- ✅ **URL de téléchargement** immédiatement accessible
-
-### Cas d'usage
-- Ressources gratuites (guides, templates)
-- Lead magnets
-- Démonstrations / échantillons
+- 📦 **Paiement classique** au checkout
+- ✅ **TVA** applicable
+- Pas de workflow spécifique
 
 ### Configuration
 ```typescript
 {
-  type: "free",
-  price: 0,  // Toujours 0
-  fileUrl: "https://s3.../free-download"  // Requis
-}
-```
-
-### Comportement au checkout
-- L'utilisateur peut "acheter" le produit sans payer
-- Une commande est créée avec `paymentStatus = "completed"` et `totalAmount = 0`
-- Le lien de téléchargement est fourni immédiatement
-
----
-
-## 4. Produits Rendez-vous (`appointment`)
-
-### Caractéristiques
-- ✅ **Taux horaire** (pour affichage uniquement)
-- ❌ **Pas de paiement**
-- ✅ **Génération de lead** automatique
-- ✅ **Intégration Outlook** pour booking (optionnel)
-
-### Cas d'usage
-- Consultations
-- Sessions de coaching
-- Rendez-vous de qualification
-- Démos personnalisées
-
-### Configuration
-```typescript
-{
-  type: "appointment",
-  price: 0,  // Pas de paiement
-  hourlyRate: 15000,  // 150.00 EUR/h (affichage uniquement)
-  outlookEventTypeId: "event-type-id"  // Optionnel
-}
-```
-
-### Comportement au checkout
-1. **Pas de paiement** traité
-2. **Lead créé** dans `product_leads` :
-   ```typescript
-   {
-     productId: "...",
-     userId: "...", // ou null si anonyme
-     userEmail: "user@example.com",
-     userName: "John Doe",
-     status: "new",
-     source: "website",
-     metadata: { /* infos additionnelles */ }
-   }
-   ```
-3. **Notifications** envoyées :
-   - Email de confirmation au client
-   - Notification à l'admin pour suivi
-
-### Table `product_leads`
-```sql
-CREATE TABLE product_leads (
-  id UUID PRIMARY KEY,
-  product_id UUID NOT NULL,
-  user_id UUID,  -- Nullable
-  user_email TEXT NOT NULL,
-  user_name TEXT,
-  user_phone TEXT,
-  status TEXT DEFAULT 'new',  -- 'new', 'contacted', 'qualified', 'converted', 'lost'
-  source TEXT DEFAULT 'website',
-  notes TEXT,
-  scheduled_at TIMESTAMP,
-  converted_at TIMESTAMP,
-  metadata JSONB,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
----
-
-## Interface Admin
-
-### Formulaire de création/édition
-
-Le formulaire affiche maintenant un **sélecteur de type** clair :
-
-```tsx
-<Select value={formData.type}>
-  <SelectItem value="standard">
-    Standard Product - Paid product with unit price
-  </SelectItem>
-  <SelectItem value="free">
-    Free Download - Free downloadable product (no payment)
-  </SelectItem>
-  <SelectItem value="appointment">
-    Appointment / Lead - Booking product (no payment, lead generation)
-  </SelectItem>
-</Select>
-```
-
-### Champs conditionnels
-
-- **Standard** : Prix + TVA + URL téléchargement (optionnel)
-- **Free** : URL téléchargement (requis)
-- **Appointment** : Taux horaire (affichage) + Event Type ID
-
----
-
-## Migration depuis l'ancien système
-
-### Ancien système (à supprimer)
-```typescript
-// ❌ Ancien : checkboxes confuses
-hasDigital: boolean
-hasAppointment: boolean
-isFree: boolean
-```
-
-### Nouveau système
-```typescript
-// ✅ Nouveau : type explicite
-type: "standard" | "free" | "appointment"
-```
-
-### Mapping automatique
-
-Les produits existants peuvent être migrés :
-
-| Ancien | Nouveau |
-|--------|---------||
-| `type: "digital"` | Reste `"digital"` (nouveau type dédié) |
-| `type: "standard"` + `price > 0` | `type: "standard"` |
-| `type: "standard"` + `price = 0` | `type: "free"` |
-| `type: "appointment"` | `type: "appointment"` |
-
-> **Note** : Le type `digital` est maintenant un type à part entière avec sa propre icône Rocket 🚀
-
----
-
-## Actions Serveur
-
-### Créer un lead (appointment uniquement)
-
-```typescript
-import { createProductLead } from "@/app/actions/ecommerce"
-
-const result = await createProductLead({
-  productId: "uuid-du-produit",
-  userEmail: "client@example.com",
-  userName: "John Doe",
-  userPhone: "+33 6 12 34 56 78",
-  metadata: {
-    preferredDate: "2024-01-15",
-    message: "Je souhaite discuter de..."
-  }
-})
-
-if (result.success) {
-  console.log("Lead créé :", result.leadId)
+  type: "standard",
+  isFree: false,
+  price: 9900,               // 99.00 EUR
+  vatRateId: "uuid-tva"
 }
 ```
 
 ---
 
-## Checkout Logic
+## Notifications Admin par Type
 
-### Standard Products
-1. Ajout au panier → Checkout → Paiement Stripe → Commande créée
-2. `processCheckout()` gère le paiement complet
-
-### Free Products
-1. Ajout au panier → Checkout immédiat (no payment)
-2. Commande créée avec `totalAmount = 0`, `paymentStatus = "completed"`
-3. Lien de téléchargement fourni
-
-### Appointment Products
-1. Formulaire de contact → `createProductLead()`
-2. **Aucun panier, aucune commande**
-3. Lead enregistré dans `product_leads`
-4. Emails de notification envoyés
+| Type | Template Email | Priorité |
+|------|---------------|----------|
+| `physical` | Commande Produit Physique | **URGENT** |
+| `digital` | Achat Produit Numérique | Normal |
+| `consulting` | Réservation Consulting | Normal |
+| `standard` | Nouvelle Commande | Normal |
 
 ---
 
-## Avantages du nouveau système
+## Logique de Tarification
 
-✅ **Clarté** : Un seul champ `type` au lieu de 3 checkboxes  
-✅ **Séparation** : Logique distincte pour chaque type  
-✅ **Tracking** : Table dédiée pour les leads  
-✅ **Flexibilité** : Facile d'ajouter de nouveaux types  
-✅ **UX** : Interface plus intuitive pour les admins  
-
----
-
-## TODO / Améliorations futures
-
-- [ ] Créer une page admin `/admin/leads` pour gérer les leads
-- [ ] Implémenter les emails de notification pour les appointments
-- [ ] Ajouter un workflow de conversion lead → client
-- [ ] Dashboard analytics pour les leads
-- [ ] Intégration CRM pour le suivi des leads
-- [ ] Rappels automatiques pour les rendez-vous non confirmés
-
----
-
-## Notes de déploiement
-
-### Déploiement Automatique via Vercel
-
-Le système de déploiement est entièrement automatisé via `scripts/build-with-db.sh` :
-
-1. **Push vers la branche** :
-   ```bash
-   git add .
-   git commit -m "feat: système de types de produits refactorisé"
-   git push origin e-commerce-bugs
-   ```
-
-2. **Vercel exécute automatiquement** :
-   - ✅ `drizzle-kit push` → Crée la table `product_leads` et met à jour le schéma
-   - ✅ `scripts/seed-email-templates.ts` → Templates d'emails
-   - ✅ `scripts/sync-pages.ts` → Permissions de pages
-   - ✅ `next build` → Compilation de l'application
-
-3. **Aucune action manuelle requise** - Le schéma est automatiquement appliqué
-
-### Migration de Données
-
-Les produits existants **conservent leur type actuel** :
-- `type: "digital"` reste `"digital"` (sera migré manuellement si nécessaire)
-- Les **nouveaux produits** utilisent le type par défaut : `"standard"`
-
-Pour migrer les anciens produits vers le nouveau système, utilisez le script SQL suivant en production :
-
-```sql
--- Migrer les produits digitaux payants vers 'standard'
-UPDATE products 
-SET type = 'standard' 
-WHERE type = 'digital' AND price > 0;
-
--- Migrer les produits digitaux gratuits vers 'free'
-UPDATE products 
-SET type = 'free' 
-WHERE type = 'digital' AND price = 0;
-
--- Les produits 'appointment' gardent leur type
+```typescript
+// Détermine si le produit nécessite un paiement
+const requiresPayment = !product.isFree && (
+  product.type === 'physical' ||
+  product.type === 'digital' ||
+  product.type === 'standard' ||
+  (product.type === 'consulting' && product.consultingMode === 'packaged')
+)
 ```
 
-### Tests Post-Déploiement
+---
 
-1. ✅ Vérifier que la table `product_leads` existe
-2. ✅ Créer un produit de chaque type
-3. ✅ Tester le checkout pour chaque type
-4. ✅ Vérifier la création de leads pour les appointments
+## Interface Admin - Formulaire Produit
+
+### Sections par Type
+
+**Physical :**
+- Poids (grammes)
+- Dimensions (L x l x H cm)
+- Quantité en stock
+- Notes de livraison
+
+**Digital :**
+- URL de téléchargement
+- Template de clé de licence
+- Instructions d'activation
+
+**Consulting :**
+- Sélecteur de mode (Forfait/Horaire)
+- Taux horaire (mode horaire)
+- Durée de session
+- ID Type d'événement Outlook
+
+**Tous les Types :**
+- Case à cocher "Produit gratuit"
+- Prix (si non gratuit et non consulting horaire)
+- Taux de TVA
+- Devise
+- Configuration upsell
 
 ---
+
+## Migration depuis v2.0
+
+| Ancien Type | Nouveau Type | Notes |
+|-------------|-------------|-------|
+| `standard` | `standard` | Aucun changement |
+| `digital` | `digital` | Ajouter champs licence si besoin |
+| `free` | Tout type + `isFree: true` | Convertir vers type approprié |
+| `appointment` | `consulting` | Définir `consultingMode: 'hourly'` |
+
+---
+
+## Bonnes Pratiques
+
+1. **Produits Physiques** : Toujours configurer les notes de livraison pour manipulation spéciale
+2. **Produits Numériques** : Utiliser des URLs S3 sécurisées avec expiration
+3. **Consulting Forfait** : Définir clairement la durée de session attendue
+4. **Consulting Horaire** : Inclure le taux horaire indicatif pour transparence
+5. **Produits Gratuits** : Utiliser avec parcimonie pour génération de leads ou échantillons
+
+---
+
+**Dernière mise à jour :** 2026-01-06
+**Version :** 3.0

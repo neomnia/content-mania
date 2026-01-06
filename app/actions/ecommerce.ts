@@ -163,8 +163,8 @@ export async function upsertProduct(data: any) {
       const updateData: any = {
         updatedAt: new Date(),
       }
-      
-      // Ajouter uniquement les champs qui sont définis dans data
+
+      // Basic fields
       if (data.title !== undefined) updateData.title = data.title
       if (data.subtitle !== undefined) updateData.subtitle = data.subtitle
       if (data.description !== undefined) updateData.description = data.description
@@ -172,51 +172,86 @@ export async function upsertProduct(data: any) {
       if (data.price !== undefined) updateData.price = data.price
       if (data.hourlyRate !== undefined) updateData.hourlyRate = data.hourlyRate
       if (data.type !== undefined) updateData.type = data.type
-      if (data.fileUrl !== undefined) updateData.fileUrl = data.fileUrl
       if (data.icon !== undefined) updateData.icon = data.icon
       if (data.currency !== undefined) updateData.currency = data.currency
-      if (data.outlookEventTypeId !== undefined) updateData.outlookEventTypeId = data.outlookEventTypeId
       if (data.isPublished !== undefined) updateData.isPublished = data.isPublished
       if (data.isFeatured !== undefined) updateData.isFeatured = data.isFeatured
       if (data.upsellProductId !== undefined) updateData.upsellProductId = data.upsellProductId
       if (data.vatRateId !== undefined) updateData.vatRateId = data.vatRateId
       if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl
-      
+
+      // v3.0 - Free option
+      if (data.isFree !== undefined) updateData.isFree = data.isFree
+
+      // v3.0 - Digital product fields
+      if (data.fileUrl !== undefined) updateData.fileUrl = data.fileUrl
+      if (data.licenseKey !== undefined) updateData.licenseKey = data.licenseKey
+      if (data.licenseInstructions !== undefined) updateData.licenseInstructions = data.licenseInstructions
+
+      // v3.0 - Physical product fields
+      if (data.requiresShipping !== undefined) updateData.requiresShipping = data.requiresShipping
+      if (data.weight !== undefined) updateData.weight = data.weight
+      if (data.dimensions !== undefined) updateData.dimensions = data.dimensions
+      if (data.stockQuantity !== undefined) updateData.stockQuantity = data.stockQuantity
+      if (data.shippingNotes !== undefined) updateData.shippingNotes = data.shippingNotes
+
+      // v3.0 - Consulting product fields
+      if (data.consultingMode !== undefined) updateData.consultingMode = data.consultingMode
+      if (data.appointmentDuration !== undefined) updateData.appointmentDuration = data.appointmentDuration
+      if (data.outlookEventTypeId !== undefined) updateData.outlookEventTypeId = data.outlookEventTypeId
+
       await db.update(products)
         .set(updateData)
         .where(eq(products.id, data.id))
-      
+
       revalidatePath("/store")
       revalidatePath("/admin/products")
+      revalidatePath("/dashboard")
       return { success: true, data: { id: data.id } }
     } else {
       // Create - validation des champs requis
-      if (!data.title || data.price === undefined || data.price === null) {
-        return { success: false, error: "Missing required fields (title and price)" }
+      if (!data.title) {
+        return { success: false, error: "Missing required field: title" }
       }
-      
+
       const result = await db.insert(products).values({
+        // Basic fields
         title: data.title,
         subtitle: data.subtitle,
         description: data.description,
         features: data.features,
-        price: data.price,
+        price: data.price || 0,
         hourlyRate: data.hourlyRate,
         type: data.type || 'standard',
-        fileUrl: data.fileUrl,
         icon: data.icon,
         currency: data.currency || 'EUR',
-        outlookEventTypeId: data.outlookEventTypeId,
         isPublished: data.isPublished || false,
         isFeatured: data.isFeatured || false,
         upsellProductId: data.upsellProductId,
         vatRateId: data.vatRateId,
+        // v3.0 - Free option
+        isFree: data.isFree || false,
+        // v3.0 - Digital product fields
+        fileUrl: data.fileUrl,
+        licenseKey: data.licenseKey,
+        licenseInstructions: data.licenseInstructions,
+        // v3.0 - Physical product fields
+        requiresShipping: data.requiresShipping || false,
+        weight: data.weight,
+        dimensions: data.dimensions,
+        stockQuantity: data.stockQuantity,
+        shippingNotes: data.shippingNotes,
+        // v3.0 - Consulting product fields
+        consultingMode: data.consultingMode,
+        appointmentDuration: data.appointmentDuration,
+        outlookEventTypeId: data.outlookEventTypeId,
       }).returning({ id: products.id })
-      
+
       const productId = result[0].id
-      
+
       revalidatePath("/store")
       revalidatePath("/admin/products")
+      revalidatePath("/dashboard")
       return { success: true, data: { id: productId } }
     }
   } catch (error) {
