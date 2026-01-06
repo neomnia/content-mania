@@ -43,6 +43,9 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
     const limit = parseInt(searchParams.get('limit') || '50')
 
+    console.log('[API /appointments GET] Fetching appointments for user:', user.userId)
+    console.log('[API /appointments GET] Filters:', { status, type, startDate, endDate, limit })
+
     const conditions = [eq(appointments.userId, user.userId)]
 
     if (status) {
@@ -67,9 +70,14 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    console.log('[API /appointments GET] Found', result.length, 'appointments')
+    if (result.length > 0) {
+      console.log('[API /appointments GET] First appointment:', result[0].id, result[0].title, result[0].startTime)
+    }
+
     return NextResponse.json({ success: true, data: result })
   } catch (error) {
-    console.error('Failed to fetch appointments:', error)
+    console.error('[API /appointments GET] Failed to fetch appointments:', error)
     return NextResponse.json(
       { error: 'Failed to fetch appointments' },
       { status: 500 }
@@ -134,11 +142,15 @@ export async function POST(request: NextRequest) {
     const isPaid = validated.isPaid !== undefined ? validated.isPaid : (validated.type === 'free')
     const paymentStatus = isPaid ? 'paid' : 'pending'
 
-    console.log('[API /appointments] Creating appointment:', {
+    console.log('[API /appointments] Creating appointment for user:', user.userId)
+    console.log('[API /appointments] Appointment data:', {
       title: validated.title,
       startTime: validated.startTime,
       endTime: validated.endTime,
+      startTimeParsed: startTime.toISOString(),
+      endTimeParsed: endTime.toISOString(),
       type: validated.type,
+      status: validated.status,
       isPaid,
       paymentStatus,
       productId: validated.productId,
@@ -168,7 +180,9 @@ export async function POST(request: NextRequest) {
       paymentStatus,
     }).returning()
 
-    console.log('[API /appointments] Appointment created successfully:', result.id)
+    console.log('[API /appointments] Appointment created successfully!')
+    console.log('[API /appointments] Created appointment ID:', result.id)
+    console.log('[API /appointments] Full result:', JSON.stringify(result, null, 2))
 
     // Sync to external calendars if requested
     if (validated.syncToCalendar) {

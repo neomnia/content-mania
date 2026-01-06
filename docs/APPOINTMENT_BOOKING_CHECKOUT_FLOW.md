@@ -71,6 +71,7 @@ Page dédiée à la planification des rendez-vous après validation de la comman
 - ✅ Barre de progression pour plusieurs rendez-vous
 - ✅ Utilisation du composant `AppointmentBooking`
 - ✅ Création des rendez-vous via `/api/appointments`
+- ✅ **Popup de confirmation avec prochaines étapes** (email, contact, calendrier)
 - ✅ Récapitulatif des rendez-vous confirmés
 - ✅ Redirection vers confirmation finale
 

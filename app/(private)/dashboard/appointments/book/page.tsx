@@ -10,11 +10,21 @@ import {
   AlertCircle,
   ArrowLeft,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  Mail,
+  Phone,
+  CalendarCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { AppointmentBooking } from '@/components/checkout/appointment-booking'
 import { toast } from 'sonner'
 
@@ -42,11 +52,22 @@ interface Order {
 
 interface BookedAppointment {
   itemId: string
+  itemName: string
   startTime: string
   endTime: string
   timezone: string
   attendeeName: string
   attendeeEmail: string
+}
+
+interface ConfirmationData {
+  appointmentId: string
+  itemName: string
+  startTime: string
+  endTime: string
+  attendeeName: string
+  attendeeEmail: string
+  emailSent: boolean
 }
 
 export default function BookAppointmentPage() {
@@ -59,6 +80,8 @@ export default function BookAppointmentPage() {
   const [error, setError] = useState<string | null>(null)
   const [bookedAppointments, setBookedAppointments] = useState<Map<string, BookedAppointment>>(new Map())
   const [currentItemIndex, setCurrentItemIndex] = useState(0)
+  const [confirmationOpen, setConfirmationOpen] = useState(false)
+  const [confirmationData, setConfirmationData] = useState<ConfirmationData | null>(null)
 
   // Filter appointment items
   const appointmentItems = order?.items.filter(item => item.itemType === 'appointment') || []
@@ -142,6 +165,7 @@ export default function BookAppointmentPage() {
 
       if (result.success) {
         const appointmentId = result.data?.id
+        let emailSent = false
 
         // Send email notifications (client + admin)
         if (appointmentId) {
@@ -153,19 +177,10 @@ export default function BookAppointmentPage() {
             })
             const notifyResult = await notifyRes.json()
             console.log('[BookAppointment] Notification result:', notifyResult)
-
-            if (notifyResult.success) {
-              toast.success('Rendez-vous confirme ! Un email de confirmation vous a ete envoye.')
-            } else {
-              toast.success('Rendez-vous confirme !')
-              console.warn('[BookAppointment] Notifications failed:', notifyResult)
-            }
+            emailSent = notifyResult.success && notifyResult.results?.clientEmail?.success
           } catch (notifyErr) {
             console.error('[BookAppointment] Failed to send notifications:', notifyErr)
-            toast.success('Rendez-vous confirme !')
           }
-        } else {
-          toast.success('Rendez-vous confirme !')
         }
 
         // Record the booked appointment
@@ -173,6 +188,7 @@ export default function BookAppointmentPage() {
           const newMap = new Map(prev)
           newMap.set(currentItem.id, {
             itemId: currentItem.id,
+            itemName: currentItem.itemName,
             startTime: data.startTime,
             endTime: data.endTime,
             timezone: data.timezone,
@@ -182,10 +198,17 @@ export default function BookAppointmentPage() {
           return newMap
         })
 
-        // Move to next appointment or finish
-        if (currentItemIndex < appointmentItems.length - 1) {
-          setCurrentItemIndex(currentItemIndex + 1)
-        }
+        // Show confirmation dialog
+        setConfirmationData({
+          appointmentId: appointmentId || '',
+          itemName: currentItem.itemName,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          attendeeName: data.attendeeName,
+          attendeeEmail: data.attendeeEmail,
+          emailSent
+        })
+        setConfirmationOpen(true)
       } else {
         toast.error(result.error || 'Erreur lors de la creation du rendez-vous')
       }
@@ -197,6 +220,16 @@ export default function BookAppointmentPage() {
 
   const handleFinish = () => {
     router.push(`/dashboard/checkout/confirmation?orderId=${orderId}`)
+  }
+
+  const handleConfirmationClose = () => {
+    setConfirmationOpen(false)
+    setConfirmationData(null)
+
+    // Move to next appointment or stay on success view
+    if (currentItemIndex < appointmentItems.length - 1) {
+      setCurrentItemIndex(currentItemIndex + 1)
+    }
   }
 
   if (loading) {
@@ -381,6 +414,106 @@ export default function BookAppointmentPage() {
           </Button>
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full">
+              <CalendarCheck className="w-8 h-8 text-green-600" />
+            </div>
+            <DialogTitle className="text-center text-xl">
+              Rendez-vous confirme !
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Votre rendez-vous a ete enregistre avec succes.
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmationData && (
+            <div className="space-y-4 mt-4">
+              {/* Appointment details */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <h4 className="font-semibold text-gray-900">{confirmationData.itemName}</h4>
+                <p className="text-sm text-gray-600">
+                  {new Date(confirmationData.startTime).toLocaleDateString('fr-FR', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {new Date(confirmationData.startTime).toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })} - {new Date(confirmationData.endTime).toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </div>
+
+              {/* Next steps */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900">Prochaines etapes :</h4>
+
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 bg-[#CD7F32]/10 rounded-full flex items-center justify-center">
+                    <Mail className="w-3.5 h-3.5 text-[#CD7F32]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Email de confirmation</p>
+                    <p className="text-sm text-gray-600">
+                      {confirmationData.emailSent
+                        ? `Un email a ete envoye a ${confirmationData.attendeeEmail}`
+                        : `Vous recevrez un email de confirmation a ${confirmationData.attendeeEmail}`
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 bg-[#CD7F32]/10 rounded-full flex items-center justify-center">
+                    <Phone className="w-3.5 h-3.5 text-[#CD7F32]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Contact</p>
+                    <p className="text-sm text-gray-600">
+                      Un membre de notre equipe vous contactera pour confirmer les details de votre rendez-vous.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 bg-[#CD7F32]/10 rounded-full flex items-center justify-center">
+                    <Calendar className="w-3.5 h-3.5 text-[#CD7F32]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Calendrier</p>
+                    <p className="text-sm text-gray-600">
+                      Retrouvez tous vos rendez-vous dans votre espace client, rubrique "Calendrier".
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action button */}
+              <div className="flex justify-center pt-2">
+                <Button
+                  onClick={handleConfirmationClose}
+                  className="bg-[#CD7F32] hover:bg-[#B8860B]"
+                >
+                  {currentItemIndex < appointmentItems.length - 1
+                    ? 'Continuer vers le prochain rendez-vous'
+                    : 'Voir le recapitulatif'
+                  }
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

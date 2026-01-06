@@ -28,6 +28,9 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
     const limit = parseInt(searchParams.get('limit') || '100')
 
+    console.log('[API /admin/appointments GET] Fetching all appointments')
+    console.log('[API /admin/appointments GET] Filters:', { status, type, startDate, endDate, limit })
+
     // Build query - get all appointments with user info
     const result = await db.query.appointments.findMany({
       where: and(
@@ -50,6 +53,11 @@ export async function GET(request: NextRequest) {
         product: true,
       },
     })
+
+    console.log('[API /admin/appointments GET] Found', result.length, 'appointments')
+    if (result.length > 0) {
+      console.log('[API /admin/appointments GET] First appointment:', result[0].id, result[0].title, result[0].startTime)
+    }
 
     return NextResponse.json({ success: true, data: result })
   } catch (error) {
