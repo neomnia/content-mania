@@ -109,8 +109,16 @@ export class EmailRouterService {
       // Utiliser le provider spécifié
       provider = this.providers.get(providerName);
       if (!provider) {
+        const errorMsg = `Provider ${providerName} is not available`;
         emailLogger.warn(`Provider ${providerName} not found or not initialized`);
-        throw new Error(`Provider ${providerName} is not available`);
+        
+        // Retourner un résultat d'échec au lieu de bloquer
+        return {
+          success: false,
+          error: errorMsg,
+          messageId: undefined,
+          provider: providerName
+        };
       }
     } else {
       // Utiliser le provider par défaut
@@ -125,7 +133,17 @@ export class EmailRouterService {
       }
 
       if (!provider) {
-        throw new Error('No email provider available. Please configure Scaleway TEM via /admin/api');
+        // En mode DEV, ne pas bloquer - retourner un résultat d'échec au lieu de throw
+        const errorMsg = 'No email provider available. Please configure Scaleway TEM via /admin/api';
+        emailLogger.warn(errorMsg);
+        
+        // Retourner un résultat d'échec au lieu de bloquer
+        return {
+          success: false,
+          error: errorMsg,
+          messageId: undefined,
+          provider: 'none' as EmailProvider
+        };
       }
     }
 

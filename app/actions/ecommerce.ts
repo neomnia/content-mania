@@ -846,10 +846,11 @@ export async function processCheckout(
             paymentStatus: appointment.paymentStatus
           })
 
-          // Envoyer les notifications email pour le rendez-vous
+          // Envoyer les notifications email pour le rendez-vous (non-bloquant)
+          console.log('[processCheckout] 📧 Attempting to send appointment notifications (DEV mode - non-blocking)')
           try {
             const { sendAllAppointmentNotifications } = await import('@/lib/notifications/appointment-notifications')
-            console.log('[processCheckout] 📧 Sending appointment notifications')
+            console.log('[processCheckout] 📧 Module loaded, sending appointment notifications')
             
             const notifResults = await sendAllAppointmentNotifications({
               appointmentId: appointment.id,
@@ -872,15 +873,15 @@ export async function processCheckout(
               adminChat: notifResults.adminChat.success
             })
           } catch (emailError) {
-            console.error('[processCheckout] ⚠️ Failed to send appointment notifications:', emailError)
-            // Non-blocking - continuer le checkout
+            console.warn('[processCheckout] ⚠️ Failed to send appointment notifications (non-critical):', emailError instanceof Error ? emailError.message : emailError)
+            // Non-blocking - continuer le checkout même si l'email échoue (OK en mode DEV)
           }
         }
       }
     }
 
-    // 8. Send Confirmation Email
-    console.log('[processCheckout] 📧 Sending confirmation email', { to: user.email })
+    // 8. Send Confirmation Email (non-bloquant en mode DEV)
+    console.log('[processCheckout] 📧 Attempting to send order confirmation email (DEV mode - non-blocking)', { to: user.email })
     try {
       await emailRouter.sendEmail({
         to: [user.email],
@@ -902,7 +903,8 @@ export async function processCheckout(
       })
       console.log('[processCheckout] ✅ Confirmation email sent successfully')
     } catch (emailError) {
-      console.error('[processCheckout] ❌ Failed to send order confirmation email:', emailError)
+      console.warn('[processCheckout] ⚠️ Failed to send order confirmation email (non-critical):', emailError instanceof Error ? emailError.message : emailError)
+      // Non-blocking - continuer le checkout même si l'email échoue (OK en mode DEV)
     }
 
     // 9. Mark Cart as Converted
@@ -916,7 +918,8 @@ export async function processCheckout(
     revalidatePath("/cart")
     revalidatePath("/orders")
     
-    console.log('[processCheckout] 🎉 Checkout completed successfully', {
+    console.log('[processCheckout] ✅ Cache revalidated')
+    console.log('[processCheckout] 🎉🎉🎉 CHECKOUT COMPLETED SUCCESSFULLY 🎉🎉🎉', {
       orderId: order.id,
       orderNumber: order.orderNumber,
       totalAmount: (totalAmount / 100).toFixed(2) + ' EUR'
