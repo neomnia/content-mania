@@ -264,8 +264,15 @@ export default function CheckoutPage() {
 
       console.log('[Checkout] Processing order...', { cartId, appointments: Array.from(appointmentsData.entries()) })
 
-      // Si nous avons des rendez-vous, les inclure dans le processus
-      const result = await processCheckout(cartId)
+      // Convertir appointmentsData (Map) en objet pour l'envoyer à processCheckout
+      const appointmentsObj = appointmentsData.size > 0 
+        ? Object.fromEntries(appointmentsData) 
+        : undefined
+
+      console.log('[Checkout] Appointments data:', appointmentsObj)
+
+      // Envoyer les données de rendez-vous à processCheckout
+      const result = await processCheckout(cartId, appointmentsObj)
 
       if (result.success) {
         toast.success("Commande traitée avec succès !")
@@ -274,17 +281,9 @@ export default function CheckoutPage() {
         // Vider le panier dans le contexte pour mettre à jour le header
         clearCart()
 
-        // Vérifier si on a des produits de type appointment
-        const hasAppointments = cartItems.some(item => item.type === 'appointment')
-
-        if (hasAppointments) {
-          // Rediriger vers la page de planification des rendez-vous
-          toast.info("Vous pouvez maintenant planifier vos rendez-vous")
-          router.push(`/dashboard/appointments/book?orderId=${result.orderId}`)
-        } else {
-          // Rediriger vers la page de confirmation avec l'ID de commande
-          router.push(`/dashboard/checkout/confirmation?orderId=${result.orderId}`)
-        }
+        // Les rendez-vous ont été créés automatiquement lors du checkout
+        // Rediriger vers la page de confirmation avec l'ID de commande
+        router.push(`/dashboard/checkout/confirmation?orderId=${result.orderId}`)
       } else {
         console.error('[Checkout] ❌ Checkout failed:', result.error)
         toast.error(result.error || "Erreur lors du checkout")

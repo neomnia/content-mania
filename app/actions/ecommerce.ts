@@ -778,6 +778,58 @@ export async function processCheckout(cartId: string) {
       })
     }
 
+    // 7b. Create Appointments for appointment-type products
+    if (appointmentsData && Object.keys(appointmentsData).length > 0) {
+      console.log('[processCheckout] 📅 Creating appointments for appointment products')
+      for (const item of cart.items) {
+        if (item.product.type === 'appointment' && appointmentsData[item.product.id]) {
+          const appointmentData = appointmentsData[item.product.id]
+          const isPaid = (item.product.hourlyRate || 0) > 0
+          const price = item.product.hourlyRate || item.product.price || 0
+
+          console.log('[processCheckout] 📅 Creating appointment for:', {
+            productId: item.product.id,
+            productTitle: item.product.title,
+            startTime: appointmentData.startTime,
+            endTime: appointmentData.endTime,
+            isPaid,
+            price: (price / 100).toFixed(2)
+          })
+
+          const [appointment] = await db.insert(appointments).values({
+            userId: user.userId,
+            productId: item.product.id,
+            title: item.product.title,
+            description: item.product.description || `Réservation: ${item.product.title}`,
+            startTime: appointmentData.startTime,
+            endTime: appointmentData.endTime,
+            timezone: appointmentData.timezone,
+            attendeeEmail: appointmentData.attendeeEmail,
+            attendeeName: appointmentData.attendeeName,
+            attendeePhone: appointmentData.attendeePhone || null,
+            notes: appointmentData.notes || null,
+            status: 'pending',
+            type: isPaid ? 'paid' : 'free',
+            price: price,
+            currency: item.product.currency || 'EUR',
+            isPaid: !isPaid, // Si gratuit, considéré comme "payé"
+            paymentStatus: isPaid ? 'pending' : 'paid',
+            metadata: {
+              orderId: order.id,
+              orderNumber,
+              devMode: lagoConfig.mode === 'dev'
+            }
+          }).returning()
+
+          console.log('[processCheckout] ✅ Appointment created:', {
+            appointmentId: appointment.id,
+            status: appointment.status,
+            paymentStatus: appointment.paymentStatus
+          })
+        }
+      }
+    }
+
     // 8. Send Confirmation Email
     console.log('[processCheckout] 📧 Sending confirmation email', { to: user.email })
     try {
