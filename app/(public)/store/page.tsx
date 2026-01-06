@@ -1,17 +1,12 @@
-"use client"
+import { redirect } from 'next/navigation'
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Loader2 } from "lucide-react"
-import { getProducts, addToCart } from "@/app/actions/ecommerce"
-import { formatProductPrice, hasValidPrice } from "@/lib/product-utils"
-import { toast } from "sonner"
-import Link from "next/link"
-
+/**
+ * Store page redirected to /dashboard
+ * The shop is now accessible from the dashboard
+ */
 export default function StorePage() {
+  redirect('/dashboard')
+}
   const router = useRouter()
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

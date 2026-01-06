@@ -852,7 +852,7 @@ export async function processCheckout(
             const { sendAllAppointmentNotifications } = await import('@/lib/notifications/appointment-notifications')
             console.log('[processCheckout] 📧 Module loaded, sending appointment notifications')
             
-            // S'assurer que les dates sont des objets Date valides
+            // Ensure dates are valid Date objects
             const startDate = appointmentData.startTime instanceof Date 
               ? appointmentData.startTime 
               : new Date(appointmentData.startTime)
@@ -896,7 +896,7 @@ export async function processCheckout(
       }
     }
 
-    // 8. Send Confirmation Email (non-bloquant en mode DEV)
+    // 8. Send Confirmation Email (non-blocking in DEV mode)
     console.log('[processCheckout] 📧 Attempting to send order confirmation email (DEV mode - non-blocking)', { to: user.email })
     try {
       await emailRouter.sendEmail({

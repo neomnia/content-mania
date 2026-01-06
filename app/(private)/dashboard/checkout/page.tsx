@@ -228,26 +228,45 @@ export default function CheckoutPage() {
   }, [searchParams, router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Plus nécessaire - les infos user sont chargées automatiquement
+    // No longer needed - user info is loaded automatically
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Vérifier s'il y a des produits de type "appointment" dans le panier
+    console.log('[Checkout] handleSubmit called', { 
+      cartItemsCount: cartItems.length,
+      appointmentsDataSize: appointmentsData.size 
+    })
+    
+    // Check if there are any "appointment" type products in the cart
     const appointmentProducts = cartItems.filter(item => item.type === 'appointment')
     
+    console.log('[Checkout] Appointment products check:', {
+      totalItems: cartItems.length,
+      appointmentProductsCount: appointmentProducts.length,
+      appointmentProducts: appointmentProducts.map(p => ({ id: p.id, name: p.name, type: p.type }))
+    })
+    
     if (appointmentProducts.length > 0) {
-      // Vérifier si tous les rendez-vous ont été sélectionnés
+      // Check if all appointments have been selected
       const missingAppointments = appointmentProducts.filter(
         item => !appointmentsData.has(item.id)
       )
       
+      console.log('[Checkout] Missing appointments check:', {
+        missingCount: missingAppointments.length,
+        missingProducts: missingAppointments.map(p => ({ id: p.id, name: p.name })),
+        hasAppointmentsData: appointmentsData.size > 0,
+        appointmentDataKeys: Array.from(appointmentsData.keys())
+      })
+      
       if (missingAppointments.length > 0) {
-        // Ouvrir la modale pour le premier rendez-vous manquant
+        // Open modal for the first missing appointment
+        console.log('[Checkout] Opening modal for:', missingAppointments[0])
         setCurrentAppointmentProduct(missingAppointments[0])
         setAppointmentModalOpen(true)
-        toast.info("Veuillez sélectionner un créneau pour votre rendez-vous")
+        toast.info("Please select a time slot for your appointment")
         return
       }
     }
@@ -256,7 +275,7 @@ export default function CheckoutPage() {
 
     try {
       if (!cartId) {
-        toast.warning("Pas de panier actif. Redirection vers le panier...")
+        toast.warning("No active cart. Redirecting to cart...")
         router.push("/dashboard/cart")
         setIsProcessing(false)
         return
@@ -264,33 +283,42 @@ export default function CheckoutPage() {
 
       console.log('[Checkout] Processing order...', { cartId, appointments: Array.from(appointmentsData.entries()) })
 
-      // Convertir appointmentsData (Map) en objet pour l'envoyer à processCheckout
+      // Convert appointmentsData (Map) to object to send to processCheckout
       const appointmentsObj = appointmentsData.size > 0 
         ? Object.fromEntries(appointmentsData) 
         : undefined
 
       console.log('[Checkout] Appointments data:', appointmentsObj)
 
-      // Envoyer les données de rendez-vous à processCheckout
+      // Send appointment data to processCheckout
       const result = await processCheckout(cartId, appointmentsObj)
 
       if (result.success) {
-        toast.success("Commande traitée avec succès !")
+        toast.success("Order processed successfully!")
         console.log('[Checkout] ✅ Order completed successfully')
 
-        // Vider le panier dans le contexte pour mettre à jour le header
+        // Clear cart in context to update header
         clearCart()
 
-        // Les rendez-vous ont été créés automatiquement lors du checkout
-        // Rediriger vers la page de confirmation avec l'ID de commande
+        // Appointments were created automatically during checkout
+        // Redirect to confirmation page with order ID
         router.push(`/dashboard/checkout/confirmation?orderId=${result.orderId}`)
       } else {
         console.error('[Checkout] ❌ Checkout failed:', result.error)
-        toast.error(result.error || "Erreur lors du checkout")
+        
+        // Specific error message if cart no longer exists
+        if (result.error?.includes('Cart not found')) {
+          toast.error("Your cart no longer exists. Please add your products to the cart again.")
+          setTimeout(() => {
+            router.push('/dashboard/cart')
+          }, 2000)
+        } else {
+          toast.error(result.error || "Checkout error")
+        }
       }
     } catch (error) {
       console.error("Checkout error:", error)
-      toast.error("Une erreur est survenue. Veuillez réessayer.")
+      toast.error("An error occurred. Please try again.")
     } finally {
       setIsProcessing(false)
     }
@@ -301,7 +329,7 @@ export default function CheckoutPage() {
     
     console.log('[Checkout] Appointment data received:', appointmentData)
     
-    // Sauvegarder les données du rendez-vous
+    // Save appointment data
     setAppointmentsData(prev => {
       const newMap = new Map(prev)
       newMap.set(currentAppointmentProduct.id, appointmentData)
@@ -309,10 +337,10 @@ export default function CheckoutPage() {
       return newMap
     })
     
-    // Fermer la modal immédiatement
+    // Close modal immediately
     setAppointmentModalOpen(false)
     setCurrentAppointmentProduct(null)
-    toast.success("Créneau sélectionné avec succès !")
+    toast.success("Time slot selected successfully!")
   }
 
   const handleAddUpsell = async () => {
@@ -360,10 +388,10 @@ export default function CheckoutPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-3">
-              <Link href="/store" className="flex-1">
+              <Link href="/dashboard" className="flex-1">
                 <Button className="w-full">
                   <ShoppingBag className="mr-2 h-4 w-4" />
-                  Parcourir la boutique
+                  Retour au Dashboard
                 </Button>
               </Link>
               <Link href="/dashboard/cart" className="flex-1">
