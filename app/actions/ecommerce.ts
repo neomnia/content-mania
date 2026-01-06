@@ -2,13 +2,115 @@
 
 import { db } from "@/db"
 import { products, carts, cartItems, orders, orderItems, outlookIntegrations } from "@/db/schema"
-import { eq, and, desc, asc } from "drizzle-orm"
+import { eq, and, desc, asc, isNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getCurrentUser } from "@/lib/auth"
 import { z } from "zod"
 import { getLagoClient, getLagoConfig, type LagoMode } from "@/lib/lago"
 import { emailRouter } from "@/lib/email"
 import { cookies } from "next/headers"
+
+// --- Cart Migration ---
+
+/**
+ * Migrate a guest cart to a logged-in user
+ * This should be called after login to transfer cart ownership
+ */
+export async function migrateGuestCart(): Promise<{ success: boolean; migrated: boolean; cartId?: string }> {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return { success: true, migrated: false }
+    }
+
+    const cookieStore = await cookies()
+    const guestCartId = cookieStore.get("cart_id")?.value
+
+    if (!guestCartId) {
+      console.log('[migrateGuestCart] No guest cart cookie found')
+      return { success: true, migrated: false }
+    }
+
+    // Find the guest cart (cart with this ID that has no userId)
+    const guestCart = await db.query.carts.findFirst({
+      where: and(
+        eq(carts.id, guestCartId),
+        isNull(carts.userId),
+        eq(carts.status, "active")
+      )
+    })
+
+    if (!guestCart) {
+      console.log('[migrateGuestCart] Guest cart not found or already has userId', { guestCartId })
+      return { success: true, migrated: false }
+    }
+
+    // Check if user already has an active cart
+    const userCart = await db.query.carts.findFirst({
+      where: and(
+        eq(carts.userId, user.userId),
+        eq(carts.status, "active")
+      ),
+      with: { items: true }
+    })
+
+    if (userCart && userCart.items.length > 0) {
+      // User already has items in their cart - merge guest cart items
+      console.log('[migrateGuestCart] Merging guest cart into existing user cart', {
+        guestCartId,
+        userCartId: userCart.id
+      })
+
+      const guestItems = await db.query.cartItems.findMany({
+        where: eq(cartItems.cartId, guestCartId)
+      })
+
+      for (const item of guestItems) {
+        // Check if item already in user cart
+        const existingItem = userCart.items.find(i => i.productId === item.productId)
+        if (existingItem) {
+          // Update quantity
+          await db.update(cartItems)
+            .set({ quantity: existingItem.quantity + item.quantity })
+            .where(eq(cartItems.id, existingItem.id))
+        } else {
+          // Move item to user cart
+          await db.update(cartItems)
+            .set({ cartId: userCart.id })
+            .where(eq(cartItems.id, item.id))
+        }
+      }
+
+      // Delete the empty guest cart
+      await db.delete(carts).where(eq(carts.id, guestCartId))
+
+      // Clear the cookie
+      cookieStore.delete("cart_id")
+
+      console.log('[migrateGuestCart] ✅ Guest cart merged into user cart')
+      return { success: true, migrated: true, cartId: userCart.id }
+    } else {
+      // User has no active cart or empty cart - just assign the guest cart to user
+      console.log('[migrateGuestCart] Assigning guest cart to user', {
+        guestCartId,
+        userId: user.userId
+      })
+
+      await db.update(carts)
+        .set({ userId: user.userId })
+        .where(eq(carts.id, guestCartId))
+
+      // Clear the cookie (cart is now linked by userId)
+      cookieStore.delete("cart_id")
+
+      console.log('[migrateGuestCart] ✅ Guest cart assigned to user')
+      return { success: true, migrated: true, cartId: guestCartId }
+    }
+  } catch (error) {
+    console.error('[migrateGuestCart] Error:', error)
+    return { success: false, migrated: false }
+  }
+}
 
 // --- Products ---
 
@@ -156,6 +258,13 @@ export async function getCart() {
     let cart
 
     if (user) {
+      // First, try to migrate any guest cart to this user
+      console.log('[getCart] 🔄 Checking for guest cart migration...')
+      const migrationResult = await migrateGuestCart()
+      if (migrationResult.migrated) {
+        console.log('[getCart] ✅ Guest cart migrated', { cartId: migrationResult.cartId })
+      }
+
       console.log('[getCart] 🔍 Looking for user cart...', { userId: user.userId })
       cart = await db.query.carts.findFirst({
         where: and(
@@ -425,7 +534,7 @@ export async function updateCartItemQuantity(productId: string, quantity: number
 
 export async function processCheckout(cartId: string) {
   console.log('[processCheckout] 🛒 Starting checkout process', { cartId })
-  
+
   try {
     const user = await getCurrentUser()
     if (!user) {
@@ -438,9 +547,24 @@ export async function processCheckout(cartId: string) {
       email: user.email
     })
 
-    // 1. Get Cart
+    // 0. Try to migrate guest cart if needed
+    console.log('[processCheckout] 🔄 Checking for guest cart migration')
+    const migrationResult = await migrateGuestCart()
+    if (migrationResult.migrated) {
+      console.log('[processCheckout] ✅ Guest cart migrated', { newCartId: migrationResult.cartId })
+      // Use the migrated cart ID if different
+      if (migrationResult.cartId && migrationResult.cartId !== cartId) {
+        console.log('[processCheckout] 📦 Using migrated cart ID', {
+          originalCartId: cartId,
+          migratedCartId: migrationResult.cartId
+        })
+        cartId = migrationResult.cartId
+      }
+    }
+
+    // 1. Get Cart - first try by userId
     console.log('[processCheckout] 📦 Fetching cart data')
-    const cart = await db.query.carts.findFirst({
+    let cart = await db.query.carts.findFirst({
       where: and(
         eq(carts.id, cartId),
         eq(carts.userId, user.userId),
@@ -454,6 +578,38 @@ export async function processCheckout(cartId: string) {
         }
       }
     })
+
+    // If not found, try to find by cartId only and assign userId
+    if (!cart) {
+      console.log('[processCheckout] ⚠️ Cart not found with userId, trying without userId filter', { cartId })
+      const guestCart = await db.query.carts.findFirst({
+        where: and(
+          eq(carts.id, cartId),
+          eq(carts.status, "active")
+        ),
+        with: {
+          items: {
+            with: {
+              product: true
+            }
+          }
+        }
+      })
+
+      if (guestCart) {
+        // Assign cart to user
+        console.log('[processCheckout] 🔄 Assigning orphan cart to user', {
+          cartId: guestCart.id,
+          currentUserId: guestCart.userId,
+          newUserId: user.userId
+        })
+        await db.update(carts)
+          .set({ userId: user.userId })
+          .where(eq(carts.id, cartId))
+
+        cart = { ...guestCart, userId: user.userId }
+      }
+    }
 
     if (!cart) {
       console.error('[processCheckout] ❌ Cart not found', { cartId })
