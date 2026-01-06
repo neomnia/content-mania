@@ -141,6 +141,33 @@ export default function BookAppointmentPage() {
       const result = await res.json()
 
       if (result.success) {
+        const appointmentId = result.data?.id
+
+        // Send email notifications (client + admin)
+        if (appointmentId) {
+          console.log('[BookAppointment] Sending notifications for appointment:', appointmentId)
+          try {
+            const notifyRes = await fetch(`/api/appointments/${appointmentId}/notify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            })
+            const notifyResult = await notifyRes.json()
+            console.log('[BookAppointment] Notification result:', notifyResult)
+
+            if (notifyResult.success) {
+              toast.success('Rendez-vous confirme ! Un email de confirmation vous a ete envoye.')
+            } else {
+              toast.success('Rendez-vous confirme !')
+              console.warn('[BookAppointment] Notifications failed:', notifyResult)
+            }
+          } catch (notifyErr) {
+            console.error('[BookAppointment] Failed to send notifications:', notifyErr)
+            toast.success('Rendez-vous confirme !')
+          }
+        } else {
+          toast.success('Rendez-vous confirme !')
+        }
+
         // Record the booked appointment
         setBookedAppointments(prev => {
           const newMap = new Map(prev)
@@ -154,8 +181,6 @@ export default function BookAppointmentPage() {
           })
           return newMap
         })
-
-        toast.success('Rendez-vous confirme !')
 
         // Move to next appointment or finish
         if (currentItemIndex < appointmentItems.length - 1) {
