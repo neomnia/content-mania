@@ -4,14 +4,15 @@ NeoSaaS uses [Lago](https://getlago.com/) for billing and invoicing. You can con
 
 ## Configuration
 
-Navigate to **Business Dashboard > Lago Parameters** (`/admin`).
+Navigate to **Business Dashboard > Settings > Payments** (`/admin/settings`).
 
 ### Environment Modes
 
-You can switch between **Production** and **Test** modes instantly. This allows you to test your billing flow without affecting real data.
+You can switch between **Dev**, **Test**, and **Production** modes instantly via the 3-mode selector in the admin panel.
 
-1.  **Production Mode**: Uses the `Production API Key`.
-2.  **Test Mode**: Uses the `Test API Key`.
+1.  **Dev Mode** (Purple): Lago is **completely bypassed**. Orders are created without any Lago API calls. Payment methods are hidden in checkout. Ideal for local development and testing the sales funnel.
+2.  **Test Mode** (Orange): Uses the `Test API Key`. Invoices are created in Lago sandbox environment.
+3.  **Production Mode** (Green): Uses the `Production API Key`. Real invoices are generated.
 
 ### Setup Steps
 
@@ -32,11 +33,30 @@ The system automatically selects the correct API key based on the selected mode 
 
 ```typescript
 // lib/lago.ts
-const mode = configMap['lago_mode'] || 'production';
-const apiKey = mode === 'test' 
-  ? configMap['lago_api_key_test']
-  : configMap['lago_api_key'];
+export type LagoMode = 'production' | 'test' | 'dev';
+
+const mode = (configMap['lago_mode'] || process.env.LAGO_MODE || 'dev') as LagoMode;
+
+// In dev mode, Lago is completely disabled
+if (mode === 'dev') {
+  return { mode: 'dev', apiKey: null, apiUrl: '', isEnabled: false };
+}
+
+const apiKey = mode === 'test'
+  ? (configMap['lago_api_key_test'] || process.env.LAGO_API_KEY_TEST)
+  : (configMap['lago_api_key'] || process.env.LAGO_API_KEY);
 ```
+
+### Dynamic Payment Methods
+
+The checkout page dynamically shows/hides payment methods based on the configuration:
+
+- **Dev Mode**: No payment methods shown, "Mode Developpement" message displayed
+- **Test/Production**: Shows only enabled payment methods (Stripe, PayPal)
+
+Payment methods are configured via toggles in Admin > Settings > Payments:
+- `lago_stripe_enabled`: Enable/disable Stripe card payments
+- `lago_paypal_enabled`: Enable/disable PayPal payments
 
 ## Troubleshooting
 

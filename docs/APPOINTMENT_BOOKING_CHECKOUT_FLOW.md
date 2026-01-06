@@ -44,14 +44,70 @@ Modifications apportées :
 - ✅ Détection automatique des produits de type "appointment" dans le panier
 - ✅ Badge visuel pour identifier les produits avec rendez-vous
 - ✅ Bouton "Sélectionner un créneau" pour chaque produit avec rendez-vous
-- ✅ Validation avant paiement : tous les créneaux doivent être sélectionnés
-- ✅ Stockage des données de rendez-vous dans un Map
+- ✅ Chargement dynamique des méthodes de paiement selon le mode Lago
+- ✅ Support du mode DEV (Lago bypassed)
+- ✅ Redirection vers page de planification post-achat pour les rendez-vous
 
 **États ajoutés:**
 ```tsx
 const [appointmentModalOpen, setAppointmentModalOpen] = useState(false)
 const [currentAppointmentProduct, setCurrentAppointmentProduct] = useState<any | null>(null)
 const [appointmentsData, setAppointmentsData] = useState<Map<string, any>>(new Map())
+const [paymentConfig, setPaymentConfig] = useState({
+  lagoMode: 'dev' as 'dev' | 'test' | 'production',
+  stripeEnabled: false,
+  paypalEnabled: false
+})
+```
+
+#### 3. Page de Planification Post-Achat
+**Fichier:** `app/(private)/dashboard/appointments/book/page.tsx`
+
+Page dédiée à la planification des rendez-vous après validation de la commande.
+
+**Fonctionnalités:**
+- ✅ Chargement de la commande via `/api/orders/[id]`
+- ✅ Filtrage des produits de type "appointment"
+- ✅ Barre de progression pour plusieurs rendez-vous
+- ✅ Utilisation du composant `AppointmentBooking`
+- ✅ Création des rendez-vous via `/api/appointments`
+- ✅ Récapitulatif des rendez-vous confirmés
+- ✅ Redirection vers confirmation finale
+
+**États:**
+```tsx
+const [order, setOrder] = useState<Order | null>(null)
+const [bookedAppointments, setBookedAppointments] = useState<Map<string, BookedAppointment>>(new Map())
+const [currentItemIndex, setCurrentItemIndex] = useState(0)
+```
+
+#### 4. API Endpoint - Récupération Commande
+**Fichier:** `app/api/orders/[id]/route.ts`
+
+Endpoint pour récupérer les détails d'une commande avec ses articles.
+
+**Méthode:** `GET /api/orders/:id`
+
+**Réponse:**
+```json
+{
+  "success": true,
+  "order": {
+    "id": "uuid",
+    "orderNumber": "ORD-xxx",
+    "status": "completed",
+    "items": [
+      {
+        "id": "uuid",
+        "itemType": "appointment",
+        "itemId": "product-uuid",
+        "itemName": "Consultation",
+        "quantity": 1,
+        "unitPrice": 9900
+      }
+    ]
+  }
+}
 ```
 
 #### 3. Système de Notifications Admin
@@ -164,30 +220,51 @@ Navigation vers `/dashboard/checkout`
 
 ### 3. Affichage du panier
 - Les produits avec rendez-vous ont un badge 📅 "Rendez-vous"
-- Un bouton "Sélectionner un créneau" est affiché
+- Un bouton "Sélectionner un créneau" est affiché (optionnel - pré-sélection)
 
-### 4. Sélection du créneau
-- Click sur "Sélectionner un créneau"
+### 4. Pré-sélection du créneau (Optionnel)
+- Click sur "Sélectionner un créneau" dans le récapitulatif
 - Ouverture de la modale `AppointmentModal`
 - Sélection de la date et de l'heure
 - Remplissage des informations participant
 - Validation
 
 ### 5. Validation de la commande
-- Click sur "Payer X€"
-- Vérification : tous les créneaux sont sélectionnés ?
-  - ❌ Non → Ouverture de la modale pour le premier rendez-vous manquant
-  - ✅ Oui → Traitement du checkout
+- Click sur "Payer X€" (ou "Valider la commande" en mode DEV)
+- Traitement du checkout
+- Création de la commande
 
-### 6. Traitement backend
+### 6. Page de planification post-achat
+**Fichier:** `app/(private)/dashboard/appointments/book/page.tsx`
+
+Après validation de la commande, si des produits de type "appointment" sont présents:
+- Redirection vers `/dashboard/appointments/book?orderId=xxx`
+- Affichage des produits avec rendez-vous à planifier
+- Barre de progression si plusieurs rendez-vous
+- Pour chaque produit:
+  - Affichage du composant `AppointmentBooking`
+  - Sélection de la date et de l'heure
+  - Remplissage des informations participant
+  - Création du rendez-vous via `/api/appointments`
+- Possibilité de terminer sans planifier tous les rendez-vous
+- Redirection finale vers la page de confirmation
+
+### 7. Traitement backend
 1. Création de la commande
-2. Création du rendez-vous dans `appointments`
-3. Synchronisation avec le calendrier
-4. Création de la facture Lago (si payant)
+2. Redirection vers page de planification
+3. Création du rendez-vous dans `appointments` (lors de la sélection)
+4. Synchronisation avec le calendrier
 5. **Envoi de notification admin via `/chat`**
 6. Envoi d'email de confirmation au client
 
-### 7. Notification admin
+### 8. Page de confirmation
+**Fichier:** `app/(private)/dashboard/checkout/confirmation/page.tsx`
+
+- Récapitulatif de tous les rendez-vous confirmés
+- Liens vers le calendrier et le dashboard
+- Message de confirmation avec détails
+
+### 9. Notification admin
 L'admin reçoit une notification dans `/admin/chat` :
 - Type : "appointment" (priorité haute)
 - Contenu : Détails du rendez-vous
@@ -281,29 +358,44 @@ Template : `order-confirmation`
 
 ## Tests
 
-### Test manuel
+### Test manuel - Flux complet
 
-1. Créer un produit de type "appointment" dans `/admin/products`
-2. Ajouter au panier
-3. Aller au checkout
-4. Vérifier le badge "Rendez-vous"
-5. Cliquer sur "Sélectionner un créneau"
-6. Sélectionner une date et heure
-7. Remplir les informations
-8. Valider
-9. Voir le statut "Créneau sélectionné" ✅
-10. Cliquer sur "Payer"
-11. Vérifier dans `/admin/chat` la nouvelle notification
+1. Configurer le mode DEV dans Admin > Settings > Payments
+2. Créer un produit de type "appointment" dans `/admin/products`
+3. Se connecter en tant qu'utilisateur normal
+4. Ajouter le produit au panier depuis `/store` ou `/dashboard`
+5. Aller au checkout `/dashboard/checkout`
+6. Vérifier le badge "Rendez-vous" sur le produit
+7. Cliquer sur "Valider la commande (Test)"
+8. **Redirection automatique vers `/dashboard/appointments/book?orderId=xxx`**
+9. Sélectionner une date disponible
+10. Sélectionner un créneau horaire
+11. Remplir les informations participant
+12. Confirmer la réservation
+13. **Voir le récapitulatif des rendez-vous confirmés**
+14. Cliquer sur "Terminer"
+15. Vérifier dans `/admin/chat` la nouvelle notification
 
-### Test de validation
+### Test avec plusieurs rendez-vous
 
 1. Ajouter 2 produits avec rendez-vous au panier
-2. Sélectionner le créneau pour le premier uniquement
-3. Essayer de valider
-4. → La modale s'ouvre pour le 2ème produit
-5. Sélectionner le créneau
-6. Valider
-7. ✅ Commande créée
+2. Valider la commande
+3. → Redirection vers page de planification
+4. Voir la barre de progression "1 / 2"
+5. Planifier le premier rendez-vous
+6. La page passe automatiquement au 2ème produit
+7. Planifier le second rendez-vous
+8. Voir le récapitulatif avec les 2 rendez-vous
+9. Terminer
+
+### Test de sortie anticipée
+
+1. Ajouter 2 produits avec rendez-vous au panier
+2. Valider la commande
+3. Planifier uniquement le premier rendez-vous
+4. Cliquer sur "Terminer sans planifier les autres"
+5. → Redirection vers confirmation
+6. Le 2ème rendez-vous reste non planifié
 
 ## Logs de débogage
 

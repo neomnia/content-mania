@@ -176,20 +176,55 @@ export default function CheckoutPage() {
 
     loadData()
 
-    // Charger les informations utilisateur depuis localStorage
-    const profileData = localStorage.getItem("userProfile")
-    if (profileData) {
-      try {
-        const profile = JSON.parse(profileData)
-        setUserInfo({
-          name: `${profile.firstName || ""} ${profile.lastName || ""}`.trim(),
-          email: profile.email || "",
-          company: profile.company || undefined,
-        })
-      } catch (error) {
-        console.error("Failed to parse profile data:", error)
+    // Charger les informations utilisateur depuis plusieurs sources
+    const loadUserInfo = async () => {
+      // 1. Try localStorage first (cached)
+      const profileData = localStorage.getItem("userProfile")
+      if (profileData) {
+        try {
+          const profile = JSON.parse(profileData)
+          if (profile.email) {
+            setUserInfo({
+              name: `${profile.firstName || ""} ${profile.lastName || ""}`.trim() || profile.email,
+              email: profile.email,
+              company: profile.company || undefined,
+            })
+            return
+          }
+        } catch (error) {
+          console.error("[Checkout] Failed to parse localStorage profile:", error)
+        }
       }
+
+      // 2. Try to fetch from API
+      try {
+        const res = await fetch('/api/user/profile')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.email) {
+            setUserInfo({
+              name: `${data.firstName || ""} ${data.lastName || ""}`.trim() || data.email,
+              email: data.email,
+              company: data.company || undefined,
+            })
+            // Cache in localStorage
+            localStorage.setItem("userProfile", JSON.stringify(data))
+            return
+          }
+        }
+      } catch (error) {
+        console.error("[Checkout] Failed to fetch profile from API:", error)
+      }
+
+      // 3. Fallback: Use minimal info (allow proceeding in dev mode)
+      setUserInfo({
+        name: "Utilisateur",
+        email: "Non renseigné",
+        company: undefined,
+      })
     }
+
+    loadUserInfo()
   }, [searchParams, router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -243,9 +278,9 @@ export default function CheckoutPage() {
         const hasAppointments = cartItems.some(item => item.type === 'appointment')
 
         if (hasAppointments) {
-          // Rediriger vers le calendrier pour planifier le rendez-vous
-          toast.info("Vous pouvez maintenant planifier votre rendez-vous")
-          router.push("/dashboard/calendar")
+          // Rediriger vers la page de planification des rendez-vous
+          toast.info("Vous pouvez maintenant planifier vos rendez-vous")
+          router.push(`/dashboard/appointments/book?orderId=${result.orderId}`)
         } else {
           // Rediriger vers la page de confirmation avec l'ID de commande
           router.push(`/dashboard/checkout/confirmation?orderId=${result.orderId}`)

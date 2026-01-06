@@ -32,16 +32,33 @@ Le tunnel d'achat permet aux utilisateurs authentifiés de finaliser leurs comma
 │ - Payment method│
 │ - Order summary │
 └────────┬────────┘
-         │ Click "Payer"
+         │ Click "Payer" / "Valider" (DEV mode)
          ▼
 ┌─────────────────┐
 │  Payment (Lago) │
-│                 │
+│  (Skip in DEV)  │
 │ - Invoice created
 │ - Payment processed
 └────────┬────────┘
          │
          ▼
+    ┌────┴────┐
+    │Has Appts?│
+    └────┬────┘
+     YES │ NO
+    ┌────┼────┐
+    ▼         ▼
+┌───────────┐  ┌───────────┐
+│ Book Page │  │Confirmation│
+│(/appointments│ │  Page     │
+│  /book)    │  │           │
+│            │  │           │
+│ - Select   │  │           │
+│   date/time│  │           │
+│ - Confirm  │  │           │
+└─────┬──────┘  └───────────┘
+      │
+      ▼
 ┌─────────────────┐
 │  Order Success  │
 │  + Email sent   │
@@ -85,18 +102,33 @@ Le tunnel d'achat permet aux utilisateurs authentifiés de finaliser leurs comma
 - ✅ Entreprise (si renseignée)
 - ✅ Bouton "Modifier mes informations" → `/dashboard/settings`
 
-**Source des données:**
+**Source des données (cascade):**
 ```typescript
+// 1. Try localStorage first (cached)
 localStorage.getItem("userProfile")
-// Contient: firstName, lastName, email, company
+
+// 2. Try API fetch from /api/user/profile
+const res = await fetch('/api/user/profile')
+
+// 3. Fallback values for DEV mode
+{ name: "Utilisateur", email: "Non renseigné", company: undefined }
 ```
 
 **Aucun champ de saisie** - Les informations sont affichées en lecture seule.
 
 #### B. Méthode de Paiement
-- ✅ Carte bancaire (via Lago)
-- ✅ PayPal
+Affichage dynamique selon la configuration Lago:
+
+**Mode DEV:**
+- Message "Mode Développement" - Lago désactivé
+- Pas de sélection de méthode de paiement
+- Bouton "Valider la commande (Test)"
+
+**Mode TEST/PRODUCTION:**
+- ✅ Carte bancaire (via Stripe) - si `lago_stripe_enabled`
+- ✅ PayPal - si `lago_paypal_enabled`
 - Sélection visuelle avec highlight
+- Bouton "Payer X€"
 
 #### C. Récapitulatif de Commande
 - Liste des articles
@@ -281,7 +313,15 @@ localStorage.getItem("userProfile")
 ┌─────────────────────────────────────────┐
 │  4. REDIRECTION                         │
 ├─────────────────────────────────────────┤
-│  • Si succès: /dashboard/orders         │
+│  • Si succès avec rendez-vous:          │
+│    → /dashboard/appointments/book?      │
+│      orderId=xxx                        │
+│    → Planification des créneaux         │
+│                                          │
+│  • Si succès sans rendez-vous:          │
+│    → /dashboard/checkout/confirmation?  │
+│      orderId=xxx                        │
+│                                          │
 │  • Toast: "Commande validée !"          │
 │  • Email envoyé automatiquement         │
 │                                          │
