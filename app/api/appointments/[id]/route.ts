@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
 import { appointments } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { verifyAuth } from '@/lib/auth/server'
+import { verifyAuth, isAdmin } from '@/lib/auth/server'
 import { z } from 'zod'
 import { syncAppointmentToCalendars, deleteAppointmentFromCalendars } from '@/lib/calendar/sync'
 
@@ -25,6 +25,7 @@ const updateSchema = z.object({
   notes: z.string().optional(),
   cancellationReason: z.string().optional(),
   syncToCalendar: z.boolean().optional().default(true),
+  assignedAdminId: z.string().uuid().optional().nullable(),
 })
 
 // GET /api/appointments/[id] - Get single appointment
@@ -79,16 +80,38 @@ export async function PUT(
     const body = await request.json()
     const validated = updateSchema.parse(body)
 
-    // Check if appointment exists and belongs to user
+    // Check if user is admin
+    const userIsAdmin = await isAdmin(user.userId)
+
+    // Check if appointment exists
+    // Admins can access all appointments, regular users only their own
     const existing = await db.query.appointments.findFirst({
-      where: and(
-        eq(appointments.id, id),
-        eq(appointments.userId, user.userId)
-      ),
+      where: userIsAdmin
+        ? eq(appointments.id, id)
+        : and(eq(appointments.id, id), eq(appointments.userId, user.userId)),
     })
 
     if (!existing) {
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
+    }
+
+    // Enforce admin-only confirmation
+    // Only admins can change status to 'confirmed' or 'completed'
+    if (validated.status === 'confirmed' || validated.status === 'completed') {
+      if (!userIsAdmin) {
+        return NextResponse.json(
+          { error: 'Only administrators can confirm or complete appointments' },
+          { status: 403 }
+        )
+      }
+    }
+
+    // Only admins can assign appointments to other admins
+    if (validated.assignedAdminId !== undefined && !userIsAdmin) {
+      return NextResponse.json(
+        { error: 'Only administrators can assign appointments' },
+        { status: 403 }
+      )
     }
 
     const updateData: Record<string, unknown> = {
@@ -119,6 +142,7 @@ export async function PUT(
     if (validated.attendeeName !== undefined) updateData.attendeeName = validated.attendeeName
     if (validated.attendeePhone !== undefined) updateData.attendeePhone = validated.attendeePhone
     if (validated.notes !== undefined) updateData.notes = validated.notes
+    if (validated.assignedAdminId !== undefined) updateData.assignedAdminId = validated.assignedAdminId
 
     const [result] = await db.update(appointments)
       .set(updateData)

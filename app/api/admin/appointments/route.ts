@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     console.log('[API /admin/appointments GET] Fetching all appointments')
     console.log('[API /admin/appointments GET] Filters:', { status, type, startDate, endDate, limit })
 
-    // Build query - get all appointments with user info
+    // Build query - get all appointments with user info and assigned admin
     const result = await db.query.appointments.findMany({
       where: and(
         status ? eq(appointments.status, status) : undefined,
@@ -55,6 +55,14 @@ export async function GET(request: NextRequest) {
           },
         },
         product: true,
+        assignedAdmin: {
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
     })
 

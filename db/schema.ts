@@ -1061,6 +1061,8 @@ export const appointments = pgTable("appointments", {
     .notNull(),
   productId: uuid("product_id")
     .references(() => products.id, { onDelete: "set null" }), // Optional link to appointment product
+  assignedAdminId: uuid("assigned_admin_id")
+    .references(() => users.id, { onDelete: "set null" }), // Admin assigned to handle this appointment
   title: text("title").notNull(),
   description: text("description"),
   location: text("location"), // Physical or virtual meeting location
@@ -1145,10 +1147,16 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
   user: one(users, {
     fields: [appointments.userId],
     references: [users.id],
+    relationName: "appointmentUser",
   }),
   product: one(products, {
     fields: [appointments.productId],
     references: [products.id],
+  }),
+  assignedAdmin: one(users, {
+    fields: [appointments.assignedAdminId],
+    references: [users.id],
+    relationName: "appointmentAssignedAdmin",
   }),
 }))
 

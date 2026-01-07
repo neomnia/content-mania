@@ -21,6 +21,7 @@ import {
   XCircle,
   ExternalLink,
   CreditCard,
+  AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -107,27 +108,7 @@ export default function AppointmentDetailPage() {
     }
   }, [params.id])
 
-  const handleConfirm = async () => {
-    setActionLoading(true)
-    try {
-      const response = await fetch(`/api/appointments/${params.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "confirmed" }),
-      })
-
-      if (response.ok) {
-        toast.success("Rendez-vous confirmé")
-        fetchAppointment()
-      } else {
-        toast.error("Erreur lors de la confirmation")
-      }
-    } catch (error) {
-      toast.error("Erreur de connexion")
-    } finally {
-      setActionLoading(false)
-    }
-  }
+  // Note: Confirmation is handled by admin only - clients cannot self-confirm
 
   const handleComplete = async () => {
     setActionLoading(true)
@@ -509,10 +490,10 @@ export default function AppointmentDetailPage() {
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             {appointment.status === "pending" && (
-              <Button onClick={handleConfirm} disabled={actionLoading}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Confirmer
-              </Button>
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>En attente de confirmation par l'administrateur</span>
+              </div>
             )}
             {appointment.status === "confirmed" && (
               <Button onClick={handleComplete} disabled={actionLoading}>

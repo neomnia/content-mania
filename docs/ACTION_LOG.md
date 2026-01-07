@@ -2,6 +2,109 @@
 
 Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
 
+## [2026-01-07] - Fix: Admin-Only Appointment Confirmation
+
+### Security: Client Self-Confirmation Removed
+
+**Problem:**
+Clients could confirm their own appointments via the dashboard detail page, which was illogical. Only administrators should be able to confirm appointments. Additionally, there was no way to assign an appointment to a specific admin.
+
+### Changes Implemented
+
+#### 1. Database Schema (`db/schema.ts`)
+
+Added new field to appointments table:
+- `assignedAdminId` - UUID reference to users table (admin who handles this appointment)
+
+Updated relations:
+- Added `assignedAdmin` relation with proper `relationName` for self-referential relations
+
+#### 2. Client Dashboard (`app/(private)/dashboard/appointments/[id]/page.tsx`)
+
+**Removed:**
+- `handleConfirm()` function
+- "Confirmer" button when status is pending
+
+**Added:**
+- Information message: "En attente de confirmation par l'administrateur"
+- AlertCircle icon to indicate pending state
+
+#### 3. API Route (`app/api/appointments/[id]/route.ts`)
+
+**Security enforcement:**
+- Added `isAdmin` check from `@/lib/auth/server`
+- Added `assignedAdminId` to update schema
+- **Admin-only confirmation:** Status changes to 'confirmed' or 'completed' now require admin role
+- **Admin-only assignment:** Only admins can set `assignedAdminId`
+- Admins can now access all appointments (not just their own) for management
+
+```typescript
+// Enforce admin-only confirmation
+if (validated.status === 'confirmed' || validated.status === 'completed') {
+  if (!userIsAdmin) {
+    return NextResponse.json(
+      { error: 'Only administrators can confirm or complete appointments' },
+      { status: 403 }
+    )
+  }
+}
+```
+
+#### 4. Admin Appointments Page (`app/(private)/admin/appointments/page.tsx`)
+
+**New features:**
+- "Assigné à" (Assigned to) column in the appointments table
+- Confirmation dialog with admin assignment dropdown
+- Fetch and display list of admin users
+- "Confirmer et assigner" button opens assignment dialog
+
+**New Components:**
+- Confirmation dialog with:
+  - Appointment summary
+  - Admin selection dropdown
+  - Optional assignment (can confirm without assignment)
+
+#### 5. New API Route (`app/api/admin/users/admins/route.ts`)
+
+New endpoint to fetch admin users for assignment dropdown:
+- **GET /api/admin/users/admins**
+- Returns users with `admin` or `super_admin` role
+- Fields: id, firstName, lastName, email
+
+### Updated Workflow
+
+```
+Client Flow:
+1. Client → Creates appointment request (status: pending)
+2. Client → Can view details, cancel, but CANNOT confirm
+3. Client → Sees "Waiting for admin confirmation" message
+
+Admin Flow:
+1. Admin → Views all appointments in /admin/appointments
+2. Admin → Clicks "Confirmer et assigner" on pending appointment
+3. Admin → Selects admin to assign (optional)
+4. Admin → Confirms → Status becomes 'confirmed', assignedAdminId set
+5. Admin → Can later mark as completed
+```
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `db/schema.ts` | Added `assignedAdminId` field and relation |
+| `app/api/appointments/[id]/route.ts` | Admin-only confirmation enforcement |
+| `app/api/admin/appointments/route.ts` | Include assignedAdmin in query results |
+| `app/api/admin/users/admins/route.ts` | **NEW** - Fetch admin users list |
+| `app/(private)/dashboard/appointments/[id]/page.tsx` | Removed self-confirmation |
+| `app/(private)/admin/appointments/page.tsx` | Admin assignment dialog |
+| `docs/ACTION_LOG.md` | This entry |
+
+### Database Migration Required
+
+After deploying, run `db:push` to add the new `assigned_admin_id` column to the appointments table.
+
+---
+
 ## [2026-01-07] - Feature: Dedicated Email Templates for Appointments
 
 ### New: Separate Email Templates for Orders and Appointments

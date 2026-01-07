@@ -57,6 +57,13 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 
+interface AdminUser {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+}
+
 interface Appointment {
   id: string
   title: string
@@ -76,6 +83,8 @@ interface Appointment {
   attendeeName?: string
   attendeePhone?: string
   notes?: string
+  assignedAdminId?: string
+  assignedAdmin?: AdminUser
   user?: {
     firstName: string
     lastName: string
@@ -100,6 +109,10 @@ export default function AdminAppointmentsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [appointmentToConfirm, setAppointmentToConfirm] = useState<Appointment | null>(null)
+  const [selectedAdminId, setSelectedAdminId] = useState<string>("")
 
   const fetchAppointments = async () => {
     try {
@@ -131,27 +144,61 @@ export default function AdminAppointmentsPage() {
     }
   }
 
+  const fetchAdminUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/users/admins')
+      const data = await response.json()
+      if (data.success) {
+        setAdminUsers(data.data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch admin users:", error)
+    }
+  }
+
   useEffect(() => {
     fetchAppointments()
+    fetchAdminUsers()
   }, [statusFilter, typeFilter])
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
+  const handleStatusChange = async (id: string, newStatus: string, assignedAdminId?: string) => {
     try {
+      const body: Record<string, unknown> = { status: newStatus }
+      if (assignedAdminId) {
+        body.assignedAdminId = assignedAdminId
+      }
+
       const response = await fetch(`/api/appointments/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify(body),
       })
 
       if (response.ok) {
         toast.success(`Statut mis à jour: ${statusConfig[newStatus as keyof typeof statusConfig]?.label}`)
         fetchAppointments()
       } else {
-        toast.error("Erreur lors de la mise à jour")
+        const data = await response.json()
+        toast.error(data.error || "Erreur lors de la mise à jour")
       }
     } catch (error) {
       toast.error("Erreur de connexion")
     }
+  }
+
+  const openConfirmDialog = (appointment: Appointment) => {
+    setAppointmentToConfirm(appointment)
+    setSelectedAdminId(appointment.assignedAdminId || "")
+    setConfirmDialogOpen(true)
+  }
+
+  const handleConfirmWithAdmin = async () => {
+    if (!appointmentToConfirm) return
+
+    await handleStatusChange(appointmentToConfirm.id, "confirmed", selectedAdminId || undefined)
+    setConfirmDialogOpen(false)
+    setAppointmentToConfirm(null)
+    setSelectedAdminId("")
   }
 
   const formatPrice = (price: number, currency: string) => {
@@ -319,6 +366,7 @@ export default function AdminAppointmentsPage() {
                   <TableHead>Titre</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Participant</TableHead>
+                  <TableHead>Assigné à</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Paiement</TableHead>
@@ -378,6 +426,20 @@ export default function AdminAppointmentsPage() {
                         )}
                       </TableCell>
                       <TableCell>
+                        {appointment.assignedAdmin ? (
+                          <div>
+                            <div className="font-medium">
+                              {appointment.assignedAdmin.firstName} {appointment.assignedAdmin.lastName}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {appointment.assignedAdmin.email}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm italic">Non assigné</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={appointment.type === "paid" ? "default" : "secondary"}>
                           {appointment.type === "paid" ? formatPrice(appointment.price, appointment.currency) : "Gratuit"}
                         </Badge>
@@ -413,9 +475,9 @@ export default function AdminAppointmentsPage() {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {appointment.status === "pending" && (
-                              <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "confirmed")}>
+                              <DropdownMenuItem onClick={() => openConfirmDialog(appointment)}>
                                 <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                                Confirmer
+                                Confirmer et assigner
                               </DropdownMenuItem>
                             )}
                             {appointment.status === "confirmed" && (
@@ -546,11 +608,11 @@ export default function AdminAppointmentsPage() {
               <div className="flex gap-2 pt-4">
                 {selectedAppointment.status === "pending" && (
                   <Button onClick={() => {
-                    handleStatusChange(selectedAppointment.id, "confirmed")
                     setDetailsOpen(false)
+                    openConfirmDialog(selectedAppointment)
                   }}>
                     <CheckCircle className="mr-2 h-4 w-4" />
-                    Confirmer
+                    Confirmer et assigner
                   </Button>
                 )}
                 {selectedAppointment.attendeeEmail && (
@@ -561,6 +623,63 @@ export default function AdminAppointmentsPage() {
                     </a>
                   </Button>
                 )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog with Admin Assignment */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer le rendez-vous</DialogTitle>
+            <DialogDescription>
+              Confirmez le rendez-vous et assignez-le à un administrateur
+            </DialogDescription>
+          </DialogHeader>
+          {appointmentToConfirm && (
+            <div className="space-y-4">
+              <div className="bg-muted p-3 rounded-lg">
+                <p className="font-medium">{appointmentToConfirm.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(appointmentToConfirm.startTime), "EEEE d MMMM yyyy à HH:mm", { locale: fr })}
+                </p>
+                {appointmentToConfirm.attendeeName && (
+                  <p className="text-sm text-muted-foreground">
+                    Participant: {appointmentToConfirm.attendeeName}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Assigner à un administrateur</label>
+                <Select value={selectedAdminId} onValueChange={setSelectedAdminId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un administrateur (optionnel)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Non assigné</SelectItem>
+                    {adminUsers.map((admin) => (
+                      <SelectItem key={admin.id} value={admin.id}>
+                        {admin.firstName} {admin.lastName} ({admin.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  L'administrateur assigné sera responsable de ce rendez-vous
+                </p>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-4">
+                <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+                  Annuler
+                </Button>
+                <Button onClick={handleConfirmWithAdmin}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Confirmer
+                </Button>
               </div>
             </div>
           )}
