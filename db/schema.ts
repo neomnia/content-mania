@@ -554,6 +554,36 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   shipments: many(shipments),
 }))
 
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+}))
+
+/**
+ * Shipments - Tracking for physical product deliveries
+ * Links to orderItems to track individual product shipments
+ */
+export const shipments = pgTable("shipments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }).notNull(),
+  orderItemId: uuid("order_item_id").references(() => orderItems.id, { onDelete: "set null" }),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+  status: text("status").notNull().default("pending"), // 'pending' | 'processing' | 'shipped' | 'in_transit' | 'delivered' | 'failed'
+  trackingNumber: text("tracking_number"), // Numéro de suivi (Colissimo, Chronopost, etc.)
+  carrier: text("carrier"), // 'colissimo' | 'chronopost' | 'ups' | 'dhl' | 'fedex' | 'other'
+  trackingUrl: text("tracking_url"), // URL de suivi fournie par le transporteur
+  shippingAddress: jsonb("shipping_address").notNull(), // { name, street, city, postalCode, country, phone }
+  estimatedDeliveryDate: timestamp("estimated_delivery_date"),
+  shippedAt: timestamp("shipped_at"),
+  deliveredAt: timestamp("delivered_at"),
+  notes: text("notes"), // Notes admin ou instructions spéciales
+  emailsSent: jsonb("emails_sent").default("[]"), // Array des emails envoyés [{type: 'shipped', sentAt: '...'}]
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
 export const shipmentsRelations = relations(shipments, ({ one }) => ({
   order: one(orders, {
     fields: [shipments.orderId],
@@ -566,13 +596,6 @@ export const shipmentsRelations = relations(shipments, ({ one }) => ({
   product: one(products, {
     fields: [shipments.productId],
     references: [products.id],
-  }),
-}))
-
-export const orderItemsRelations = relations(orderItems, ({ one }) => ({
-  order: one(orders, {
-    fields: [orderItems.orderId],
-    references: [orders.id],
   }),
 }))
 
@@ -767,29 +790,6 @@ export const products = pgTable("products", {
   isPublished: boolean("is_published").default(false).notNull(),
   isFeatured: boolean("is_featured").default(false).notNull(), // "Most Popular" badge
   upsellProductId: uuid("upsell_product_id"), // Self-reference for upsell
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
-
-/**
- * Shipments - Tracking for physical product deliveries
- * Links to orderItems to track individual product shipments
- */
-export const shipments = pgTable("shipments", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }).notNull(),
-  orderItemId: uuid("order_item_id").references(() => orderItems.id, { onDelete: "set null" }),
-  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
-  status: text("status").notNull().default("pending"), // 'pending' | 'processing' | 'shipped' | 'in_transit' | 'delivered' | 'failed'
-  trackingNumber: text("tracking_number"), // Numéro de suivi (Colissimo, Chronopost, etc.)
-  carrier: text("carrier"), // 'colissimo' | 'chronopost' | 'ups' | 'dhl' | 'fedex' | 'other'
-  trackingUrl: text("tracking_url"), // URL de suivi fournie par le transporteur
-  shippingAddress: jsonb("shipping_address").notNull(), // { name, street, city, postalCode, country, phone }
-  estimatedDeliveryDate: timestamp("estimated_delivery_date"),
-  shippedAt: timestamp("shipped_at"),
-  deliveredAt: timestamp("delivered_at"),
-  notes: text("notes"), // Notes admin ou instructions spéciales
-  emailsSent: jsonb("emails_sent").default("[]"), // Array des emails envoyés [{type: 'shipped', sentAt: '...'}]
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
