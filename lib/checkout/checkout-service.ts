@@ -26,6 +26,11 @@ import { notifyAdminNewOrder, notifyAdminNewAppointment } from '@/lib/notificati
 import { syncAppointmentToCalendars } from '@/lib/calendar/sync'
 import { emailRouter } from '@/lib/email'
 import type { CheckoutResult, AppointmentBookingData, ProductType, TeamNotification } from './types'
+import {
+  generateOrderConfirmationEmail,
+  generateAppointmentBookingEmail,
+  generateAppointmentWithPaymentEmail
+} from './email-templates'
 
 interface CheckoutParams {
   cartId?: string
@@ -366,22 +371,40 @@ async function processAppointmentCheckout(params: {
   }
 
   // 6. Send confirmation email to client
+  // Use different templates based on whether payment is involved
   try {
+    const emailContent = isPaid
+      ? generateAppointmentWithPaymentEmail({
+          customerName: appointmentData.attendeeName,
+          productTitle: product.title,
+          startTime: startTime,
+          endTime: endTime,
+          timezone: appointmentData.timezone,
+          location: product.location || undefined,
+          meetingUrl: product.meetingUrl || undefined,
+          isPaid: true,
+          price,
+          currency: product.currency || 'EUR',
+          orderNumber,
+          testMode
+        })
+      : generateAppointmentBookingEmail({
+          customerName: appointmentData.attendeeName,
+          productTitle: product.title,
+          startTime: startTime,
+          endTime: endTime,
+          timezone: appointmentData.timezone,
+          location: product.location || undefined,
+          meetingUrl: product.meetingUrl || undefined,
+          notes: appointmentData.notes,
+          orderNumber,
+          testMode
+        })
+
     await emailRouter.sendWithFallback({
       to: [appointmentData.attendeeEmail],
-      subject: `Appointment Confirmation - ${product.title}`,
-      htmlContent: generateAppointmentConfirmationEmail({
-        customerName: appointmentData.attendeeName,
-        productTitle: product.title,
-        startTime: startTime, // Use converted Date object
-        endTime: endTime, // Use converted Date object
-        timezone: appointmentData.timezone,
-        isPaid,
-        price,
-        currency: product.currency || 'EUR',
-        orderNumber,
-        testMode
-      }),
+      subject: `Confirmation de rendez-vous - ${product.title}`,
+      htmlContent: emailContent,
       tags: ['appointment-confirmation', orderNumber]
     })
   } catch (emailError) {
@@ -788,125 +811,4 @@ export async function simulatePayment(appointmentId: string): Promise<CheckoutRe
   }
 }
 
-// Helper functions for emails
-
-function generateAppointmentConfirmationEmail(params: {
-  customerName: string
-  productTitle: string
-  startTime: Date
-  endTime: Date
-  timezone: string
-  isPaid: boolean
-  price: number
-  currency: string
-  orderNumber: string
-  testMode: boolean
-}): string {
-  const formatDate = (date: Date) => new Intl.DateTimeFormat('fr-FR', {
-    dateStyle: 'full',
-    timeStyle: 'short',
-    timeZone: params.timezone
-  }).format(date)
-
-  const formatPrice = (amount: number) => new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: params.currency
-  }).format(amount / 100)
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="utf-8"></head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px;">
-      <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <div style="background: linear-gradient(135deg, #059669, #10b981); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0;">✅ Rendez-vous confirmé</h1>
-        </div>
-        <div style="padding: 30px;">
-          <p>Bonjour ${params.customerName},</p>
-          <p>Votre rendez-vous a été enregistré avec succès.</p>
-
-          <div style="background: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #047857;">${params.productTitle}</h3>
-            <p><strong>Date:</strong> ${formatDate(params.startTime)}</p>
-            <p><strong>Fin prévue:</strong> ${formatDate(params.endTime)}</p>
-            <p><strong>Fuseau horaire:</strong> ${params.timezone}</p>
-            ${params.isPaid ? `<p><strong>Montant:</strong> ${formatPrice(params.price)}</p>` : '<p><strong>Montant:</strong> Gratuit</p>'}
-          </div>
-
-          <p style="color: #6b7280;">Référence: ${params.orderNumber}</p>
-
-          ${params.testMode ? '<p style="background: #fef3c7; padding: 10px; border-radius: 4px; color: #92400e; font-size: 12px;">⚠️ Mode test activé - Ceci est une confirmation de test</p>' : ''}
-
-          <p>À bientôt,<br>L'équipe Neosaas</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `
-}
-
-function generateOrderConfirmationEmail(params: {
-  customerName: string
-  orderNumber: string
-  items: { name: string; quantity: number; price: number }[]
-  totalAmount: number
-  currency: string
-  testMode: boolean
-}): string {
-  const formatPrice = (amount: number) => new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: params.currency
-  }).format(amount / 100)
-
-  const itemsHtml = params.items.map(item => `
-    <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.name}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatPrice(item.price)}</td>
-    </tr>
-  `).join('')
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="utf-8"></head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px;">
-      <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <div style="background: linear-gradient(135deg, #4f46e5, #6366f1); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0;">🎉 Commande confirmée</h1>
-        </div>
-        <div style="padding: 30px;">
-          <p>Bonjour ${params.customerName},</p>
-          <p>Merci pour votre commande ! Voici le récapitulatif :</p>
-
-          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-            <thead>
-              <tr style="background: #f9fafb;">
-                <th style="padding: 12px; text-align: left;">Produit</th>
-                <th style="padding: 12px; text-align: center;">Qté</th>
-                <th style="padding: 12px; text-align: right;">Prix</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHtml}
-            </tbody>
-            <tfoot>
-              <tr style="background: #f9fafb;">
-                <td colspan="2" style="padding: 12px; font-weight: bold;">Total</td>
-                <td style="padding: 12px; text-align: right; font-weight: bold; color: #4f46e5;">${formatPrice(params.totalAmount)}</td>
-              </tr>
-            </tfoot>
-          </table>
-
-          <p style="color: #6b7280;">Commande #${params.orderNumber}</p>
-
-          ${params.testMode ? '<p style="background: #fef3c7; padding: 10px; border-radius: 4px; color: #92400e; font-size: 12px;">⚠️ Mode test activé - Ceci est une confirmation de test</p>' : ''}
-
-          <p>À bientôt,<br>L'équipe Neosaas</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `
-}
+// Email templates are now in ./email-templates.ts

@@ -2,6 +2,69 @@
 
 Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
 
+## [2026-01-07] - Feature: Dedicated Email Templates for Appointments
+
+### New: Separate Email Templates for Orders and Appointments
+
+**Context:**
+The original implementation used a single email template that combined payment and appointment information. This has been split into dedicated templates for better clarity.
+
+### New File: `lib/checkout/email-templates.ts`
+
+This file centralizes all checkout-related email templates:
+
+| Template | Usage |
+|----------|-------|
+| `generateOrderConfirmationEmail` | Payment/order validation (🎉 Commande confirmée) |
+| `generateAppointmentBookingEmail` | Calendar/appointment confirmation without payment (📅 Rendez-vous confirmé) |
+| `generateAppointmentRequestEmail` | Pending appointment request before admin validation (⏳ Demande reçue) |
+| `generateAppointmentWithPaymentEmail` | Appointment with payment details (✅ RDV + paiement) |
+
+### Template Features
+
+**Order Confirmation Email:**
+- Purple gradient header
+- Items table with quantities and prices
+- Total amount paid
+- Order reference number
+
+**Appointment Booking Email (Calendar-focused):**
+- Green gradient header
+- Date, time, duration details
+- Location and meeting URL (if available)
+- Timezone information
+- Helpful reminder about connecting early
+
+**Appointment Request Email:**
+- Orange/amber gradient header
+- Requested time slot details
+- Information about next steps (admin validation)
+- Client's notes
+
+**Appointment with Payment Email:**
+- Green gradient header
+- All appointment details
+- Payment status and amount
+- Combined confirmation
+
+### Changes to `checkout-service.ts`
+
+- Email templates moved to dedicated `email-templates.ts` file
+- Smart template selection:
+  - If paid → uses `generateAppointmentWithPaymentEmail`
+  - If free → uses `generateAppointmentBookingEmail`
+- Includes location and meeting URL from product
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `lib/checkout/email-templates.ts` | **NEW** - Centralized email templates |
+| `lib/checkout/checkout-service.ts` | Import templates, smart template selection |
+| `docs/ACTION_LOG.md` | This entry |
+
+---
+
 ## [2026-01-07] - Standardization: English Code Comments & Error Messages
 
 ### Fix: Translate French Comments and Error Messages to English
