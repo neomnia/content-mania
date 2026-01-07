@@ -232,12 +232,35 @@ Routes accessible to all authenticated users for managing their own appointments
 
 | Route | Description |
 |-------|-------------|
-| `/dashboard/appointments` | List of user's appointments |
+| `/dashboard/appointments` | List view of appointments with search and filters |
 | `/dashboard/appointments/new` | Create new appointment |
 | `/dashboard/appointments/[id]` | Appointment details |
 | `/dashboard/calendar` | Calendar view (react-big-calendar) |
 | `/dashboard/calendar/settings` | Calendar connections (Google/Microsoft) |
 | `/dashboard/support` | Help center & FAQ |
+
+### Appointments List Page (`/dashboard/appointments`)
+
+Full-featured list view of appointments with:
+
+**Search & Filters:**
+- Search by title, attendee name, email, or description
+- Filter by status: pending, confirmed, completed, cancelled, no_show
+- Filter by type: free, paid
+
+**Display:**
+- Appointments grouped by date
+- Each appointment card shows:
+  - Time range (start - end)
+  - Title and status badge
+  - Payment status (for paid appointments)
+  - Attendee name
+  - Location or video call indicator
+- Click to navigate to appointment details
+
+**Navigation:**
+- "Calendrier" button → `/dashboard/calendar`
+- "Nouveau" button → `/dashboard/appointments/new`
 
 ### Admin Routes
 

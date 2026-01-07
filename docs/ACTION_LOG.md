@@ -2,6 +2,41 @@
 
 Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
 
+## [2026-01-07] - Correction Page Liste des Rendez-vous (Calendrier)
+
+### Fix : Page Liste des Rendez-vous
+
+- **Problème** : La page `/dashboard/appointments` redirigeait automatiquement vers `/dashboard/calendar`, créant une boucle. Le bouton "Liste" sur la page du calendrier ne fonctionnait pas car il ramenait l'utilisateur vers le calendrier au lieu d'afficher la liste.
+- **Solution** : Création d'une vraie page de liste des rendez-vous avec fonctionnalités complètes.
+
+### Nouvelle Page Liste des Rendez-vous (`/dashboard/appointments`)
+
+**Fonctionnalités :**
+- **Vue en liste** : Affichage des rendez-vous groupés par date
+- **Recherche** : Recherche par titre, participant, email ou description
+- **Filtres** :
+  - Par statut (En attente, Confirmé, Terminé, Annulé, Absent)
+  - Par type (Gratuit, Payant)
+- **Navigation** : Lien vers le calendrier et création de nouveau rendez-vous
+- **Clic sur un rendez-vous** : Navigation vers la page de détail
+
+### Navigation entre Calendrier et Liste
+
+| Page | Bouton | Action |
+|------|--------|--------|
+| `/dashboard/calendar` | Liste | Redirige vers `/dashboard/appointments` |
+| `/dashboard/appointments` | Calendrier | Redirige vers `/dashboard/calendar` |
+
+### Fichiers Modifiés
+
+| Fichier | Modification |
+|---------|--------------|
+| `app/(private)/dashboard/appointments/page.tsx` | Réécriture complète - Page liste avec recherche et filtres |
+| `docs/ACTION_LOG.md` | Ce fichier |
+| `docs/CALENDAR_APPOINTMENTS_MODULE.md` | Mise à jour de la documentation |
+
+---
+
 ## [2026-01-05] - Correction Redirection Première Connexion
 
 ### Fix : Redirection vers Page Entreprise
