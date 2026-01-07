@@ -30,15 +30,10 @@ import type { StatusConfig } from "@/components/ui/status-badge"
 // =============================================================================
 
 export const productTypeConfigs: Record<string, StatusConfig> = {
-  standard: {
-    label: "Standard",
+  physical: {
+    label: "Physical",
     icon: Package,
     className: "bg-green-100 text-green-700 border-green-300"
-  },
-  free: {
-    label: "Free",
-    icon: Download,
-    className: "bg-amber-100 text-amber-700 border-amber-300"
   },
   digital: {
     label: "Digital",
@@ -47,6 +42,22 @@ export const productTypeConfigs: Record<string, StatusConfig> = {
   },
   appointment: {
     label: "Appointment",
+    icon: Calendar,
+    className: "bg-purple-100 text-purple-700 border-purple-300"
+  },
+  // Legacy types (backward compatibility)
+  standard: {
+    label: "Standard (Legacy)",
+    icon: Package,
+    className: "bg-gray-100 text-gray-700 border-gray-300"
+  },
+  free: {
+    label: "Free (Legacy)",
+    icon: Download,
+    className: "bg-amber-100 text-amber-700 border-amber-300"
+  },
+  consulting: {
+    label: "Consulting (Legacy)",
     icon: Calendar,
     className: "bg-purple-100 text-purple-700 border-purple-300"
   },

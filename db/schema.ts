@@ -551,6 +551,22 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     references: [companies.id],
   }),
   items: many(orderItems),
+  shipments: many(shipments),
+}))
+
+export const shipmentsRelations = relations(shipments, ({ one }) => ({
+  order: one(orders, {
+    fields: [shipments.orderId],
+    references: [orders.id],
+  }),
+  orderItem: one(orderItems, {
+    fields: [shipments.orderItemId],
+    references: [orderItems.id],
+  }),
+  product: one(products, {
+    fields: [shipments.productId],
+    references: [products.id],
+  }),
 }))
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
@@ -715,18 +731,19 @@ export const products = pgTable("products", {
   price: integer("price").notNull().default(0), // in cents
   hourlyRate: integer("hourly_rate"), // For consulting: hourly rate in cents (display only for hourly mode)
 
-  // Product Type System - NEW in v3.0
-  // 'physical' = produit physique (livraison courrier)
-  // 'digital' = produit numérique (téléchargement + licence optionnelle)
-  // 'consulting' = consulting/RDV (packagé ou horaire)
-  // 'standard' = produit standard générique
-  type: text("type").notNull().default("standard"), // 'physical' | 'digital' | 'consulting' | 'standard'
+  // Product Type System - NEW in v4.0
+  // 'physical' = produit physique (envoi postal avec tracking)
+  // 'digital' = produit numérique (code/URL de téléchargement instantané)
+  // 'appointment' = rendez-vous/consultation (peut être gratuit ou payant avec tarif horaire)
+  type: text("type").notNull().default("physical"), // 'physical' | 'digital' | 'appointment'
 
   // Free Option - Any product type can be free
   isFree: boolean("is_free").default(false).notNull(), // true = no payment required
 
   // Digital Product Fields
   fileUrl: text("file_url"), // Download URL for digital products
+  deliveryCode: text("delivery_code"), // Generated code for digital delivery (e.g., activation key)
+  downloadUrl: text("download_url"), // Direct download link (generated after purchase)
   licenseKey: text("license_key"), // License key template (optional, e.g., "PROD-XXXX-XXXX")
   licenseInstructions: text("license_instructions"), // Instructions for license activation
 
@@ -737,8 +754,8 @@ export const products = pgTable("products", {
   stockQuantity: integer("stock_quantity"), // Inventory tracking
   shippingNotes: text("shipping_notes"), // Special shipping instructions
 
-  // Consulting Product Fields
-  consultingMode: text("consulting_mode"), // 'packaged' | 'hourly' - packaged = paid upfront, hourly = post-billing
+  // Appointment Product Fields
+  appointmentMode: text("appointment_mode"), // 'packaged' | 'hourly' - packaged = paid upfront, hourly = post-billing
   appointmentDuration: integer("appointment_duration"), // Duration in minutes (default: 60)
 
   // Common Fields
@@ -754,12 +771,36 @@ export const products = pgTable("products", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
+/**
+ * Shipments - Tracking for physical product deliveries
+ * Links to orderItems to track individual product shipments
+ */
+export const shipments = pgTable("shipments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }).notNull(),
+  orderItemId: uuid("order_item_id").references(() => orderItems.id, { onDelete: "set null" }),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+  status: text("status").notNull().default("pending"), // 'pending' | 'processing' | 'shipped' | 'in_transit' | 'delivered' | 'failed'
+  trackingNumber: text("tracking_number"), // Numéro de suivi (Colissimo, Chronopost, etc.)
+  carrier: text("carrier"), // 'colissimo' | 'chronopost' | 'ups' | 'dhl' | 'fedex' | 'other'
+  trackingUrl: text("tracking_url"), // URL de suivi fournie par le transporteur
+  shippingAddress: jsonb("shipping_address").notNull(), // { name, street, city, postalCode, country, phone }
+  estimatedDeliveryDate: timestamp("estimated_delivery_date"),
+  shippedAt: timestamp("shipped_at"),
+  deliveredAt: timestamp("delivered_at"),
+  notes: text("notes"), // Notes admin ou instructions spéciales
+  emailsSent: jsonb("emails_sent").default("[]"), // Array des emails envoyés [{type: 'shipped', sentAt: '...'}]
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
 export const vatRatesRelations = relations(vatRates, ({ many }) => ({
   products: many(products),
 }))
 
 export const productsRelations = relations(products, ({ one, many }) => ({
   cartItems: many(cartItems),
+  shipments: many(shipments),
   vatRate: one(vatRates, {
     fields: [products.vatRateId],
     references: [vatRates.id],
