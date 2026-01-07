@@ -77,8 +77,8 @@ export function ProductForm({ initialData, products = [], vatRates }: ProductFor
     description: initialData?.description || "",
     price: initialData?.price ? (initialData.price / 100).toString() : "",
     currency: initialData?.currency || "EUR",
-    // Product Type - v3.0: 'physical' | 'digital' | 'consulting' | 'standard'
-    type: initialData?.type || "standard",
+    // Product Type - v4.0: 'physical' | 'digital' | 'appointment'
+    type: initialData?.type || "physical",
     isPublished: initialData?.isPublished || false,
     isFeatured: (initialData as any)?.isFeatured || false,
     // Free option - any product type can be free

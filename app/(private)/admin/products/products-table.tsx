@@ -519,12 +519,12 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
     }
 
     switch (type) {
-      case "standard":
+      case "physical":
         return {
-          label: "Standard",
+          label: "Physical",
           icon: Package,
           variant: "default" as const,
-          className: "bg-green-100 text-green-700 hover:bg-green-100"
+          className: "bg-orange-100 text-orange-700 hover:bg-orange-100"
         }
       case "digital":
         return {
@@ -533,13 +533,6 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
           variant: "default" as const,
           className: "bg-blue-100 text-blue-700 hover:bg-blue-100"
         }
-      case "free":
-        return {
-          label: "Free",
-          icon: Icons.Download,
-          variant: "default" as const,
-          className: "bg-amber-100 text-amber-700 hover:bg-amber-100"
-        }
       case "appointment":
         return {
           label: "Appointment",
@@ -547,12 +540,34 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
           variant: "secondary" as const,
           className: "bg-purple-100 text-purple-700 hover:bg-purple-100"
         }
+      // Legacy types support (for backward compatibility)
+      case "standard":
+        return {
+          label: "Standard (Legacy)",
+          icon: Package,
+          variant: "default" as const,
+          className: "bg-green-100 text-green-700 hover:bg-green-100"
+        }
+      case "free":
+        return {
+          label: "Free (Legacy)",
+          icon: Icons.Download,
+          variant: "default" as const,
+          className: "bg-amber-100 text-amber-700 hover:bg-amber-100"
+        }
+      case "consulting":
+        return {
+          label: "Consulting (Legacy)",
+          icon: Calendar,
+          variant: "default" as const,
+          className: "bg-indigo-100 text-indigo-700 hover:bg-indigo-100"
+        }
       default:
         return {
           label: type,
           icon: Package,
           variant: "outline" as const,
-          className: "bg-orange-100 text-orange-700 hover:bg-orange-100"
+          className: "bg-gray-100 text-gray-700 hover:bg-gray-100"
         }
     }
   }
@@ -1058,8 +1073,8 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        const typeOrder = ['standard', 'digital', 'free', 'appointment']
-                        const currentIndex = typeOrder.indexOf(product.type || 'standard')
+                        const typeOrder = ['physical', 'digital', 'appointment']
+                        const currentIndex = typeOrder.indexOf(product.type || 'physical')
                         const nextType = typeOrder[(currentIndex + 1) % typeOrder.length]
                         updateField(product.id, "type", nextType)
                       }}
@@ -1696,17 +1711,17 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
                           <div className="grid grid-cols-2 gap-2">
                             <button
                               type="button"
-                              onClick={() => setEditValues({...editValues, type: 'standard'})}
+                              onClick={() => setEditValues({...editValues, type: 'physical'})}
                               className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all hover:scale-105 ${
-                                editValues.type === 'standard'
-                                  ? 'border-green-500 bg-green-50 text-green-700'
-                                  : 'border-border bg-card hover:border-green-500/50'
+                                editValues.type === 'physical'
+                                  ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                  : 'border-border bg-card hover:border-orange-500/50'
                               }`}
                             >
                               <Icons.Package className="h-6 w-6 mb-1" />
-                              <span className="text-xs font-medium">Standard</span>
-                              {editValues.type === 'standard' && (
-                                <Check className="h-4 w-4 mt-1 text-green-600" />
+                              <span className="text-xs font-medium">Physical</span>
+                              {editValues.type === 'physical' && (
+                                <Check className="h-4 w-4 mt-1 text-orange-600" />
                               )}
                             </button>
                             <button
@@ -1722,21 +1737,6 @@ export const ProductsTable = forwardRef<ProductsTableHandle, ProductsTableProps>
                               <span className="text-xs font-medium">Digital</span>
                               {editValues.type === 'digital' && (
                                 <Check className="h-4 w-4 mt-1 text-blue-600" />
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditValues({...editValues, type: 'free'})}
-                              className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all hover:scale-105 ${
-                                editValues.type === 'free'
-                                  ? 'border-amber-500 bg-amber-50 text-amber-700'
-                                  : 'border-border bg-card hover:border-amber-500/50'
-                              }`}
-                            >
-                              <Icons.Download className="h-6 w-6 mb-1" />
-                              <span className="text-xs font-medium">Free</span>
-                              {editValues.type === 'free' && (
-                                <Check className="h-4 w-4 mt-1 text-amber-600" />
                               )}
                             </button>
                             <button

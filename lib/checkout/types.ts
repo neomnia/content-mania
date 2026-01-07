@@ -1,18 +1,21 @@
 /**
  * Types pour le tunnel d'achat
- * v3.0 - Support des nouveaux types de produits
+ * v4.0 - Système à 3 catégories de produits
  */
 
-// Product Types - v3.0
-// 'physical' = produit physique (livraison courrier)
-// 'digital' = produit numérique (téléchargement + licence)
-// 'consulting' = consulting/RDV (packagé ou horaire)
-// 'appointment' = rendez-vous/consultation (legacy type for compatibility)
-// 'standard' = produit standard générique
-export type ProductType = 'physical' | 'digital' | 'consulting' | 'appointment' | 'standard'
+// Product Types - v4.0
+// 'physical' = produit physique (envoi postal avec tracking)
+// 'digital' = produit numérique (téléchargement instantané + code/licence)
+// 'appointment' = rendez-vous/consultation (réservation de créneau)
+// Legacy types (backward compatibility):
+// 'standard' = anciennement produit standard (migrer vers physical ou digital)
+// 'free' = anciennement produit gratuit (utiliser isFree: true maintenant)
+// 'consulting' = anciennement consulting (renommé en appointment)
+export type ProductType = 'physical' | 'digital' | 'appointment' | 'standard' | 'free' | 'consulting'
 
-// Consulting Mode - for consulting products
-export type ConsultingMode = 'packaged' | 'hourly'
+// Appointment Mode - for appointment products (renamed from ConsultingMode)
+export type AppointmentMode = 'packaged' | 'hourly'
+export type ConsultingMode = AppointmentMode // Legacy alias
 
 // Shipping Address for physical products
 export interface ShippingAddress {

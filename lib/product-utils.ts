@@ -1,29 +1,36 @@
 /**
  * Utilitaires pour le formatage des prix de produits
- * Gère les 3 types de produits : standard, free, appointment
+ * v4.0 - Système à 3 catégories : physical, digital, appointment
  */
 
 export interface Product {
-  type: 'standard' | 'free' | 'digital' | 'appointment'
+  type: 'physical' | 'digital' | 'appointment' | 'standard' | 'free' | 'consulting' // v4.0 + legacy support
   price: number // en centimes
   hourlyRate?: number | null // en centimes
   currency: string
+  isFree?: boolean // v4.0 - Free is now an attribute, not a type
 }
 
 /**
  * Formate le prix d'un produit selon son type
- * - Standard/Digital: Prix unitaire (ex: "99.00€")
- * - Free: "Gratuit"
+ * - Physical/Digital: Prix unitaire (ex: "99.00€")
+ * - Free (legacy) ou isFree: "Gratuit"
  * - Appointment: Taux horaire (ex: "150€/h") ou "Sur devis"
  */
 export function formatProductPrice(product: Product): string {
   const currencySymbol = product.currency === 'EUR' ? '€' : '$'
   
+  // v4.0 - Check isFree attribute first
+  if (product.isFree) {
+    return 'Gratuit'
+  }
+  
   switch (product.type) {
-    case 'free':
+    case 'free': // Legacy support
       return 'Gratuit'
     
     case 'appointment':
+    case 'consulting': // Legacy support
       if (product.hourlyRate && product.hourlyRate > 0) {
         const hourlyAmount = (product.hourlyRate / 100).toFixed(2)
         return `${hourlyAmount}${currencySymbol}/h`
