@@ -5,8 +5,8 @@ import { chatConversations, chatMessages } from "@/db/schema"
 import { eq } from "drizzle-orm"
 
 /**
- * Envoie une notification à l'admin via le système de chat
- * Utilisé pour : nouvelles commandes, nouveaux rendez-vous, support, etc.
+ * Send a notification to admin via the chat system
+ * Used for: new orders, new appointments, support, etc.
  */
 export async function sendAdminNotification(params: {
   subject: string
@@ -30,10 +30,10 @@ export async function sendAdminNotification(params: {
   } = params
 
   try {
-    // 1. Créer ou récupérer une conversation pour ce type de notification
+    // 1. Create or retrieve a conversation for this notification type
     const conversationSubject = `[${type.toUpperCase()}] ${subject}`
-    
-    // Chercher une conversation existante ouverte pour cet utilisateur et ce type
+
+    // Look for an existing open conversation for this user and type
     let conversation = await db.query.chatConversations.findFirst({
       where: (conversations, { and, or, eq }) => {
         const conditions: any[] = [
@@ -53,7 +53,7 @@ export async function sendAdminNotification(params: {
       }
     })
 
-    // Si pas de conversation existante, en créer une nouvelle
+    // If no existing conversation, create a new one
     if (!conversation) {
       const [newConversation] = await db.insert(chatConversations).values({
         userId: userId || null,
@@ -68,21 +68,21 @@ export async function sendAdminNotification(params: {
       conversation = newConversation
     }
 
-    // 2. Ajouter le message de notification dans la conversation
+    // 2. Add the notification message to the conversation
     await db.insert(chatMessages).values({
       conversationId: conversation.id,
       senderType: 'system',
       content: message,
       messageType: type,
-      isRead: false, // Les admins devront le lire
+      isRead: false, // Admins will need to read it
       metadata: metadata || {}
     })
 
-    // 3. Mettre à jour le timestamp de la dernière activité
+    // 3. Update the last activity timestamp
     await db.update(chatConversations)
-      .set({ 
+      .set({
         lastMessageAt: new Date(),
-        priority // Mettre à jour la priorité si nécessaire
+        priority // Update priority if necessary
       })
       .where(eq(chatConversations.id, conversation.id))
 
@@ -106,7 +106,7 @@ export async function sendAdminNotification(params: {
 }
 
 /**
- * Envoie une notification de nouvelle commande aux admins
+ * Send a new order notification to admins
  */
 export async function notifyAdminNewOrder(params: {
   orderId: string
@@ -136,23 +136,23 @@ export async function notifyAdminNewOrder(params: {
   } = params
 
   const amount = (totalAmount / 100).toFixed(2)
-  
-  let message = `📦 Nouvelle commande reçue !\n\n`
-  message += `**Commande:** ${orderNumber}\n`
-  message += `**Client:** ${userName} (${userEmail})\n`
-  message += `**Montant:** ${amount} ${currency}\n\n`
-  
+
+  let message = `📦 New order received!\n\n`
+  message += `**Order:** ${orderNumber}\n`
+  message += `**Customer:** ${userName} (${userEmail})\n`
+  message += `**Amount:** ${amount} ${currency}\n\n`
+
   if (hasAppointment && appointmentDetails) {
-    message += `📅 **Rendez-vous requis**\n`
-    message += `• Participant: ${appointmentDetails.attendeeName}\n`
-    message += `• Début: ${appointmentDetails.startTime.toLocaleString('fr-FR')}\n`
-    message += `• Fin: ${appointmentDetails.endTime.toLocaleString('fr-FR')}\n\n`
+    message += `📅 **Appointment required**\n`
+    message += `• Attendee: ${appointmentDetails.attendeeName}\n`
+    message += `• Start: ${appointmentDetails.startTime.toLocaleString('en-US')}\n`
+    message += `• End: ${appointmentDetails.endTime.toLocaleString('en-US')}\n\n`
   }
-  
-  message += `Pour gérer cette commande, rendez-vous dans le [tableau de bord admin](/admin/orders/${orderId})`
+
+  message += `To manage this order, go to [admin dashboard](/admin/orders/${orderId})`
 
   return sendAdminNotification({
-    subject: `Nouvelle commande ${orderNumber}`,
+    subject: `New order ${orderNumber}`,
     message,
     type: 'order',
     userId,
@@ -171,7 +171,7 @@ export async function notifyAdminNewOrder(params: {
 }
 
 /**
- * Envoie une notification de nouveau rendez-vous aux admins
+ * Send a new appointment notification to admins
  */
 export async function notifyAdminNewAppointment(params: {
   appointmentId: string
@@ -196,16 +196,16 @@ export async function notifyAdminNewAppointment(params: {
     attendeeEmail
   } = params
 
-  const message = `📅 Nouveau rendez-vous réservé !\n\n` +
+  const message = `📅 New appointment booked!\n\n` +
     `**Service:** ${productTitle}\n` +
-    `**Client:** ${userName} (${userEmail})\n` +
-    `**Participant:** ${attendeeName} (${attendeeEmail})\n` +
-    `**Début:** ${startTime.toLocaleString('fr-FR')}\n` +
-    `**Fin:** ${endTime.toLocaleString('fr-FR')}\n\n` +
-    `Pour gérer ce rendez-vous, rendez-vous dans [votre calendrier](/dashboard/calendar)`
+    `**Customer:** ${userName} (${userEmail})\n` +
+    `**Attendee:** ${attendeeName} (${attendeeEmail})\n` +
+    `**Start:** ${startTime.toLocaleString('en-US')}\n` +
+    `**End:** ${endTime.toLocaleString('en-US')}\n\n` +
+    `To manage this appointment, go to [your calendar](/dashboard/calendar)`
 
   return sendAdminNotification({
-    subject: `Nouveau rendez-vous - ${productTitle}`,
+    subject: `New appointment - ${productTitle}`,
     message,
     type: 'appointment',
     userId,

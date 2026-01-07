@@ -57,24 +57,24 @@ export async function POST(
     let systemMessage: string
     if (validated.adminId) {
       if (validated.adminId === auth?.userId) {
-        systemMessage = `${assignerName} a pris en charge cette conversation`
+        systemMessage = `${assignerName} took charge of this conversation`
       } else {
         const assignedAdmin = await db.query.users.findFirst({
           where: eq(users.id, validated.adminId),
           columns: { firstName: true, lastName: true },
         })
-        const assignedName = `${assignedAdmin?.firstName || ''} ${assignedAdmin?.lastName || ''}`.trim() || 'un administrateur'
-        systemMessage = `${assignerName} a assigné cette conversation à ${assignedName}`
+        const assignedName = `${assignedAdmin?.firstName || ''} ${assignedAdmin?.lastName || ''}`.trim() || 'an administrator'
+        systemMessage = `${assignerName} assigned this conversation to ${assignedName}`
       }
     } else {
-      systemMessage = `${assignerName} a retiré l'assignation de cette conversation`
+      systemMessage = `${assignerName} removed the assignment from this conversation`
     }
 
     await db.insert(chatMessages).values({
       conversationId: id,
       senderId: auth?.userId || null,
       senderType: 'system',
-      senderName: 'Système',
+      senderName: 'System',
       content: systemMessage,
       messageType: 'system',
       isRead: true,
