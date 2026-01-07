@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { format } from "date-fns"
-import { fr } from "date-fns/locale"
+import { enUS } from "date-fns/locale"
 import {
   Calendar,
   Plus,
@@ -94,11 +94,11 @@ interface Appointment {
 }
 
 const statusConfig = {
-  pending: { label: "En attente", variant: "warning" as const, icon: AlertCircle, color: "text-yellow-600" },
-  confirmed: { label: "Confirmé", variant: "success" as const, icon: CheckCircle, color: "text-green-600" },
-  cancelled: { label: "Annulé", variant: "destructive" as const, icon: XCircle, color: "text-red-600" },
-  completed: { label: "Terminé", variant: "secondary" as const, icon: CheckCircle, color: "text-gray-600" },
-  no_show: { label: "Absent", variant: "destructive" as const, icon: XCircle, color: "text-red-600" },
+  pending: { label: "Pending", variant: "warning" as const, icon: AlertCircle, color: "text-yellow-600" },
+  confirmed: { label: "Confirmed", variant: "success" as const, icon: CheckCircle, color: "text-green-600" },
+  cancelled: { label: "Cancelled", variant: "destructive" as const, icon: XCircle, color: "text-red-600" },
+  completed: { label: "Completed", variant: "secondary" as const, icon: CheckCircle, color: "text-gray-600" },
+  no_show: { label: "No Show", variant: "destructive" as const, icon: XCircle, color: "text-red-600" },
 }
 
 export default function AdminAppointmentsPage() {
@@ -133,12 +133,12 @@ export default function AdminAppointmentsPage() {
         if (fallbackData.success) {
           setAppointments(fallbackData.data)
         } else {
-          toast.error("Erreur lors du chargement des rendez-vous")
+          toast.error("Failed to load appointments")
         }
       }
     } catch (error) {
       console.error("Failed to fetch appointments:", error)
-      toast.error("Erreur de connexion")
+      toast.error("Connection error")
     } finally {
       setLoading(false)
     }
@@ -175,34 +175,36 @@ export default function AdminAppointmentsPage() {
       })
 
       if (response.ok) {
-        toast.success(`Statut mis à jour: ${statusConfig[newStatus as keyof typeof statusConfig]?.label}`)
+        toast.success(`Status updated: ${statusConfig[newStatus as keyof typeof statusConfig]?.label}`)
         fetchAppointments()
       } else {
         const data = await response.json()
-        toast.error(data.error || "Erreur lors de la mise à jour")
+        toast.error(data.error || "Failed to update")
       }
     } catch (error) {
-      toast.error("Erreur de connexion")
+      toast.error("Connection error")
     }
   }
 
   const openConfirmDialog = (appointment: Appointment) => {
     setAppointmentToConfirm(appointment)
-    setSelectedAdminId(appointment.assignedAdminId || "")
+    setSelectedAdminId(appointment.assignedAdminId || "none")
     setConfirmDialogOpen(true)
   }
 
   const handleConfirmWithAdmin = async () => {
     if (!appointmentToConfirm) return
 
-    await handleStatusChange(appointmentToConfirm.id, "confirmed", selectedAdminId || undefined)
+    // Convert "none" to undefined for the API
+    const adminId = selectedAdminId === "none" ? undefined : selectedAdminId
+    await handleStatusChange(appointmentToConfirm.id, "confirmed", adminId)
     setConfirmDialogOpen(false)
     setAppointmentToConfirm(null)
-    setSelectedAdminId("")
+    setSelectedAdminId("none")
   }
 
   const formatPrice = (price: number, currency: string) => {
-    return new Intl.NumberFormat("fr-FR", {
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency,
     }).format(price / 100)
@@ -239,15 +241,15 @@ export default function AdminAppointmentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Gestion des Rendez-vous</h1>
+          <h1 className="text-2xl font-bold">Appointment Management</h1>
           <p className="text-muted-foreground">
-            Gérez tous les rendez-vous de la plateforme
+            Manage all platform appointments
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
-            Exporter
+            Export
           </Button>
         </div>
       </div>
@@ -265,7 +267,7 @@ export default function AdminAppointmentsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">En attente</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
             <AlertCircle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
@@ -274,7 +276,7 @@ export default function AdminAppointmentsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Confirmés</CardTitle>
+            <CardTitle className="text-sm font-medium">Confirmed</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -292,7 +294,7 @@ export default function AdminAppointmentsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Impayés</CardTitle>
+            <CardTitle className="text-sm font-medium">Unpaid</CardTitle>
             <AlertCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
@@ -309,7 +311,7 @@ export default function AdminAppointmentsPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Rechercher par nom, email..."
+                  placeholder="Search by name, email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -318,15 +320,15 @@ export default function AdminAppointmentsPage() {
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Statut" />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="pending">En attente</SelectItem>
-                <SelectItem value="confirmed">Confirmé</SelectItem>
-                <SelectItem value="completed">Terminé</SelectItem>
-                <SelectItem value="cancelled">Annulé</SelectItem>
-                <SelectItem value="no_show">Absent</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="no_show">No Show</SelectItem>
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -334,9 +336,9 @@ export default function AdminAppointmentsPage() {
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les types</SelectItem>
-                <SelectItem value="free">Gratuit</SelectItem>
-                <SelectItem value="paid">Payant</SelectItem>
+                <SelectItem value="all">All types</SelectItem>
+                <SelectItem value="free">Free</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -348,28 +350,28 @@ export default function AdminAppointmentsPage() {
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-pulse text-muted-foreground">Chargement...</div>
+              <div className="animate-pulse text-muted-foreground">Loading...</div>
             </div>
           ) : filteredAppointments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium">Aucun rendez-vous</p>
+              <p className="text-lg font-medium">No appointments</p>
               <p className="text-muted-foreground">
-                Aucun rendez-vous ne correspond à vos critères
+                No appointments match your criteria
               </p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date & Heure</TableHead>
-                  <TableHead>Titre</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Participant</TableHead>
-                  <TableHead>Assigné à</TableHead>
+                  <TableHead>Date & Time</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Attendee</TableHead>
+                  <TableHead>Assigned To</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Paiement</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Payment</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -382,7 +384,7 @@ export default function AdminAppointmentsPage() {
                     <TableRow key={appointment.id}>
                       <TableCell>
                         <div className="font-medium">
-                          {format(new Date(appointment.startTime), "d MMM yyyy", { locale: fr })}
+                          {format(new Date(appointment.startTime), "d MMM yyyy", { locale: enUS })}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {format(new Date(appointment.startTime), "HH:mm")} - {format(new Date(appointment.endTime), "HH:mm")}
@@ -436,12 +438,12 @@ export default function AdminAppointmentsPage() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground text-sm italic">Non assigné</span>
+                          <span className="text-muted-foreground text-sm italic">Not assigned</span>
                         )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={appointment.type === "paid" ? "default" : "secondary"}>
-                          {appointment.type === "paid" ? formatPrice(appointment.price, appointment.currency) : "Gratuit"}
+                          {appointment.type === "paid" ? formatPrice(appointment.price, appointment.currency) : "Free"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -453,7 +455,7 @@ export default function AdminAppointmentsPage() {
                       <TableCell>
                         {appointment.type === "paid" ? (
                           <Badge variant={appointment.isPaid ? "default" : "destructive"}>
-                            {appointment.isPaid ? "Payé" : "Impayé"}
+                            {appointment.isPaid ? "Paid" : "Unpaid"}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -471,33 +473,33 @@ export default function AdminAppointmentsPage() {
                               setSelectedAppointment(appointment)
                               setDetailsOpen(true)
                             }}>
-                              Voir les détails
+                              View details
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {appointment.status === "pending" && (
                               <DropdownMenuItem onClick={() => openConfirmDialog(appointment)}>
                                 <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                                Confirmer et assigner
+                                Confirm and assign
                               </DropdownMenuItem>
                             )}
                             {appointment.status === "confirmed" && (
                               <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "completed")}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
-                                Marquer terminé
+                                Mark as completed
                               </DropdownMenuItem>
                             )}
                             {appointment.status !== "cancelled" && appointment.status !== "completed" && (
                               <>
                                 <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "no_show")}>
                                   <XCircle className="mr-2 h-4 w-4 text-orange-500" />
-                                  Marquer absent
+                                  Mark as no show
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-destructive"
                                   onClick={() => handleStatusChange(appointment.id, "cancelled")}
                                 >
                                   <XCircle className="mr-2 h-4 w-4" />
-                                  Annuler
+                                  Cancel
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -507,7 +509,7 @@ export default function AdminAppointmentsPage() {
                                 <DropdownMenuItem asChild>
                                   <a href={`mailto:${appointment.attendeeEmail}`}>
                                     <Mail className="mr-2 h-4 w-4" />
-                                    Envoyer un email
+                                    Send email
                                   </a>
                                 </DropdownMenuItem>
                               </>
@@ -530,7 +532,7 @@ export default function AdminAppointmentsPage() {
           <DialogHeader>
             <DialogTitle>{selectedAppointment?.title}</DialogTitle>
             <DialogDescription>
-              Détails du rendez-vous
+              Appointment details
             </DialogDescription>
           </DialogHeader>
           {selectedAppointment && (
@@ -539,11 +541,11 @@ export default function AdminAppointmentsPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Date</p>
                   <p className="font-medium">
-                    {format(new Date(selectedAppointment.startTime), "EEEE d MMMM yyyy", { locale: fr })}
+                    {format(new Date(selectedAppointment.startTime), "EEEE d MMMM yyyy", { locale: enUS })}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Horaire</p>
+                  <p className="text-sm text-muted-foreground">Time</p>
                   <p className="font-medium">
                     {format(new Date(selectedAppointment.startTime), "HH:mm")} - {format(new Date(selectedAppointment.endTime), "HH:mm")}
                   </p>
@@ -559,13 +561,13 @@ export default function AdminAppointmentsPage() {
 
               {(selectedAppointment.location || selectedAppointment.meetingUrl) && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Lieu</p>
+                  <p className="text-sm text-muted-foreground">Location</p>
                   {selectedAppointment.location && <p>{selectedAppointment.location}</p>}
                   {selectedAppointment.meetingUrl && (
                     <Button asChild variant="link" className="p-0 h-auto">
                       <a href={selectedAppointment.meetingUrl} target="_blank" rel="noopener noreferrer">
                         <Video className="mr-2 h-4 w-4" />
-                        Lien de visioconférence
+                        Video call link
                       </a>
                     </Button>
                   )}
@@ -574,7 +576,7 @@ export default function AdminAppointmentsPage() {
 
               {(selectedAppointment.attendeeName || selectedAppointment.attendeeEmail) && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Participant externe</p>
+                  <p className="text-sm text-muted-foreground mb-2">External attendee</p>
                   <div className="bg-muted p-3 rounded-lg space-y-1">
                     {selectedAppointment.attendeeName && (
                       <p className="flex items-center gap-2">
@@ -600,7 +602,7 @@ export default function AdminAppointmentsPage() {
 
               {selectedAppointment.notes && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Notes internes</p>
+                  <p className="text-sm text-muted-foreground">Internal notes</p>
                   <p className="bg-muted p-3 rounded-lg">{selectedAppointment.notes}</p>
                 </div>
               )}
@@ -612,14 +614,14 @@ export default function AdminAppointmentsPage() {
                     openConfirmDialog(selectedAppointment)
                   }}>
                     <CheckCircle className="mr-2 h-4 w-4" />
-                    Confirmer et assigner
+                    Confirm and assign
                   </Button>
                 )}
                 {selectedAppointment.attendeeEmail && (
                   <Button variant="outline" asChild>
                     <a href={`mailto:${selectedAppointment.attendeeEmail}`}>
                       <Mail className="mr-2 h-4 w-4" />
-                      Contacter
+                      Contact
                     </a>
                   </Button>
                 )}
@@ -633,9 +635,9 @@ export default function AdminAppointmentsPage() {
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmer le rendez-vous</DialogTitle>
+            <DialogTitle>Confirm appointment</DialogTitle>
             <DialogDescription>
-              Confirmez le rendez-vous et assignez-le à un administrateur
+              Confirm the appointment and assign it to an administrator
             </DialogDescription>
           </DialogHeader>
           {appointmentToConfirm && (
@@ -643,23 +645,23 @@ export default function AdminAppointmentsPage() {
               <div className="bg-muted p-3 rounded-lg">
                 <p className="font-medium">{appointmentToConfirm.title}</p>
                 <p className="text-sm text-muted-foreground">
-                  {format(new Date(appointmentToConfirm.startTime), "EEEE d MMMM yyyy à HH:mm", { locale: fr })}
+                  {format(new Date(appointmentToConfirm.startTime), "EEEE, MMMM d, yyyy 'at' HH:mm", { locale: enUS })}
                 </p>
                 {appointmentToConfirm.attendeeName && (
                   <p className="text-sm text-muted-foreground">
-                    Participant: {appointmentToConfirm.attendeeName}
+                    Attendee: {appointmentToConfirm.attendeeName}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Assigner à un administrateur</label>
+                <label className="text-sm font-medium">Assign to an administrator</label>
                 <Select value={selectedAdminId} onValueChange={setSelectedAdminId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un administrateur (optionnel)" />
+                    <SelectValue placeholder="Select an administrator (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Non assigné</SelectItem>
+                    <SelectItem value="none">Not assigned</SelectItem>
                     {adminUsers.map((admin) => (
                       <SelectItem key={admin.id} value={admin.id}>
                         {admin.firstName} {admin.lastName} ({admin.email})
@@ -668,17 +670,17 @@ export default function AdminAppointmentsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  L'administrateur assigné sera responsable de ce rendez-vous
+                  The assigned administrator will be responsible for this appointment
                 </p>
               </div>
 
               <div className="flex gap-2 justify-end pt-4">
                 <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
-                  Annuler
+                  Cancel
                 </Button>
                 <Button onClick={handleConfirmWithAdmin}>
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  Confirmer
+                  Confirm
                 </Button>
               </div>
             </div>

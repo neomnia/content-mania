@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
-import { users, userRoles } from '@/db/schema'
+import { users, userRoles, roles } from '@/db/schema'
 import { eq, or, inArray } from 'drizzle-orm'
 import { requireAdmin } from '@/lib/auth/server'
 
@@ -17,12 +17,23 @@ export async function GET(request: NextRequest) {
     // Require admin access
     await requireAdmin()
 
-    // Get all users with admin or super_admin role
-    const adminRoleEntries = await db.query.userRoles.findMany({
+    // First, get the role IDs for 'admin' and 'super_admin' from the roles table
+    const adminRoles = await db.query.roles.findMany({
       where: or(
-        eq(userRoles.role, 'admin'),
-        eq(userRoles.role, 'super_admin')
+        eq(roles.name, 'admin'),
+        eq(roles.name, 'super_admin')
       ),
+    })
+
+    if (adminRoles.length === 0) {
+      return NextResponse.json({ success: true, data: [] })
+    }
+
+    const adminRoleIds = adminRoles.map(r => r.id)
+
+    // Get all userRoles entries that match the admin role IDs
+    const adminRoleEntries = await db.query.userRoles.findMany({
+      where: inArray(userRoles.roleId, adminRoleIds),
     })
 
     const adminUserIds = [...new Set(adminRoleEntries.map(r => r.userId))]

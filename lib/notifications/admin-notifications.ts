@@ -202,7 +202,7 @@ export async function notifyAdminNewAppointment(params: {
     `**Attendee:** ${attendeeName} (${attendeeEmail})\n` +
     `**Start:** ${startTime.toLocaleString('en-US')}\n` +
     `**End:** ${endTime.toLocaleString('en-US')}\n\n` +
-    `To manage this appointment, go to [your calendar](/dashboard/calendar)`
+    `To manage this appointment, go to [admin appointments](/admin/appointments)`
 
   return sendAdminNotification({
     subject: `New appointment - ${productTitle}`,
