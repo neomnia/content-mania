@@ -1,15 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Calendar, Clock, MapPin, Video, User, DollarSign } from "lucide-react"
+import { ArrowLeft, Calendar, Clock, MapPin, Video, FileText, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Select,
   SelectContent,
@@ -22,7 +23,6 @@ import { toast } from "sonner"
 export default function NewAppointmentPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [isPaid, setIsPaid] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -32,15 +32,17 @@ export default function NewAppointmentPage() {
     startTime: "",
     endTime: "",
     timezone: "Europe/Paris",
-    type: "free",
-    price: 0,
-    currency: "EUR",
-    attendeeEmail: "",
-    attendeeName: "",
-    attendeePhone: "",
     notes: "",
     syncToCalendar: true,
   })
+
+  // Set default date to tomorrow
+  useEffect(() => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const dateStr = tomorrow.toISOString().split('T')[0]
+    setFormData(prev => ({ ...prev, startDate: dateStr }))
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -66,25 +68,36 @@ export default function NewAppointmentPage() {
         return
       }
 
+      // Client-side appointment request:
+      // - type is always 'free' (admin will set payment if needed)
+      // - status is 'pending' (waiting for admin confirmation)
+      // - no attendee info required (admin will fill if needed)
       const response = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          title: formData.title,
+          description: formData.description,
+          location: formData.location || undefined,
+          meetingUrl: formData.meetingUrl || undefined,
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
-          type: isPaid ? "paid" : "free",
-          price: isPaid ? Math.round(formData.price * 100) : 0, // Convert to cents
+          timezone: formData.timezone,
+          notes: formData.notes || undefined,
+          syncToCalendar: formData.syncToCalendar,
+          type: "free", // Client can only request free appointments
+          status: "pending", // Always pending until admin confirms
+          price: 0,
         }),
       })
 
       const data = await response.json()
 
       if (data.success) {
-        toast.success("Rendez-vous créé avec succès")
+        toast.success("Demande de rendez-vous envoyée ! Vous serez notifié après confirmation.")
         router.push("/dashboard/appointments")
       } else {
-        toast.error(data.error || "Erreur lors de la création")
+        toast.error(data.error || "Erreur lors de l'envoi de la demande")
       }
     } catch (error) {
       console.error("Failed to create appointment:", error)
@@ -103,28 +116,41 @@ export default function NewAppointmentPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Nouveau rendez-vous</h1>
+          <h1 className="text-2xl font-bold">Demander un rendez-vous</h1>
           <p className="text-muted-foreground">
-            Créez un nouveau rendez-vous ou une consultation
+            Envoyez une demande de rendez-vous à notre équipe
           </p>
         </div>
       </div>
+
+      {/* Info Alert */}
+      <Alert>
+        <Send className="h-4 w-4" />
+        <AlertDescription>
+          Votre demande sera examinée par notre équipe. Vous recevrez une notification
+          une fois le rendez-vous confirmé. Si un paiement est nécessaire, vous serez
+          contacté avec les modalités.
+        </AlertDescription>
+      </Alert>
 
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Informations du rendez-vous
+              <FileText className="h-5 w-5" />
+              Objet de la demande
             </CardTitle>
+            <CardDescription>
+              Décrivez le sujet de votre demande de rendez-vous
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Titre *</Label>
+              <Label htmlFor="title">Titre de la demande *</Label>
               <Input
                 id="title"
                 name="title"
-                placeholder="Ex: Consultation initiale"
+                placeholder="Ex: Consultation initiale, Question technique, Démonstration..."
                 value={formData.title}
                 onChange={handleChange}
                 required
@@ -136,22 +162,36 @@ export default function NewAppointmentPage() {
               <Textarea
                 id="description"
                 name="description"
-                placeholder="Décrivez le sujet du rendez-vous..."
+                placeholder="Décrivez le sujet de votre demande pour nous aider à mieux vous répondre..."
                 value={formData.description}
                 onChange={handleChange}
-                rows={3}
+                rows={4}
               />
             </div>
+          </CardContent>
+        </Card>
 
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Créneau souhaité
+            </CardTitle>
+            <CardDescription>
+              Indiquez vos disponibilités. Notre équipe vous proposera un créneau adapté si nécessaire.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="startDate">Date *</Label>
+                <Label htmlFor="startDate">Date souhaitée *</Label>
                 <Input
                   id="startDate"
                   name="startDate"
                   type="date"
                   value={formData.startDate}
                   onChange={handleChange}
+                  min={new Date().toISOString().split('T')[0]}
                   required
                 />
               </div>
@@ -204,8 +244,11 @@ export default function NewAppointmentPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
-              Lieu
+              Préférence de lieu (optionnel)
             </CardTitle>
+            <CardDescription>
+              Indiquez si vous avez une préférence pour le lieu du rendez-vous
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -213,14 +256,14 @@ export default function NewAppointmentPage() {
               <Input
                 id="location"
                 name="location"
-                placeholder="Ex: 123 Rue de la Paix, Paris"
+                placeholder="Ex: Vos bureaux, un lieu de rencontre..."
                 value={formData.location}
                 onChange={handleChange}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="meetingUrl">Lien de visioconférence</Label>
+              <Label htmlFor="meetingUrl">Ou lien de visioconférence</Label>
               <div className="flex items-center gap-2">
                 <Video className="h-4 w-4 text-muted-foreground" />
                 <Input
@@ -232,113 +275,10 @@ export default function NewAppointmentPage() {
                   onChange={handleChange}
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Si vous laissez ce champ vide, notre équipe vous enverra un lien
+              </p>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Participant
-            </CardTitle>
-            <CardDescription>
-              Informations sur le participant externe (optionnel)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="attendeeName">Nom</Label>
-              <Input
-                id="attendeeName"
-                name="attendeeName"
-                placeholder="Nom du participant"
-                value={formData.attendeeName}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="attendeeEmail">Email</Label>
-                <Input
-                  id="attendeeEmail"
-                  name="attendeeEmail"
-                  type="email"
-                  placeholder="email@example.com"
-                  value={formData.attendeeEmail}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="attendeePhone">Téléphone</Label>
-                <Input
-                  id="attendeePhone"
-                  name="attendeePhone"
-                  type="tel"
-                  placeholder="+33 6 12 34 56 78"
-                  value={formData.attendeePhone}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Paiement
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Rendez-vous payant</Label>
-                <p className="text-sm text-muted-foreground">
-                  Activez cette option pour facturer ce rendez-vous
-                </p>
-              </div>
-              <Switch
-                checked={isPaid}
-                onCheckedChange={setIsPaid}
-              />
-            </div>
-
-            {isPaid && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Prix</Label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.price}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="currency">Devise</Label>
-                  <Select
-                    value={formData.currency}
-                    onValueChange={(value) => handleSelectChange("currency", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="EUR">EUR (€)</SelectItem>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="GBP">GBP (£)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -349,9 +289,9 @@ export default function NewAppointmentPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Synchroniser avec le calendrier</Label>
+                <Label>Ajouter à mon calendrier</Label>
                 <p className="text-sm text-muted-foreground">
-                  Ajouter automatiquement à Google Calendar ou Outlook
+                  Synchroniser automatiquement avec Google Calendar ou Outlook
                 </p>
               </div>
               <Switch
@@ -361,11 +301,11 @@ export default function NewAppointmentPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes internes</Label>
+              <Label htmlFor="notes">Informations complémentaires</Label>
               <Textarea
                 id="notes"
                 name="notes"
-                placeholder="Notes visibles uniquement par vous..."
+                placeholder="Ajoutez toute information utile pour préparer notre rendez-vous..."
                 value={formData.notes}
                 onChange={handleChange}
                 rows={2}
@@ -379,7 +319,8 @@ export default function NewAppointmentPage() {
             <Link href="/dashboard/appointments">Annuler</Link>
           </Button>
           <Button type="submit" disabled={loading}>
-            {loading ? "Création..." : "Créer le rendez-vous"}
+            <Send className="mr-2 h-4 w-4" />
+            {loading ? "Envoi en cours..." : "Envoyer la demande"}
           </Button>
         </div>
       </form>

@@ -2,38 +2,72 @@
 
 Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
 
-## [2026-01-07] - Correction Page Liste des Rendez-vous (Calendrier)
+## [2026-01-07] - Amélioration du Flux de Rendez-vous Client/Admin
 
-### Fix : Page Liste des Rendez-vous
+### Fix : Cohérence du Système de Rendez-vous
 
-- **Problème** : La page `/dashboard/appointments` redirigeait automatiquement vers `/dashboard/calendar`, créant une boucle. Le bouton "Liste" sur la page du calendrier ne fonctionnait pas car il ramenait l'utilisateur vers le calendrier au lieu d'afficher la liste.
-- **Solution** : Création d'une vraie page de liste des rendez-vous avec fonctionnalités complètes.
+**Problèmes identifiés :**
+1. L'option "Paiement" était visible côté client (inutile - c'est l'admin qui décide)
+2. Le participant était requis alors qu'une demande de RDV est dirigée vers l'admin
+3. La page de liste (`/dashboard/appointments`) redirigeait vers le calendrier
+4. Aucune notification n'était envoyée à l'admin lors d'une demande de RDV
 
-### Nouvelle Page Liste des Rendez-vous (`/dashboard/appointments`)
+**Solutions implémentées :**
 
-**Fonctionnalités :**
-- **Vue en liste** : Affichage des rendez-vous groupés par date
-- **Recherche** : Recherche par titre, participant, email ou description
-- **Filtres** :
-  - Par statut (En attente, Confirmé, Terminé, Annulé, Absent)
-  - Par type (Gratuit, Payant)
-- **Navigation** : Lien vers le calendrier et création de nouveau rendez-vous
-- **Clic sur un rendez-vous** : Navigation vers la page de détail
+### 1. Formulaire Client Simplifié (`/dashboard/appointments/new`)
 
-### Navigation entre Calendrier et Liste
+Le formulaire a été transformé en "Demande de rendez-vous" :
 
-| Page | Bouton | Action |
-|------|--------|--------|
-| `/dashboard/calendar` | Liste | Redirige vers `/dashboard/appointments` |
-| `/dashboard/appointments` | Calendrier | Redirige vers `/dashboard/calendar` |
+| Avant | Après |
+|-------|-------|
+| Option paiement visible | Option paiement **retirée** (géré par admin) |
+| Participant requis | Participant **non requis** (l'admin gère) |
+| Titre "Nouveau rendez-vous" | Titre "**Demander un rendez-vous**" |
+| Bouton "Créer le rendez-vous" | Bouton "**Envoyer la demande**" |
+
+**Nouveau flux client :**
+- Client remplit : titre, description, créneau souhaité, lieu (optionnel)
+- Type automatiquement défini sur "free" (l'admin peut modifier)
+- Statut automatiquement défini sur "pending"
+- Message informatif expliquant le processus
+
+### 2. Notification Admin Automatique
+
+Lors de la création d'un RDV, une notification est envoyée via le chat admin avec :
+- Informations du client (nom, email)
+- Détails du rendez-vous (titre, date, heure, lieu)
+- Lien vers la page du rendez-vous
+- Instruction pour confirmer/refuser et configurer le paiement si nécessaire
+
+### 3. Page Liste des Rendez-vous (`/dashboard/appointments`)
+
+Création d'une vraie page de liste avec :
+- Recherche par titre, participant, email ou description
+- Filtres par statut et type
+- Affichage groupé par date
+- Navigation vers le calendrier et les détails
+
+### Flux Complet Client → Admin
+
+```
+1. Client → Envoie une demande de RDV (titre, description, créneau)
+2. Système → Crée le RDV avec status="pending", type="free"
+3. Système → Envoie notification à l'admin via chat
+4. Admin → Reçoit notification, consulte le RDV
+5. Admin → Configure le paiement si nécessaire
+6. Admin → Confirme ou refuse le RDV
+7. Client → Notifié de la confirmation (+ paiement si requis)
+```
 
 ### Fichiers Modifiés
 
 | Fichier | Modification |
 |---------|--------------|
-| `app/(private)/dashboard/appointments/page.tsx` | Réécriture complète - Page liste avec recherche et filtres |
+| `app/(private)/dashboard/appointments/new/page.tsx` | Formulaire simplifié - Demande de RDV |
+| `app/(private)/dashboard/appointments/page.tsx` | Page liste des rendez-vous |
+| `app/api/appointments/route.ts` | Ajout notification admin |
 | `docs/ACTION_LOG.md` | Ce fichier |
-| `docs/CALENDAR_APPOINTMENTS_MODULE.md` | Mise à jour de la documentation |
+| `docs/CALENDAR_APPOINTMENTS_MODULE.md` | Documentation mise à jour |
 
 ---
 

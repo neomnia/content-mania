@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
-import { appointments } from '@/db/schema'
+import { appointments, users } from '@/db/schema'
 import { eq, and, desc, gte, lte, or } from 'drizzle-orm'
 import { verifyAuth } from '@/lib/auth/server'
 import { z } from 'zod'
 import { syncAppointmentToCalendars } from '@/lib/calendar/sync'
+import { sendAdminNotification } from '@/lib/notifications/admin-notifications'
 
 // Force dynamic to prevent caching issues
 export const dynamic = 'force-dynamic'
@@ -196,6 +197,64 @@ export async function POST(request: NextRequest) {
         console.error('Calendar sync failed:', syncError)
         // Don't fail the request if sync fails
       }
+    }
+
+    // Send notification to admin for new appointment requests
+    try {
+      // Fetch user info for the notification
+      const userInfo = await db.query.users.findFirst({
+        where: eq(users.id, user.userId),
+        columns: {
+          firstName: true,
+          lastName: true,
+          email: true,
+        }
+      })
+
+      const userName = userInfo?.firstName && userInfo?.lastName
+        ? `${userInfo.firstName} ${userInfo.lastName}`
+        : userInfo?.email || user.email
+
+      const formattedStartTime = startTime.toLocaleString('fr-FR', {
+        dateStyle: 'full',
+        timeStyle: 'short',
+        timeZone: validated.timezone
+      })
+
+      const formattedEndTime = endTime.toLocaleString('fr-FR', {
+        timeStyle: 'short',
+        timeZone: validated.timezone
+      })
+
+      await sendAdminNotification({
+        subject: `Nouvelle demande de RDV - ${validated.title}`,
+        message: `📅 **Nouvelle demande de rendez-vous**\n\n` +
+          `**Titre:** ${validated.title}\n` +
+          `**Client:** ${userName} (${userInfo?.email || user.email})\n` +
+          `**Date:** ${formattedStartTime} - ${formattedEndTime}\n` +
+          (validated.description ? `**Description:** ${validated.description}\n` : '') +
+          (validated.location ? `**Lieu:** ${validated.location}\n` : '') +
+          (validated.meetingUrl ? `**Visio:** ${validated.meetingUrl}\n` : '') +
+          `\n---\n` +
+          `📌 **Action requise:** Confirmez ou refusez cette demande.\n` +
+          `Si un paiement est nécessaire, configurez-le avant de confirmer.\n\n` +
+          `[Voir le rendez-vous](/dashboard/appointments/${result.id})`,
+        type: 'appointment',
+        userId: user.userId,
+        userEmail: userInfo?.email || user.email,
+        userName,
+        priority: 'high',
+        metadata: {
+          appointmentId: result.id,
+          title: validated.title,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+        }
+      })
+      console.log('[API /appointments] Admin notification sent for new appointment')
+    } catch (notifyError) {
+      console.error('[API /appointments] Failed to send admin notification:', notifyError)
+      // Don't fail the request if notification fails
     }
 
     return NextResponse.json({ success: true, data: result }, { status: 201 })

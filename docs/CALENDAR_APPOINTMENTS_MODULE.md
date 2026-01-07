@@ -262,6 +262,31 @@ Full-featured list view of appointments with:
 - "Calendrier" button → `/dashboard/calendar`
 - "Nouveau" button → `/dashboard/appointments/new`
 
+### Appointment Request Page (`/dashboard/appointments/new`)
+
+Client-side appointment request form. This is a **request** that must be validated by admin.
+
+**Form Fields:**
+- **Title** (required): Subject of the appointment request
+- **Description**: Detailed explanation of the appointment purpose
+- **Preferred Date/Time** (required): Client's preferred time slot
+- **Timezone**: Client's timezone
+- **Location** (optional): Physical address or video conference link
+- **Notes**: Additional information for the admin
+
+**Automatic Behavior:**
+- Type is always set to `free` (admin can change to `paid` if needed)
+- Status is always set to `pending` (waiting for admin confirmation)
+- No payment options shown to client
+- No attendee information required (admin manages this)
+
+**User Flow:**
+1. Client fills the request form
+2. System creates appointment with `status: pending`, `type: free`
+3. Admin receives notification in chat
+4. Admin reviews, configures payment if needed, and confirms/rejects
+5. Client is notified of the decision
+
 ### Admin Routes
 
 Routes accessible only to administrators for managing all appointments across the platform.
