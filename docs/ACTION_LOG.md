@@ -2,6 +2,61 @@
 
 Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
 
+## [2026-01-07] - Standardization: English Code Comments & Error Messages
+
+### Fix: Translate French Comments and Error Messages to English
+
+**Context:**
+The project should be fully in English (code comments, error messages, function documentation). French content was found in API routes and service files.
+
+**Files Translated:**
+
+### 1. app/api/checkout/available-slots/route.ts
+
+| French | English |
+|--------|---------|
+| `productId requis` | `productId required` |
+| `Produit non trouvé` | `Product not found` |
+| `Ce produit ne supporte pas les réservations` | `This product does not support bookings` |
+| `Erreur lors de la récupération des créneaux` | `Error fetching available slots` |
+
+### 2. lib/checkout/checkout-service.ts
+
+**File header and function documentation translated:**
+- `Service de Checkout Unifié` → `Unified Checkout Service`
+- `Génère un numéro de commande unique` → `Generates a unique order number`
+- `Récupère ou crée un client Lago` → `Gets or creates a Lago customer`
+- `Crée une facture via Lago` → `Creates an invoice via Lago`
+- `Process un checkout pour des produits de type...` → `Process checkout for ... type products`
+- `Point d'entrée principal du checkout` → `Main checkout entry point`
+- `Simule le paiement en mode test` → `Simulate payment in test mode`
+
+**Error messages translated:**
+| French | English |
+|--------|---------|
+| `Produit non trouvé` | `Product not found` |
+| `Ce produit ne supporte pas la réservation de rendez-vous` | `This product does not support appointment booking` |
+| `Panier non spécifié` | `Cart not specified` |
+| `Panier vide ou non trouvé` | `Cart empty or not found` |
+| `Données de rendez-vous requises pour les produits de type appointment` | `Appointment data required for appointment-type products` |
+| `Rendez-vous non trouvé` | `Appointment not found` |
+| `Déjà payé` | `Already paid` |
+
+**Code comments translated (40+ comments):**
+All inline comments in French were translated to English while preserving the code logic.
+
+**Note:** Email templates remain in French as they are user-facing content for French users. Only code-level documentation and error messages were translated.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `app/api/checkout/available-slots/route.ts` | Error messages translated |
+| `lib/checkout/checkout-service.ts` | Comments, docs, and error messages translated |
+| `docs/ACTION_LOG.md` | This entry |
+
+---
+
 ## [2026-01-07] - Fix: Checkout Flow pour Produits Appointment
 
 ### Fix : Correction de la conversion Date/String dans le checkout

@@ -1,10 +1,10 @@
 /**
- * Service de Checkout Unifié
- * Gère le tunnel d'achat selon le type de produit:
- * - standard: Checkout classique avec paiement
- * - digital: Checkout + email équipe
- * - free: Pas de paiement
- * - appointment: Réservation calendrier + paiement optionnel
+ * Unified Checkout Service
+ * Handles the purchase flow based on product type:
+ * - standard: Classic checkout with payment
+ * - digital: Checkout + team email notification
+ * - free: No payment required
+ * - appointment: Calendar booking + optional payment
  */
 
 import { db } from '@/db'
@@ -37,7 +37,7 @@ interface CheckoutParams {
 }
 
 /**
- * Génère un numéro de commande unique
+ * Generates a unique order number
  */
 function generateOrderNumber(): string {
   const date = new Date()
@@ -49,7 +49,7 @@ function generateOrderNumber(): string {
 }
 
 /**
- * Récupère ou crée un client Lago
+ * Gets or creates a Lago customer
  */
 async function getOrCreateLagoCustomer(params: {
   userId: string
@@ -69,11 +69,11 @@ async function getOrCreateLagoCustomer(params: {
     return { lagoId: testCustomer.lagoId, testMode: true }
   }
 
-  // Mode production - utiliser Lago réel
+  // Production mode - use real Lago
   try {
     const lago = await getLagoClient()
 
-    // Vérifier si le client existe dans la DB
+    // Check if customer exists in DB
     if (params.companyId) {
       const company = await db.query.companies.findFirst({
         where: eq(companies.id, params.companyId)
@@ -83,7 +83,7 @@ async function getOrCreateLagoCustomer(params: {
       }
     }
 
-    // Créer le client dans Lago
+    // Create customer in Lago
     const result = await lago.customers.createCustomer({
       customer: {
         external_id: params.companyId || params.userId,
@@ -98,7 +98,7 @@ async function getOrCreateLagoCustomer(params: {
 
     const lagoId = result.data.customer.lago_id
 
-    // Sauvegarder le Lago ID dans la company si applicable
+    // Save Lago ID in company if applicable
     if (params.companyId && lagoId) {
       await db.update(companies)
         .set({ lagoId, updatedAt: new Date() })
@@ -108,7 +108,7 @@ async function getOrCreateLagoCustomer(params: {
     return { lagoId: lagoId || '', testMode: false }
   } catch (error) {
     console.error('[Checkout] Lago customer creation failed, falling back to test mode:', error)
-    // Fallback vers le mode test
+    // Fallback to test mode
     const testCustomer = await createTestCustomer({
       externalId: params.companyId || params.userId,
       email: params.userEmail,
@@ -119,7 +119,7 @@ async function getOrCreateLagoCustomer(params: {
 }
 
 /**
- * Crée une facture via Lago (mode réel ou test)
+ * Creates an invoice via Lago (real or test mode)
  */
 async function createLagoInvoice(params: {
   customerId: string
@@ -152,7 +152,7 @@ async function createLagoInvoice(params: {
     }
   }
 
-  // Mode production
+  // Production mode
   try {
     const lago = await getLagoClient()
 
@@ -198,7 +198,7 @@ async function createLagoInvoice(params: {
 }
 
 /**
- * Process un checkout pour des produits de type "appointment"
+ * Process checkout for "appointment" type products
  */
 async function processAppointmentCheckout(params: {
   product: typeof products.$inferSelect
@@ -226,16 +226,16 @@ async function processAppointmentCheckout(params: {
     endTime: endTime.toISOString()
   })
 
-  // 1. Déterminer si c'est payant
+  // 1. Determine if payment is required
   const isPaid = product.type === 'appointment' && (product.hourlyRate || 0) > 0
   const price = product.hourlyRate || 0
 
-  // 2. Créer le rendez-vous
+  // 2. Create the appointment
   const [appointment] = await db.insert(appointments).values({
     userId,
     productId: product.id,
     title: product.title,
-    description: product.description || `Réservation: ${product.title}`,
+    description: product.description || `Booking: ${product.title}`,
     startTime: startTime,
     endTime: endTime,
     timezone: appointmentData.timezone,
@@ -247,7 +247,7 @@ async function processAppointmentCheckout(params: {
     type: isPaid ? 'paid' : 'free',
     price: price,
     currency: product.currency || 'EUR',
-    isPaid: !isPaid, // Si gratuit, déjà "payé"
+    isPaid: !isPaid, // If free, already "paid"
     paymentStatus: isPaid ? 'pending' : 'paid',
   }).returning()
 
@@ -257,7 +257,7 @@ async function processAppointmentCheckout(params: {
     price
   })
 
-  // 3. Synchroniser avec le calendrier Neosaas
+  // 3. Sync with Neosaas calendar
   try {
     const syncResult = await syncAppointmentToCalendars(appointment.id)
     console.log('[Checkout] Calendar sync result:', syncResult)
@@ -265,12 +265,12 @@ async function processAppointmentCheckout(params: {
     console.error('[Checkout] Calendar sync failed (non-blocking):', syncError)
   }
 
-  // 4. Si payant, créer la facture Lago
+  // 4. If paid, create Lago invoice
   let invoiceResult
   let testMode = false
 
   if (isPaid) {
-    // Récupérer ou créer le client Lago
+    // Get or create Lago customer
     const lagoCustomer = await getOrCreateLagoCustomer({
       userId,
       userEmail,
@@ -279,7 +279,7 @@ async function processAppointmentCheckout(params: {
     })
     testMode = lagoCustomer.testMode
 
-    // Créer la facture
+    // Create invoice
     invoiceResult = await createLagoInvoice({
       customerId: lagoCustomer.lagoId,
       customerEmail: userEmail,
@@ -293,7 +293,7 @@ async function processAppointmentCheckout(params: {
       testMode
     })
 
-    // Mettre à jour le rendez-vous avec l'ID de facture
+    // Update appointment with invoice ID
     await db.update(appointments)
       .set({
         lagoInvoiceId: invoiceResult.invoiceId,
@@ -304,7 +304,7 @@ async function processAppointmentCheckout(params: {
       })
       .where(eq(appointments.id, appointment.id))
 
-    // Si en mode test avec auto-pay, confirmer le RDV
+    // If in test mode with auto-pay, confirm the appointment
     if (testMode && invoiceResult.status === 'paid') {
       await db.update(appointments)
         .set({
@@ -321,7 +321,7 @@ async function processAppointmentCheckout(params: {
     })
   }
 
-  // 5. Notifier l'équipe
+  // 5. Notify the team
   const teamNotification: TeamNotification = {
     type: 'appointment_booking',
     orderId: appointment.id,
@@ -346,7 +346,7 @@ async function processAppointmentCheckout(params: {
 
   await notifyTeamAppointmentBooking(teamNotification)
 
-  // 5b. Notifier l'admin via le système de chat
+  // 5b. Notify admin via chat system
   try {
     await notifyAdminNewAppointment({
       appointmentId: appointment.id,
@@ -365,11 +365,11 @@ async function processAppointmentCheckout(params: {
     // Non-blocking
   }
 
-  // 6. Envoyer email de confirmation au client
+  // 6. Send confirmation email to client
   try {
     await emailRouter.sendWithFallback({
       to: [appointmentData.attendeeEmail],
-      subject: `Confirmation de votre rendez-vous - ${product.title}`,
+      subject: `Appointment Confirmation - ${product.title}`,
       htmlContent: generateAppointmentConfirmationEmail({
         customerName: appointmentData.attendeeName,
         productTitle: product.title,
@@ -398,7 +398,7 @@ async function processAppointmentCheckout(params: {
 }
 
 /**
- * Process un checkout pour des produits digitaux
+ * Process checkout for digital products
  */
 async function processDigitalProductCheckout(params: {
   cartId: string
@@ -422,7 +422,7 @@ async function processDigitalProductCheckout(params: {
   const totalAmount = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
   const currency = items[0]?.product.currency || 'EUR'
 
-  // 1. Créer la commande
+  // 1. Create the order
   const [order] = await db.insert(orders).values({
     userId,
     companyId: companyId || null,
@@ -433,7 +433,7 @@ async function processDigitalProductCheckout(params: {
     paymentStatus: totalAmount > 0 ? 'pending' : 'paid'
   }).returning()
 
-  // 2. Créer les items de commande
+  // 2. Create order items
   for (const item of items) {
     await db.insert(orderItems).values({
       orderId: order.id,
@@ -448,7 +448,7 @@ async function processDigitalProductCheckout(params: {
     })
   }
 
-  // 3. Traiter le paiement si nécessaire
+  // 3. Process payment if required
   let invoiceResult
   let testMode = false
 
@@ -474,7 +474,7 @@ async function processDigitalProductCheckout(params: {
       testMode
     })
 
-    // Mettre à jour la commande avec l'info de paiement
+    // Update order with payment info
     await db.update(orders)
       .set({
         paymentStatus: invoiceResult.status === 'paid' ? 'paid' : 'pending',
@@ -489,7 +489,7 @@ async function processDigitalProductCheckout(params: {
       })
       .where(eq(orders.id, order.id))
 
-    // Si payé, marquer les items comme livrés
+    // If paid, mark items as delivered
     if (invoiceResult.status === 'paid') {
       await db.update(orderItems)
         .set({
@@ -499,7 +499,7 @@ async function processDigitalProductCheckout(params: {
         .where(eq(orderItems.orderId, order.id))
     }
   } else {
-    // Produits gratuits
+    // Free products
     await db.update(orders)
       .set({
         status: 'completed',
@@ -517,12 +517,12 @@ async function processDigitalProductCheckout(params: {
       .where(eq(orderItems.orderId, order.id))
   }
 
-  // 4. Convertir le panier
+  // 4. Convert the cart
   await db.update(carts)
     .set({ status: 'converted', updatedAt: new Date() })
     .where(eq(carts.id, cartId))
 
-  // 5. Notifier l'équipe
+  // 5. Notify the team
   const teamNotification: TeamNotification = {
     type: 'digital_product_purchase',
     orderId: order.id,
@@ -541,7 +541,7 @@ async function processDigitalProductCheckout(params: {
 
   await notifyTeamDigitalProductPurchase(teamNotification)
 
-  // 5b. Notifier l'admin via le système de chat
+  // 5b. Notify admin via chat system
   try {
     await notifyAdminNewOrder({
       orderId: order.id,
@@ -559,11 +559,11 @@ async function processDigitalProductCheckout(params: {
     // Non-blocking
   }
 
-  // 6. Envoyer email de confirmation au client
+  // 6. Send confirmation email to client
   try {
     await emailRouter.sendWithFallback({
       to: [userEmail],
-      subject: `Confirmation de votre commande #${orderNumber}`,
+      subject: `Order Confirmation #${orderNumber}`,
       htmlContent: generateOrderConfirmationEmail({
         customerName: userName,
         orderNumber,
@@ -592,7 +592,7 @@ async function processDigitalProductCheckout(params: {
 }
 
 /**
- * Point d'entrée principal du checkout
+ * Main checkout entry point
  */
 export async function processCheckout(params: CheckoutParams): Promise<CheckoutResult> {
   const { cartId, appointmentData, userId, userEmail, userName, companyId } = params
@@ -605,18 +605,18 @@ export async function processCheckout(params: CheckoutParams): Promise<CheckoutR
   })
 
   try {
-    // Si c'est une réservation de rendez-vous directe (sans panier)
+    // If this is a direct appointment booking (without cart)
     if (appointmentData && !cartId) {
       const product = await db.query.products.findFirst({
         where: eq(products.id, appointmentData.productId)
       })
 
       if (!product) {
-        return { success: false, error: 'Produit non trouvé' }
+        return { success: false, error: 'Product not found' }
       }
 
       if (product.type !== 'appointment') {
-        return { success: false, error: 'Ce produit ne supporte pas la réservation de rendez-vous' }
+        return { success: false, error: 'This product does not support appointment booking' }
       }
 
       return processAppointmentCheckout({
@@ -630,9 +630,9 @@ export async function processCheckout(params: CheckoutParams): Promise<CheckoutR
       })
     }
 
-    // Checkout classique avec panier
+    // Classic checkout with cart
     if (!cartId) {
-      return { success: false, error: 'Panier non spécifié' }
+      return { success: false, error: 'Cart not specified' }
     }
 
     const cart = await db.query.carts.findFirst({
@@ -651,10 +651,10 @@ export async function processCheckout(params: CheckoutParams): Promise<CheckoutR
     })
 
     if (!cart || cart.items.length === 0) {
-      return { success: false, error: 'Panier vide ou non trouvé' }
+      return { success: false, error: 'Cart empty or not found' }
     }
 
-    // Séparer les produits par type
+    // Separate products by type
     const appointmentItems = cart.items.filter(item => item.product.type === 'appointment')
     const digitalItems = cart.items.filter(item => item.product.type === 'digital')
     const standardItems = cart.items.filter(item => item.product.type === 'standard')
@@ -662,10 +662,10 @@ export async function processCheckout(params: CheckoutParams): Promise<CheckoutR
 
     const results: CheckoutResult[] = []
 
-    // Traiter les rendez-vous
+    // Process appointments
     for (const item of appointmentItems) {
       if (!appointmentData) {
-        return { success: false, error: 'Données de rendez-vous requises pour les produits de type appointment' }
+        return { success: false, error: 'Appointment data required for appointment-type products' }
       }
 
       const result = await processAppointmentCheckout({
@@ -683,7 +683,7 @@ export async function processCheckout(params: CheckoutParams): Promise<CheckoutR
       results.push(result)
     }
 
-    // Traiter les produits digitaux
+    // Process digital products
     if (digitalItems.length > 0) {
       const result = await processDigitalProductCheckout({
         cartId,
@@ -699,7 +699,7 @@ export async function processCheckout(params: CheckoutParams): Promise<CheckoutR
       results.push(result)
     }
 
-    // Traiter les produits standards et gratuits ensemble
+    // Process standard and free products together
     const otherItems = [...standardItems, ...freeItems]
     if (otherItems.length > 0) {
       const result = await processDigitalProductCheckout({
@@ -716,7 +716,7 @@ export async function processCheckout(params: CheckoutParams): Promise<CheckoutR
       results.push(result)
     }
 
-    // Convertir le panier si tout est OK
+    // Convert cart if everything is OK
     const allSuccessful = results.every(r => r.success)
     if (allSuccessful) {
       await db.update(carts)
@@ -724,7 +724,7 @@ export async function processCheckout(params: CheckoutParams): Promise<CheckoutR
         .where(eq(carts.id, cartId))
     }
 
-    // Retourner le résultat combiné
+    // Return combined result
     return {
       success: allSuccessful,
       orderId: results.find(r => r.orderId)?.orderId,
@@ -745,7 +745,7 @@ export async function processCheckout(params: CheckoutParams): Promise<CheckoutR
 }
 
 /**
- * Simule le paiement en mode test
+ * Simulate payment in test mode
  */
 export async function simulatePayment(appointmentId: string): Promise<CheckoutResult> {
   try {
@@ -754,11 +754,11 @@ export async function simulatePayment(appointmentId: string): Promise<CheckoutRe
     })
 
     if (!appointment) {
-      return { success: false, error: 'Rendez-vous non trouvé' }
+      return { success: false, error: 'Appointment not found' }
     }
 
     if (appointment.isPaid) {
-      return { success: false, error: 'Déjà payé' }
+      return { success: false, error: 'Already paid' }
     }
 
     const payment = await simulateTestPayment(appointment.lagoInvoiceId || '')
@@ -788,7 +788,7 @@ export async function simulatePayment(appointmentId: string): Promise<CheckoutRe
   }
 }
 
-// Helper functions pour les emails
+// Helper functions for emails
 
 function generateAppointmentConfirmationEmail(params: {
   customerName: string

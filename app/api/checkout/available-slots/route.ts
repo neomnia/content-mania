@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
 
     if (!productId) {
       return NextResponse.json(
-        { success: false, error: 'productId requis' },
+        { success: false, error: 'productId required' },
         { status: 400 }
       )
     }
@@ -172,14 +172,14 @@ export async function GET(request: NextRequest) {
 
     if (!product) {
       return NextResponse.json(
-        { success: false, error: 'Produit non trouvé' },
+        { success: false, error: 'Product not found' },
         { status: 404 }
       )
     }
 
     if (product.type !== 'appointment') {
       return NextResponse.json(
-        { success: false, error: 'Ce produit ne supporte pas les réservations' },
+        { success: false, error: 'This product does not support bookings' },
         { status: 400 }
       )
     }
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[API Available Slots] Error:', error)
     return NextResponse.json(
-      { success: false, error: 'Erreur lors de la récupération des créneaux' },
+      { success: false, error: 'Error fetching available slots' },
       { status: 500 }
     )
   }
