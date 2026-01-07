@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// GET stats for admin dashboard
+// POST /api/admin/appointments - Create appointment or get stats
 export async function POST(request: NextRequest) {
   try {
     const user = await verifyAuth()
@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
+    // Action: Get stats
     if (body.action === 'stats') {
       const now = new Date()
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -121,6 +122,76 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json({ success: true, data: stats })
+    }
+
+    // Action: Create appointment (admin requests appointment with client)
+    if (body.action === 'create') {
+      const {
+        clientEmail,
+        title,
+        description,
+        startTime,
+        endTime,
+        timezone = 'Europe/Paris',
+        type = 'free',
+        price = 0,
+        currency = 'EUR',
+        location,
+        meetingUrl,
+        notes,
+      } = body
+
+      // Validate required fields
+      if (!clientEmail || !title || !startTime || !endTime) {
+        return NextResponse.json(
+          { error: 'Missing required fields: clientEmail, title, startTime, endTime' },
+          { status: 400 }
+        )
+      }
+
+      // Find client user by email
+      const clientUser = await db.query.users.findFirst({
+        where: eq(users.email, clientEmail),
+      })
+
+      if (!clientUser) {
+        return NextResponse.json(
+          { error: 'Client not found with this email' },
+          { status: 404 }
+        )
+      }
+
+      // Create appointment with status 'pending' (awaiting client confirmation)
+      const [newAppointment] = await db.insert(appointments).values({
+        userId: clientUser.id,
+        assignedAdminId: user.userId, // Admin who created the request
+        title,
+        description,
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        timezone,
+        status: 'pending', // Client needs to confirm
+        type,
+        price,
+        currency,
+        isPaid: false,
+        location,
+        meetingUrl,
+        notes,
+        attendeeEmail: clientUser.email,
+        attendeeName: `${clientUser.firstName} ${clientUser.lastName}`,
+        attendeePhone: clientUser.phone,
+      }).returning()
+
+      console.log('[API /admin/appointments POST] Created appointment request:', newAppointment.id)
+
+      // TODO: Send notification email to client about the appointment request
+
+      return NextResponse.json({
+        success: true,
+        data: newAppointment,
+        message: 'Appointment request sent to client'
+      })
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })

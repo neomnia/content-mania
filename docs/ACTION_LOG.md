@@ -2,6 +2,191 @@
 
 Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
 
+## [2026-01-07] - Feature: Admin Appointment Request & Client Confirmation System
+
+### New: Admin Can Request Appointments with Clients
+
+**Objective:**
+Enable administrators to proactively request appointments with clients. Clients receive the request and can confirm it with one click.
+
+### Features Implemented
+
+#### 1. Admin Appointment Request API
+
+**File:** `app/api/admin/appointments/route.ts`
+
+**New Action: `create`**
+- Allows admins to create appointment requests for clients
+- Validates client exists by email lookup
+- Creates appointment with `status: pending`
+- Automatically assigns requesting admin (`assignedAdminId`)
+- Pre-fills client information (name, email, phone)
+
+**Request Example:**
+```json
+POST /api/admin/appointments
+{
+  "action": "create",
+  "clientEmail": "client@example.com",
+  "title": "Technical Consultation",
+  "description": "Project discussion",
+  "startTime": "2026-01-20T10:00:00Z",
+  "endTime": "2026-01-20T11:00:00Z",
+  "type": "free",
+  "location": "Paris Office",
+  "meetingUrl": "https://meet.google.com/abc",
+  "notes": "VIP client"
+}
+```
+
+**Validations:**
+- Client must exist in database (404 if not found)
+- Required fields: `clientEmail`, `title`, `startTime`, `endTime`
+
+#### 2. Admin Calendar View
+
+**File:** `app/(private)/admin/appointments/calendar/page.tsx` (NEW)
+
+**Features:**
+- Full calendar interface using `react-big-calendar`
+- Displays ALL appointments from all users (group-wide)
+- 4 view modes: Month, Week, Day, Agenda
+- Color-coded by status:
+  - 🟡 Yellow: Pending
+  - 🟢 Green: Confirmed
+  - ⚪ Gray: Completed
+  - 🔴 Red: Cancelled/No Show
+- Click time slot → Opens appointment request dialog
+- Click event → Navigate to appointment details
+- Navigation to/from list view
+
+**Dialog Form:**
+- Client email (required, autocomplete)
+- Title (required)
+- Description
+- Type: Free/Paid (with price input)
+- Location
+- Meeting URL
+- Internal notes (admin only)
+
+#### 3. Client Confirmation Interface
+
+**File:** `app/(private)/dashboard/appointments/page.tsx`
+
+**New Section:**
+- Yellow/gold card displayed at top when pending appointments exist
+- Shows all appointments requiring confirmation
+- Each card displays:
+  - Title and description
+  - Date, time, location
+  - "Détails" button (view full info)
+  - "Confirmer" button (one-click confirmation)
+
+**Confirmation Logic:**
+```typescript
+const handleConfirmAppointment = async (appointmentId: string) => {
+  await fetch(`/api/appointments/${appointmentId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: 'confirmed' })
+  })
+}
+```
+
+#### 4. Updated Permissions
+
+**File:** `app/api/appointments/[id]/route.ts`
+
+**Changed Logic:**
+- **Before:** Only admins could confirm appointments
+- **After:** 
+  - Clients can confirm THEIR OWN pending appointments
+  - Admins can update any appointment to any status
+  - Only admins can mark appointments as completed
+
+**Security Rules:**
+```typescript
+if (validated.status === 'confirmed') {
+  const isOwnAppointment = existing.userId === user.userId
+  const wasPending = existing.status === 'pending'
+  
+  if (!userIsAdmin && (!isOwnAppointment || !wasPending)) {
+    return 403 // Forbidden
+  }
+}
+```
+
+#### 5. Navigation Enhancements
+
+**Admin List Page:** Added "Calendar View" button
+**Admin Calendar Page:** Added "List View" button
+**Bidirectional navigation** between views
+
+### User Flows
+
+**Admin → Client Request:**
+1. Admin goes to `/admin/appointments/calendar`
+2. Clicks time slot
+3. Fills client email and appointment details
+4. System creates `pending` appointment
+5. Client sees yellow card on dashboard
+
+**Client → Confirmation:**
+1. Client logs in to `/dashboard/appointments`
+2. Sees yellow pending confirmation card
+3. Reviews appointment details
+4. Clicks "Confirmer"
+5. Status changes to `confirmed`
+6. Admin calendar shows green event
+
+### Files Created
+- `app/(private)/admin/appointments/calendar/page.tsx` - Admin calendar view
+- `docs/ADMIN_APPOINTMENT_REQUEST_SYSTEM.md` - Implementation guide
+
+### Files Modified
+- `app/api/admin/appointments/route.ts` - Added create action
+- `app/api/appointments/[id]/route.ts` - Updated confirmation permissions
+- `app/(private)/admin/appointments/page.tsx` - Added calendar link
+- `app/(private)/dashboard/appointments/page.tsx` - Added confirmation section
+- `docs/CALENDAR_APPOINTMENTS_MODULE.md` - Updated with new features
+
+### Technical Details
+
+**Database:**
+- Uses existing `appointments` table
+- Field `assignedAdminId` for admin assignment
+- Field `status` with value `pending` for requests
+
+**Security:**
+- JWT authentication via `verifyAuth()`
+- Role-based permissions (admin vs client)
+- Email validation for client existence
+
+**UI/UX:**
+- Yellow/gold cards for pending items (visual priority)
+- One-click confirmation (no extra forms)
+- Real-time calendar updates
+- Responsive design (mobile-friendly)
+
+### Next Steps (Recommended)
+
+1. **Email Notifications:**
+   - Send email to client when admin creates request
+   - Send email to admin when client confirms
+   - Use existing email system
+
+2. **Push Notifications:**
+   - Real-time notification badge
+   - WebSocket or Server-Sent Events
+
+3. **Appointment History:**
+   - Log who created/confirmed
+   - Timestamp audit trail
+
+4. **iCal Export:**
+   - Allow clients to add to external calendars
+
+---
+
 ## [2026-01-07] - Fix: Admin-Only Appointment Confirmation
 
 ### Security: Client Self-Confirmation Removed

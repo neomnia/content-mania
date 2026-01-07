@@ -147,6 +147,31 @@ export default function AppointmentsListPage() {
     new Date(b).getTime() - new Date(a).getTime()
   )
 
+  // Get pending appointments that need user confirmation
+  const pendingAppoint = appointments.filter(apt => apt.status === 'pending')
+
+  const handleConfirmAppointment = async (appointmentId: string) => {
+    try {
+      const response = await fetch(`/api/appointments/${appointmentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'confirmed' }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success("Rendez-vous confirmé !")
+        fetchAppointments() // Refresh list
+      } else {
+        toast.error(data.error || "Échec de la confirmation")
+      }
+    } catch (error) {
+      console.error("Failed to confirm appointment:", error)
+      toast.error("Erreur de connexion")
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -172,6 +197,68 @@ export default function AppointmentsListPage() {
           </Button>
         </div>
       </div>
+
+      {/* Pending Confirmation Section */}
+      {pendingAppoint.length > 0 && (
+        <Card className="border-yellow-200 bg-yellow-50/50">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Clock className="h-5 w-5 text-yellow-600" />
+              Rendez-vous en attente de confirmation
+            </CardTitle>
+            <CardDescription>
+              Ces rendez-vous ont été demandés par l'équipe et nécessitent votre confirmation
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pendingAppoint.map(apt => (
+                <div key={apt.id} className="bg-white rounded-lg p-4 border border-yellow-200">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <h4 className="font-medium mb-1">{apt.title}</h4>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <CalendarIcon className="h-3 w-3" />
+                          {format(new Date(apt.startTime), "PPP", { locale: fr })}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {format(new Date(apt.startTime), "HH:mm")} - {format(new Date(apt.endTime), "HH:mm")}
+                        </span>
+                        {apt.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {apt.location}
+                          </span>
+                        )}
+                      </div>
+                      {apt.description && (
+                        <p className="text-sm text-muted-foreground mt-2">{apt.description}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => router.push(`/dashboard/appointments/${apt.id}`)}
+                      >
+                        Détails
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleConfirmAppointment(apt.id)}
+                      >
+                        Confirmer
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>

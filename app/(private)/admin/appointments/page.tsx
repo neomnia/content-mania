@@ -247,6 +247,12 @@ export default function AdminAppointmentsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/appointments/calendar">
+              <Calendar className="mr-2 h-4 w-4" />
+              Calendar View
+            </Link>
+          </Button>
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Export

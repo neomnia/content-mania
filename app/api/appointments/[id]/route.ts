@@ -95,12 +95,25 @@ export async function PUT(
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
     }
 
-    // Enforce admin-only confirmation
-    // Only admins can change status to 'confirmed' or 'completed'
-    if (validated.status === 'confirmed' || validated.status === 'completed') {
+    // Clients can confirm their own appointments if they were in 'pending' status
+    // Admins can change to any status
+    if (validated.status === 'confirmed') {
+      const isOwnAppointment = existing.userId === user.userId
+      const wasPending = existing.status === 'pending'
+      
+      if (!userIsAdmin && (!isOwnAppointment || !wasPending)) {
+        return NextResponse.json(
+          { error: 'You can only confirm your own pending appointments' },
+          { status: 403 }
+        )
+      }
+    }
+
+    // Only admins can mark appointments as completed
+    if (validated.status === 'completed') {
       if (!userIsAdmin) {
         return NextResponse.json(
-          { error: 'Only administrators can confirm or complete appointments' },
+          { error: 'Only administrators can mark appointments as completed' },
           { status: 403 }
         )
       }

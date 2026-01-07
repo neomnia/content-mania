@@ -7,7 +7,9 @@ The Calendar & Appointments module provides a comprehensive appointment booking 
 ## Features
 
 - **Appointment Management**: Create, update, and manage appointments (free and paid)
-- **Calendar View**: Visual calendar interface with react-big-calendar
+- **Calendar View**: Visual calendar interface with react-big-calendar (client & admin)
+- **Admin Request System**: Admins can request appointments with clients (NEW ✨)
+- **Client Confirmation**: Clients can confirm pending appointment requests (NEW ✨)
 - **External Calendar Sync**: Bidirectional sync with Google Calendar and Microsoft Outlook
 - **Payment Integration**: Lago integration for paid appointments
 - **Availability Management**: Define available time slots and exceptions
@@ -25,6 +27,7 @@ Main table for storing appointments.
 | id | UUID | Primary key |
 | userId | UUID | Owner of the appointment |
 | productId | UUID | Optional link to appointment product |
+| assignedAdminId | UUID | Admin assigned to handle this appointment (NEW ✨) |
 | title | TEXT | Appointment title |
 | description | TEXT | Optional description |
 | location | TEXT | Physical location |
@@ -43,7 +46,7 @@ Main table for storing appointments.
 | attendeeEmail | TEXT | External attendee email |
 | attendeeName | TEXT | External attendee name |
 | attendeePhone | TEXT | External attendee phone |
-| notes | TEXT | Internal notes |
+| notes | TEXT | Internal notes (admin only) |
 
 #### `calendarConnections`
 Stores OAuth tokens for external calendar services.
@@ -149,6 +152,19 @@ Get a single appointment.
 
 #### PUT /api/appointments/[id]
 Update an appointment.
+**Special Rules:**
+- **Clients** can confirm their own pending appointments (status: `pending` → `confirmed`)
+- **Admins** can update any appointment to any status
+- Only admins can mark appointments as `completed`
+
+**Client Confirmation Example:**
+```json
+PUT /api/appointments/abc123
+{
+  "status": "confirmed"
+}
+```
+
 
 #### DELETE /api/appointments/[id]
 Delete an appointment.
@@ -219,16 +235,29 @@ MICROSOFT_REDIRECT_URI=https://yourdomain.com/api/calendar/callback/microsoft
 3. Create a new registration
 4. Add redirect URI: `https://yourdomain.com/api/calendar/callback/microsoft`
 5. Create a client secret
-6. Add API permissions:
-   - `Calendars.ReadWrite`
-   - `User.Read`
-   - `offline_access`
+6. Add API permissions:with pending confirmation section (NEW ✨) |
+| `/dashboard/appointments/new` | Create new appointment |
+| `/dashboard/appointments/[id]` | Appointment details |
+| `/dashboard/calendar` | Calendar view (react-big-calendar) |
+| `/dashboard/calendar/settings` | Calendar connections (Google/Microsoft) |
+| `/dashboard/support` | Help center & FAQ |
 
-## Frontend Pages
+### Appointments List Page (`/dashboard/appointments`) ✨ UPDATED
 
-### Client Dashboard Routes
+Full-featured list view of appointments with:
 
-Routes accessible to all authenticated users for managing their own appointments.
+**Pending Confirmation Section (NEW):**
+- Special yellow/gold card section at the top of the page
+- Shows all appointments with `status: pending` that require client confirmation
+- Each pending appointment displays:
+  - Title and description
+  - Date and time
+  - Location (if specified)
+  - Two action buttons:
+    - **"Détails"** → View full appointment details
+    - **"Confirmer"** → Confirm appointment (changes status to `confirmed`)
+- Only visible when there are pending appointments
+- Disappears after all appointments are confirmedfor managing their own appointments.
 
 | Route | Description |
 |-------|-------------|
@@ -267,7 +296,85 @@ Full-featured list view of appointments with:
 Client-side appointment request form. This is a **request** that must be validated by admin.
 
 **Form Fields:**
-- **Title** (required): Subject of the appointment request
+- **Title** (required): Subject of the appoinlist management |
+| `/admin/appointments/calendar` | Admin calendar view with request creation (NEW ✨) |
+
+### Admin Appointments List (`/admin/appointments`)
+
+List view of all appointments across all users with:
+
+**Features:**
+- Search by title, client name, or email
+- Filter by status and type
+- View assigned admin for each appointment
+- Export functionality
+- Statistics cards (total, pending, confirmed, revenue, etc.)
+- Action menu for each appointment:
+  - View details
+  - Confirm/assign admin
+  - Cancel
+  - Mark as completed/no-show
+
+**Navigation:**
+- "Calendar View" button → `/admin/appointments/calendar`
+
+### Admin Calendar Page (`/admin/appointments/calendar`) ✨ NEW
+
+Full calendar view for admins to visualize and manage all appointments.
+
+**Library:** `react-big-calendar`
+
+**Features:**
+- **View all appointments** from all users (group-wide visibility)
+- **Multiple views:** Month, Week, Day, Agenda
+- **Color-coded status:**
+  - 🟡 Yellow: Pending (awaiting client confirmation)
+  - 🟢 Green: Confirmed
+  - ⚪ Gray: Completed
+  - 🔴 Red: Cancelled / No Show
+- **Quick creation:** Click any time slot to open appointment request dialog
+- **Event details:** Each event shows title and client name
+- **Click events:** Navigate to appointment details
+
+**Create Appointment Request Dialog:**
+
+When clicking a time slot, opens a modal with:
+
+**Required Fields:**
+- **Client Email**: Must be a registered user in the system
+- **Title**: Appointment subject
+
+**Optional Fields:**
+- **Description**: Detailed information
+- **Type**: Free or Paid (with price input for paid)
+- **Location**: Physical address or "Virtual"
+- **Meeting URL**: Video conference link (Google Meet, Zoom, etc.)
+- **Internal Notes**: Only visible to admins
+
+**Behavior:**
+1. Admin fills the form
+2. System validates client email exists
+3. Appointment created with:
+   - `status: pending` (client must confirm)
+   - `userId: <client_id>`
+   - `assignedAdminId: <admin_id>` (auto-assigned to creator)
+   - Pre-filled attendee info from client profile
+4. Client receives notification (TODO: email)
+5. Appointment appears in yellow on calendar
+
+**Navigation:**
+- "List View" button → `/admin/appointments`
+
+**Custom Toolbar:**
+- Previous/Next/Today navigation
+- Current date display
+- View selector (Month/Week/Day/Agenda)
+
+**Use Cases:**
+- Admin needs to schedule a consultation with a specific client
+- Admin wants to propose multiple time slots to a client
+- Admin wants to visualize team availability
+- Admin needs to see all upcoming appointments at a glancet
 - **Description**: Detailed explanation of the appointment purpose
 - **Preferred Date/Time** (required): Client's preferred time slot
 - **Timezone**: Client's timezone
@@ -302,18 +409,301 @@ List all appointments across all users (admin only).
 
 **Query Parameters:**
 - `status`: Filter by status
-- `type`: Filter by type
+- `
+
+## User Flows
+
+### Flow 1: Admin Requests Appointment with Client ✨ NEW
+
+**Scenario:** Admin needs to schedule a consultation with a client.
+
+1. **Admin** navigates to `/admin/appointments/calendar`
+2. **Admin** clicks on a time slot (e.g., Jan 20, 2026 at 10:00 AM)
+3. **System** opens "Request Appointment with Client" dialog with pre-filled times
+4. **Admin** fills form:
+   - Client Email: `jean.dupont@example.com`
+   - Title: `Technical Consultation`
+   - Description: `Discuss project architecture`
+   - Type: `Free`
+   - Location: `Paris Office`
+   - Meeting URL: `https://meet.google.com/xyz`
+   - Notes: `VIP client - prepare demo`
+5. **Admin** clicks "Send Request"
+6. **System** validates:
+   - ✅ Client exists in database
+   - ✅ Time slot is not overlapping
+   - ✅ All required fields present
+7. **System** creates appointment:
+   ```json
+   {
+     "userId": "<jean_dupont_id>",
+     "assignedAdminId": "<admin_id>",
+     "status": "pending",
+     "title": "Technical Consultation",
+     "attendeeEmail": "jean.dupont@example.com",
+     "attendeeName": "Jean Dupont",
+     ...
+   }
+   ```
+8. **System** shows success toast: "Appointment request sent to client"
+9. **Calendar** refreshes, shows yellow event
+10. **Client** receives notification (TODO: email implementation)
+
+### Flow 2: Client Confirms Appointment Request ✨ NEW
+
+**Scenario:** Client receives appointment request from admin and needs to confirm.
+
+1. **Client** logs in and navigates to `/dashboard/appointments`
+2. **System** displays yellow card at top:
+   > 🕐 **Rendez-vous en attente de confirmation**
+   > 
+   > Ces rendez-vous ont été demandés par l'équipe et nécessitent votre confirmation
+3. **Card** shows appointment details:
+   - Title: Technical Consultation
+   - Date: Tuesday, January 20, 2026
+   - Time: 10:00 - 11:00
+   - Location: Paris Office
+   - Description: Discuss project architecture
+4. **Client** reviews and clicks "Confirmer"
+5. **System** calls `PUT /api/appointments/{id}` with `{ status: "confirmed" }`
+6. **API** validates:
+   - ✅ User owns this appointment
+   - ✅ Appointment is in `pending` status
+   - ✅ User has permission to confirm
+7. **System** updates appointment:
+   ```json
+   {
+     "status": "confirmed",
+     "updatedAt": "2026-01-15T14:30:00Z"
+   }
+   ```
+8. **System** shows success toast: "Rendez-vous confirmé !"
+9. **Page** refreshes, yellow card disappears
+10. **Admin calendar** updates, shows green event
+
+### Flow 3: Client Views Appointments in Calendar
+
+**Scenario:** Client wants visual overview of all appointments.
+
+1. **Client** navigates to `/dashboard/calendar`
+2. **System** fetches appointments for date range (3 months before/after)
+3. **Calendar** displays:
+   - Green events for confirmed appointments
+   - Yellow events for pending requests
+   - Gray events for completed
+4. **Client** can:
+   - Switch views (Month/Week/Day/Agenda)
+   - Navigate dates (Previous/Next/Today)
+   - Click event → Navigate to `/dashboard/appointments/{id}`
+   - Click time slot → Navigate to `/dashboard/appointments/new` with pre-filled time
+
+### Flow 4: Admin Monitors All Appointments
+
+**Scenario:** Admin needs to see team schedule and client appointments.
+
+1. **Admin** navigates to `/admin/appointments/calendar`
+2. **Calendar** shows **all appointments** from all users
+3. **Visual indicators:**
+   - Event title + client name
+   - Color by status
+   - Time duration
+4. **Admin** can:
+   - See who is assigned to each appointment
+   - Create new requests by clicking slots
+   - Click events to view/edit details
+   - Switch between calendar and list viewstype`: Filter by type
 - `startDate`: Filter from date
 - `endDate`: Filter to date
 - `limit`: Maximum results (default: 100)
 
-**Response includes user information:**
+**RespoassignedAdmin": {
+        "id": "admin_uuid",
+        "firstName": "Admin",
+        "lastName": "Name",
+    Test Admin Request Creation ✨ NEW
+
+```bash
+curl -X POST http://localhost:3000/api/admin/appointments \
+  -H "Content-Type: application/json" \
+  -H "Cookie: auth-token=admin_token" \
+  -d '{
+    "action": "create",
+    "clientEmail": "client@example.com",
+    "title": "Test Consultation",
+    "description": "Testing admin request feature",
+    "startTime": "2026-01-20T10:00:00Z",
+    "endTime": "2026-01-20T11:00:00Z",
+    "type": "free",
+    "location": "Office",
+    "notes": "Test appointment"
+  }'
+```
+
+**Expected Response:**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": "uuid",
+  "data": {
+    "id": "new_uuid",
+    "status": "pending",
+    "title": "Test Consultation",
+    ...
+  },
+  "message": "Appointment request sent to client"
+}
+```Admin Request Issues ✨ NEW
+
+**Error: "Client not found with this email"**
+- **Cause**: Email doesn't exist in users table
+- **Solution**: Verify email is correct, client must be registered first
+
+**Error: "Missing required fields"**
+- **Cause**: clientEmail, title, startTime, or endTime missing
+- **Solution**: Include all required fields in request body
+
+**Pending appointments not showing for client**
+- **Cause**: Status filter or UI issue
+- **Solution**: Check status is `pending`, refresh page, check console for errors
+
+### Client Confirmation Issues ✨ NEW
+
+**Error: "You can only confirm your own pending appointments"**
+- **Cause**: Either appointment doesn't belong to user or status is not `pending`
+- **Solution**: Verify appointment ownership and status
+
+**Confirm button doesn't work**
+- **Cause**: API error or network issue
+- **Solution**: Check browser console, verify authentication, check API logs
+
+### OAuth Errors
+
+- **state_expired**: User took too long, restart OAuth flow
+- **invalid_state**: State verification failed, check encryption
+- **access_denied**: User denied permissions
+
+### Sync Issues
+
+- Check token expiration and refresh logic
+- Verify calendar permissions
+- Check API rate limits
+
+### Payment Issues
+
+- Verify Lago API key configuration
+- Check customer exists in Lago
+- Review webhook configuration
+
+## Changelog
+
+### January 7, 2026 ✨ NEW FEATURES
+
+**Admin Request System:**
+- ✅ Admins can request appointments with clients via calendar interface
+- ✅ POST `/api/admin/appointments` with action `create`
+- ✅ New page `/admin/appointments/calendar` with full calendar view
+- ✅ Dialog-based appointment request form
+- ✅ Automatic assignment of requesting admin
+
+**Client Confirmation:**
+- ✅ Clients can confirm pending appointments
+- ✅ PUT `/api/appointments/{id}` now allows client confirmation
+- ✅ Special pending confirmation section in `/dashboard/appointments`
+- ✅ Visual yellow/gold card for pending appointments
+- ✅ One-click confirmation button
+
+**Calendar Enhancements:**
+- ✅ Admin calendar view shows all users' appointments
+- ✅ Color-coded status indicators
+- ✅ Click slot to create appointment request
+- ✅ Navigation between list and calendar views
+
+**Security Updates:**
+- ✅ Enhanced permission checks for appointment confirmation
+- ✅ Clients can only confirm own pending appointments
+- ✅ Admins retain full control over all appointments
+
+**Files Modified:**
+- `app/api/admin/appointments/route.ts` - Added create action
+- `app/api/appointments/[id]/route.ts` - Updated confirmation logic
+- `app/(private)/admin/appointments/page.tsx` - Added calendar link
+- `app/(private)/dashboard/appointments/page.tsx` - Added confirmation section
+
+**Files Created:**
+- `app/(private)/admin/appointments/calendar/page.tsx` - New admin calendar
+- `docs/ADMIN_APPOINTMENT_REQUEST_SYSTEM.md` - Implementation guide
+    "status": "confirmed",
+    "updatedAt": "2026-01-15T14:30:00Z",
+    ...
+  }
+}
+```
+
+**Error Cases:**
+```bash
+# Client tries to confirm someone else's appointment
+# Expected: 404 Appointment not found
+
+# Client tries to confirm already confirmed appointment
+# Expected: 403 You can only confirm your own pending appointments
+```
+
+###     "email": "admin@example.com"
+      },
+      "product": { ... },
+      "status": "confirmed",
+      "startTime": "2024-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### POST /api/admin/appointments (action: create) ✨ NEW
+Create an appointment request for a client.
+
+**Request Body:**
+```json
+{
+  "action": "create",
+  "clientEmail": "client@example.com",
+  "title": "Technical Consultation",
+  "description": "Discussion about the project",
+  "startTime": "2026-01-20T10:00:00Z",
+  "endTime": "2026-01-20T11:00:00Z",
+  "timezone": "Europe/Paris",
+  "type": "free",
+  "price": 0,
+  "currency": "EUR",
+  "location": "Paris Office",
+  "meetingUrl": "https://meet.google.com/abc-defg-hij",
+  "notes": "VIP client - prepare documentation"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "new_appointment_uuid",
+    "userId": "client_uuid",
+    "assignedAdminId": "admin_uuid",
+    "status": "pending",
+    "title": "Technical Consultation",
+    ...
+  },
+  "message": "Appointment request sent to client"
+}
+```
+
+**Behavior:**
+- Client must exist in the database (searched by email)
+- Appointment is created with `status: pending`
+- Client needs to confirm the appointment
+- Admin who created it is automatically assigned (`assignedAdminId`)
+
+**Error Responses:**
+- `400`: Missing required fields (clientEmail, title, startTime, endTime)
+- `404`: Client not found with provided email   "id": "uuid",
       "title": "Consultation",
       "user": {
         "id": "user_uuid",
