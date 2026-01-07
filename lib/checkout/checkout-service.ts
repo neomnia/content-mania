@@ -211,11 +211,19 @@ async function processAppointmentCheckout(params: {
 }): Promise<CheckoutResult> {
   const { product, appointmentData, userId, userEmail, userName, companyId, orderNumber } = params
 
+  // Convert string dates to Date objects if needed (handles both Date and string inputs)
+  const startTime = appointmentData.startTime instanceof Date
+    ? appointmentData.startTime
+    : new Date(appointmentData.startTime as unknown as string)
+  const endTime = appointmentData.endTime instanceof Date
+    ? appointmentData.endTime
+    : new Date(appointmentData.endTime as unknown as string)
+
   console.log('[Checkout] Processing appointment checkout:', {
     productId: product.id,
     productTitle: product.title,
-    startTime: appointmentData.startTime,
-    endTime: appointmentData.endTime
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString()
   })
 
   // 1. Déterminer si c'est payant
@@ -228,8 +236,8 @@ async function processAppointmentCheckout(params: {
     productId: product.id,
     title: product.title,
     description: product.description || `Réservation: ${product.title}`,
-    startTime: appointmentData.startTime,
-    endTime: appointmentData.endTime,
+    startTime: startTime,
+    endTime: endTime,
     timezone: appointmentData.timezone,
     attendeeEmail: appointmentData.attendeeEmail,
     attendeeName: appointmentData.attendeeName,
@@ -329,8 +337,8 @@ async function processAppointmentCheckout(params: {
     totalAmount: price,
     currency: product.currency || 'EUR',
     appointmentDetails: {
-      startTime: appointmentData.startTime,
-      endTime: appointmentData.endTime,
+      startTime: startTime, // Use converted Date object
+      endTime: endTime, // Use converted Date object
       timezone: appointmentData.timezone,
       notes: appointmentData.notes
     }
@@ -346,8 +354,8 @@ async function processAppointmentCheckout(params: {
       userEmail,
       userName,
       productTitle: product.title,
-      startTime: appointmentData.startTime,
-      endTime: appointmentData.endTime,
+      startTime: startTime, // Use converted Date object
+      endTime: endTime, // Use converted Date object
       attendeeName: appointmentData.attendeeName,
       attendeeEmail: appointmentData.attendeeEmail
     })
@@ -365,8 +373,8 @@ async function processAppointmentCheckout(params: {
       htmlContent: generateAppointmentConfirmationEmail({
         customerName: appointmentData.attendeeName,
         productTitle: product.title,
-        startTime: appointmentData.startTime,
-        endTime: appointmentData.endTime,
+        startTime: startTime, // Use converted Date object
+        endTime: endTime, // Use converted Date object
         timezone: appointmentData.timezone,
         isPaid,
         price,

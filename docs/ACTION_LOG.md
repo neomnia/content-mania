@@ -2,6 +2,57 @@
 
 Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
 
+## [2026-01-07] - Fix: Checkout Flow pour Produits Appointment
+
+### Fix : Correction de la conversion Date/String dans le checkout
+
+**Problèmes identifiés :**
+1. Le service checkout (`checkout-service.ts`) recevait des dates au format string mais tentait de les utiliser comme objets Date
+2. Les notifications admin et les emails recevaient des strings au lieu d'objets Date
+3. Le type `ProductType` ne contenait pas `'appointment'` (utilisé avec cast forcé)
+4. Le type `TeamNotification` ne contenait pas `'appointment_booking'`
+5. La propriété `consultingMode` dans `appointmentDetails` était obligatoire mais non fournie
+
+**Solutions implémentées :**
+
+### 1. Conversion Date/String dans checkout-service.ts
+
+Ajout d'une conversion robuste au début de `processAppointmentCheckout`:
+
+```typescript
+// Convert string dates to Date objects if needed
+const startTime = appointmentData.startTime instanceof Date
+  ? appointmentData.startTime
+  : new Date(appointmentData.startTime as unknown as string)
+const endTime = appointmentData.endTime instanceof Date
+  ? appointmentData.endTime
+  : new Date(appointmentData.endTime as unknown as string)
+```
+
+Cette conversion est utilisée ensuite pour :
+- La création du rendez-vous dans la base de données
+- Les notifications à l'équipe
+- Les notifications admin via chat
+- L'envoi des emails de confirmation
+
+### 2. Correction des types dans types.ts
+
+| Type | Modification |
+|------|--------------|
+| `ProductType` | Ajout de `'appointment'` |
+| `TeamNotification.type` | Ajout de `'appointment_booking'` |
+| `TeamNotification.appointmentDetails.consultingMode` | Rendu **optionnel** |
+
+### Fichiers Modifiés
+
+| Fichier | Modification |
+|---------|--------------|
+| `lib/checkout/checkout-service.ts` | Conversion Date/String, utilisation des objets Date |
+| `lib/checkout/types.ts` | Ajout types appointment, consultingMode optionnel |
+| `docs/ACTION_LOG.md` | Ce fichier |
+
+---
+
 ## [2026-01-07] - Amélioration du Flux de Rendez-vous Client/Admin
 
 ### Fix : Cohérence du Système de Rendez-vous

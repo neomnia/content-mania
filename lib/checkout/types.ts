@@ -7,8 +7,9 @@
 // 'physical' = produit physique (livraison courrier)
 // 'digital' = produit numérique (téléchargement + licence)
 // 'consulting' = consulting/RDV (packagé ou horaire)
+// 'appointment' = rendez-vous/consultation (legacy type for compatibility)
 // 'standard' = produit standard générique
-export type ProductType = 'physical' | 'digital' | 'consulting' | 'standard'
+export type ProductType = 'physical' | 'digital' | 'consulting' | 'appointment' | 'standard'
 
 // Consulting Mode - for consulting products
 export type ConsultingMode = 'packaged' | 'hourly'
@@ -98,7 +99,7 @@ export interface LagoTestModeResult {
 }
 
 export interface TeamNotification {
-  type: 'physical_product_purchase' | 'digital_product_purchase' | 'consulting_booking' | 'new_order'
+  type: 'physical_product_purchase' | 'digital_product_purchase' | 'consulting_booking' | 'appointment_booking' | 'new_order'
   orderId: string
   orderNumber: string
   customerEmail: string
@@ -115,12 +116,12 @@ export interface TeamNotification {
   // For physical products
   shippingAddress?: ShippingAddress
   requiresShipping?: boolean
-  // For consulting products
+  // For consulting/appointment products
   appointmentDetails?: {
     startTime: Date
     endTime: Date
     timezone: string
-    consultingMode: ConsultingMode
+    consultingMode?: ConsultingMode
     hourlyRate?: number
     notes?: string
   }
