@@ -1,103 +1,297 @@
-# Migration vers le Panneau Unifié - Guide Technique
+# Migration Guide - Product Types v4.0
 
 ## Vue d'ensemble
 
-Ce document explique la migration de l'ancien système à deux modes vers le nouveau panneau unifié.
+Ce document explique la migration du système de produits v3.0 (4 types) vers v4.0 (3 catégories).
 
-## Ancien Système (Avant)
+## Changements Majeurs v3.0 → v4.0
 
-### Architecture
-```
-app/(private)/admin/products/
-├── page.tsx                    # Liste des produits
-├── products-page-client.tsx   # Client component
-├── products-table.tsx          # Tableau avec panneau basique
-├── new/
-│   └── page.tsx               # Page création (PLEINE PAGE)
-├── [id]/
-│   └── page.tsx               # Page édition (PLEINE PAGE)
-└── product-form.tsx           # Formulaire complet
-```
+### Simplification des Types
 
-### Problèmes Identifiés
-1. **Incohérence UX** : Deux interfaces différentes (panneau vs page pleine)
-2. **Complexité** : Deux composants séparés (`products-table.tsx` et `product-form.tsx`)
-3. **Navigation** : Changement de page = perte de contexte
-4. **Redondance** : Code dupliqué entre panneau basique et formulaire complet
-5. **Limitations** : Panneau basique sans upload d'image ni sélection d'icône
+**Avant (v3.0)** : 4 types confus
+- `standard` - Produits payants génériques
+- `digital` - Produits digitaux
+- `free` - Produits gratuits
+- `appointment` (ou `consulting`) - Rendez-vous
 
-## Nouveau Système (Maintenant)
+**Maintenant (v4.0)** : 3 catégories distinctes
+- `physical` - Produits physiques expédiés
+- `digital` - Produits digitaux instantanés
+- `appointment` - Réservation de créneaux
 
-### Architecture
-```
-app/(private)/admin/products/
-├── page.tsx                    # Liste des produits (inchangé)
-├── products-page-client.tsx   # Client component (inchangé)
-├── products-table.tsx          # ⭐ TOUT-EN-UN: Table + Panneau Complet
-├── new/
-│   └── page.tsx               # ⚠️ OBSOLÈTE (non supprimé)
-├── [id]/
-│   └── page.tsx               # ⚠️ OBSOLÈTE (non supprimé)
-└── product-form.tsx           # ⚠️ OBSOLÈTE (non supprimé)
+### Nouvelle Table: Shipments
+
+```sql
+CREATE TABLE shipments (
+  id UUID PRIMARY KEY,
+  order_id UUID REFERENCES orders(id),
+  order_item_id UUID REFERENCES order_items(id),
+  product_id UUID REFERENCES products(id),
+  status TEXT DEFAULT 'pending',
+  tracking_number TEXT,
+  carrier TEXT,
+  shipping_address JSONB,
+  shipped_at TIMESTAMP,
+  delivered_at TIMESTAMP,
+  emails_sent JSONB DEFAULT '{"shipping_confirmation": false, "delivery_confirmation": false}'
+);
 ```
 
-### Avantages
-1. ✅ **Interface Unique** : Même panneau pour création et modification
-2. ✅ **Fonctionnalités Complètes** : Upload image, sélection icône, tous les champs
-3. ✅ **Contexte Préservé** : Pas de changement de page
-4. ✅ **Code Centralisé** : Tout dans `products-table.tsx`
-5. ✅ **UX Améliorée** : Transitions fluides, calculs temps réel
+### Nouveaux Champs Produits
 
-## Modifications Techniques
+**Digital Products:**
+- `delivery_code` - Code d'activation généré
+- `download_url` - Lien de téléchargement direct
+- `license_key` - Template de clé de licence
+- `license_instructions` - Instructions d'activation
 
-### États Ajoutés
+**Appointment Products:**
+- `appointment_mode` - Renommé de `consulting_mode`
+
+---
+
+## Migration des Données
+
+### Option 1: Migration SQL Automatique
+
+```sql
+-- 1. Migrer standard → physical (produits avec expédition)
+UPDATE products 
+SET type = 'physical' 
+WHERE type = 'standard' 
+  AND requires_shipping = true;
+
+-- 2. Migrer standard → digital (produits téléchargeables)
+UPDATE products 
+SET type = 'digital' 
+WHERE type = 'standard' 
+  AND (file_url IS NOT NULL OR download_url IS NOT NULL);
+
+-- 3. Migrer consulting → appointment
+UPDATE products 
+SET type = 'appointment' 
+WHERE type = 'consulting';
+
+-- 4. Gérer les produits free
+UPDATE products 
+SET 
+  type = CASE 
+    WHEN requires_shipping THEN 'physical'
+    WHEN file_url IS NOT NULL OR download_url IS NOT NULL THEN 'digital'
+    ELSE 'digital'
+  END,
+  is_free = true
+WHERE type = 'free';
+
+-- 5. Gérer les produits standard restants (par défaut → physical)
+UPDATE products 
+SET type = 'physical' 
+WHERE type = 'standard';
+```
+
+### Option 2: Migration Manuelle via Admin UI
+
+1. **Accéder à Admin → Products**
+2. **Filtrer** par type legacy:
+   - Filtre: `standard`
+   - Filtre: `free`  
+   - Filtre: `consulting`
+3. **Pour chaque produit**, déterminer le bon type:
+   - Expédié physiquement? → `physical`
+   - Téléchargement/Code? → `digital`
+   - Rendez-vous? → `appointment`
+4. **Action groupée** ou **Edition individuelle**
+5. **Sauvegarder**
+
+---
+
+## Migration de l'Interface Admin
+
+### Avant (v3.0)
+```tsx
+// product-form.tsx
+<SelectItem value="standard">Standard Product</SelectItem>
+<SelectItem value="digital">Digital Product</SelectItem>
+<SelectItem value="free">Free Product</SelectItem>
+<SelectItem value="consulting">Consulting</SelectItem>
+```
+
+### Maintenant (v4.0)
+```tsx
+// product-form.tsx
+<SelectItem value="physical">
+  <Box className="h-4 w-4 text-orange-500" />
+  Physical - Shipped by mail with tracking
+</SelectItem>
+<SelectItem value="digital">
+  <Monitor className="h-4 w-4 text-blue-500" />
+  Digital - Instant delivery via code/download
+</SelectItem>
+<SelectItem value="appointment">
+  <Calendar className="h-4 w-4 text-purple-500" />
+  Appointment - Book a time slot after purchase
+</SelectItem>
+```
+
+### Filtres et Actions Groupées
+
+**Avant:**
+- Filtres: All, Standard, Digital, Free, Appointment
+- Actions: Change Type (4 options)
+
+**Maintenant:**
+- Filtres: All, Physical, Digital, Appointment
+- Actions: Change Type (3 options)
+
+---
+
+## Migration du Checkout
+
+### Checkout Interface (Traduction)
+
+**Avant v4.0:** Texte mélangé français/anglais
+
+**Maintenant v4.0:** 100% anglais
+
+Fichiers modifiés:
+- `app/(private)/dashboard/checkout/page.tsx`
+- `components/checkout/appointment-modal.tsx`
+
+Exemples de traductions:
+```diff
+- "Retour au Dashboard" → "Back to Dashboard"
+- "Voir le panier" → "View Cart"
+- "Rendez-vous" → "Appointment"
+- "Sélectionner un créneau" → "Select Time Slot"
+- "Informations de facturation" → "Billing Information"
+- "Valider la commande (Test)" → "Validate Order (Test)"
+```
+
+### Checkout Logic (Backend)
+
+Aucun changement nécessaire - le backend supporte déjà les 3 types:
+
 ```typescript
-// Gestion de l'image
-const [imagePreview, setImagePreview] = useState<string | null>(null)
-const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
-
-// Ajout du champ icon dans editValues
-const [editValues, setEditValues] = useState<{
-  // ... autres champs
-  icon: string; // ⭐ NOUVEAU
-}>({ 
-  // ... valeurs par défaut
-  icon: 'ShoppingBag' // ⭐ NOUVEAU
-})
-```
-
-### Fonctions Ajoutées
-```typescript
-// Upload d'image dans le panneau
-const handleImageUploadInPanel = async (file: File) => {
-  if (isNewProduct) {
-    // Stockage temporaire + preview
-    setPendingImageFile(file)
-    // Preview base64
-  } else {
-    // Upload immédiat pour produits existants
+// app/actions/ecommerce.ts
+export async function processCheckout(
+  cartId: string,
+  appointmentsData?: Record<string, AppointmentData>
+) {
+  // ✅ Physical → Create shipment
+  if (item.product.type === 'physical') {
+    await createShipment(...)
   }
+  
+  // ✅ Digital → Generate code
+  if (item.product.type === 'digital') {
+    await generateDeliveryCode(...)
+  }
+  
+  // ✅ Appointment → Create booking
+  if (item.product.type === 'appointment' && appointmentsData) {
+    await createAppointment(...)
+  }
+  
+  // ✅ Clear cart
+  await db.update(carts).set({ status: "converted" })
 }
+```
 
-// Suppression d'image dans le panneau
-const removeImageInPanel = async () => {
-  if (isNewProduct) {
-    // Juste effacer la preview
-  } else {
-    // Supprimer de la DB via upsertProduct
-  }
+---
+
+## Rétrocompatibilité
+
+### Support des Types Legacy
+
+Les anciens types restent fonctionnels grâce à `lib/status-configs.ts`:
+
+```typescript
+export const productTypeConfigs = {
+  // v4.0 Types
+  physical: { label: "Physical", icon: Box, ... },
+  digital: { label: "Digital", icon: Monitor, ... },
+  appointment: { label: "Appointment", icon: Calendar, ... },
+  
+  // Legacy Types (v3.0)
+  standard: { label: "Standard (Legacy)", icon: Package, ... },
+  free: { label: "Free (Legacy)", icon: Download, ... },
+  consulting: { label: "Consulting (Legacy)", icon: Users, ... },
 }
 ```
 
-### Logique de Sauvegarde Modifiée
-```typescript
-const handleSaveFromPanel = async () => {
-  // 1. Validation
-  // 2. Préparation des données (avec icon maintenant)
-  const productData = {
-    // ... autres champs
-    icon: editValues.icon // ⭐ NOUVEAU
-  }
+**Comportement:**
+- ✅ Anciens produits continuent de fonctionner
+- ✅ Badge "(Legacy)" affiché dans l'admin
+- ✅ Pas d'erreur de checkout
+- ⚠️ Ne peuvent plus être créés (seulement édités)
+
+---
+
+## Checklist de Migration
+
+### Phase 1: Préparation
+- [ ] Sauvegarder la base de données
+- [ ] Documenter les produits existants (types, quantités)
+- [ ] Informer l'équipe du changement
+
+### Phase 2: Migration Backend
+- [ ] Déployer le schéma v4.0 (table shipments, nouveaux champs)
+- [ ] Exécuter le script SQL de migration
+- [ ] Vérifier les données migrées
+- [ ] Tester les requêtes sur les nouveaux types
+
+### Phase 3: Migration Frontend
+- [ ] Déployer la nouvelle UI (formulaires, filtres)
+- [ ] Vérifier l'affichage des 3 types
+- [ ] Tester la création de produits
+- [ ] Tester l'édition de produits existants
+
+### Phase 4: Tests Checkout
+- [ ] Tester achat produit Physical
+  - [ ] Shipment créé
+  - [ ] Email admin envoyé
+  - [ ] Panier vidé
+- [ ] Tester achat produit Digital
+  - [ ] Code généré
+  - [ ] Email client avec code
+  - [ ] Panier vidé
+- [ ] Tester achat produit Appointment
+  - [ ] Modal de sélection créneau (anglais)
+  - [ ] Appointment créé en DB
+  - [ ] Email confirmation
+  - [ ] Panier vidé
+
+### Phase 5: Migration Produits Legacy
+- [ ] Identifier produits `standard` restants
+- [ ] Identifier produits `free`
+- [ ] Identifier produits `consulting`
+- [ ] Convertir manuellement ou via script
+- [ ] Vérifier après conversion
+
+### Phase 6: Validation Finale
+- [ ] Tous produits ont un type v4.0
+- [ ] Aucun produit legacy visible dans création
+- [ ] Checkout fonctionne pour les 3 types
+- [ ] Emails envoyés correctement
+- [ ] Documentation mise à jour
+
+---
+
+## Rollback (Si Nécessaire)
+
+### Retour à v3.0
+
+```sql
+-- 1. Restaurer les types legacy
+UPDATE products SET type = 'standard' WHERE type = 'physical';
+UPDATE products SET type = 'consulting' WHERE type = 'appointment';
+
+-- 2. Gérer les produits gratuits
+UPDATE products 
+SET type = 'free' 
+WHERE is_free = true;
+
+-- Note: La table shipments restera (pas de problème)
   
   // 3. Sauvegarde du produit
   const result = await upsertProduct(productData)

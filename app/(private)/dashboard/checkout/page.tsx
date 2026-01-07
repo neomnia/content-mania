@@ -137,11 +137,11 @@ export default function CheckoutPage() {
               name: item.product.title,
               price: item.product.price / 100,
               icon: item.product.type === 'appointment' ? Calendar : ShoppingBag,
-              deliveryTime: item.product.type === 'appointment' ? 'Rendez-vous \u00e0 planifier' : 'Instant Access',
+              deliveryTime: item.product.type === 'appointment' ? 'Appointment to schedule' : 'Instant Access',
               description: item.product.description,
               quantity: item.quantity,
               currency: item.product.currency,
-              type: item.product.type // Ajouter le type de produit
+              type: item.product.type // Add product type
             }))
             setCartItems(items)
 
@@ -374,16 +374,16 @@ export default function CheckoutPage() {
       <div className="container max-w-6xl py-10">
         <Link href="/dashboard" className="flex items-center text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Retour au Dashboard
+          Back to Dashboard
         </Link>
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShoppingBag className="h-6 w-6" />
-              Panier vide
+              Empty Cart
             </CardTitle>
             <CardDescription>
-              Votre panier est actuellement vide. Ajoutez des produits pour continuer.
+              Your cart is currently empty. Add products to continue.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -391,12 +391,12 @@ export default function CheckoutPage() {
               <Link href="/dashboard" className="flex-1">
                 <Button className="w-full">
                   <ShoppingBag className="mr-2 h-4 w-4" />
-                  Retour au Dashboard
+                  Back to Dashboard
                 </Button>
               </Link>
               <Link href="/dashboard/cart" className="flex-1">
                 <Button variant="outline" className="w-full">
-                  Voir le panier
+                  View Cart
                 </Button>
               </Link>
             </div>
@@ -416,12 +416,12 @@ export default function CheckoutPage() {
       <div className="flex items-center justify-between mb-6">
         <Link href="/dashboard" className="flex items-center text-muted-foreground hover:text-foreground">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Retour au Dashboard
+          Back to Dashboard
         </Link>
         <Link href="/dashboard/cart">
           <Button variant="outline" size="sm">
             <ShoppingCart className="mr-2 h-4 w-4" />
-            Voir le panier
+            View Cart
           </Button>
         </Link>
       </div>
@@ -445,7 +445,7 @@ export default function CheckoutPage() {
                       {item.type === 'appointment' && (
                         <Badge variant="outline" className="text-xs">
                           <Calendar className="h-3 w-3 mr-1" />
-                          Rendez-vous
+                          Appointment
                         </Badge>
                       )}
                     </div>
@@ -467,12 +467,12 @@ export default function CheckoutPage() {
                         {appointmentsData.has(item.id) ? (
                           <>
                             <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Cr\u00e9neau s\u00e9lectionn\u00e9
+                            Time Slot Selected
                           </>
                         ) : (
                           <>
                             <Calendar className="h-3 w-3 mr-1" />
-                            S\u00e9lectionner un cr\u00e9neau
+                            Select Time Slot
                           </>
                         )}
                       </Button>
@@ -525,17 +525,17 @@ export default function CheckoutPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Mail className="mr-2 h-5 w-5" />
-                Informations de facturation
+                Billing Information
               </CardTitle>
               <CardDescription>
-                Ces informations seront utilisées pour votre facture
+                This information will be used for your invoice
               </CardDescription>
             </CardHeader>
             <CardContent>
               {userInfo ? (
                 <div className="space-y-3">
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">Nom</span>
+                    <span className="text-sm text-muted-foreground">Name</span>
                     <span className="font-medium">{userInfo.name}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
@@ -544,21 +544,21 @@ export default function CheckoutPage() {
                   </div>
                   {userInfo.company && (
                     <div className="flex justify-between py-2 border-b">
-                      <span className="text-sm text-muted-foreground">Entreprise</span>
+                      <span className="text-sm text-muted-foreground">Company</span>
                       <span className="font-medium">{userInfo.company}</span>
                     </div>
                   )}
                   <div className="mt-4">
                     <Button variant="outline" size="sm" asChild>
                       <Link href="/dashboard/profile">
-                        Modifier mes informations
+                        Edit My Information
                       </Link>
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-muted-foreground text-sm">Chargement des informations...</p>
+                  <p className="text-muted-foreground text-sm">Loading information...</p>
                 </div>
               )}
             </CardContent>
@@ -567,11 +567,11 @@ export default function CheckoutPage() {
           {/* Payment Method */}
           <Card>
             <CardHeader>
-              <CardTitle>Méthode de paiement</CardTitle>
+              <CardTitle>Payment Method</CardTitle>
               <CardDescription>
                 {paymentConfig.lagoMode === 'dev'
-                  ? 'Mode développement - Lago désactivé'
-                  : 'Sélectionnez votre mode de paiement sécurisé'}
+                  ? 'Development mode - Lago disabled'
+                  : 'Select your secure payment method'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -584,10 +584,10 @@ export default function CheckoutPage() {
                         <Lock className="h-5 w-5 text-purple-600" />
                       </div>
                       <div>
-                        <p className="font-medium text-purple-900 dark:text-purple-100">Mode Développement</p>
+                        <p className="font-medium text-purple-900 dark:text-purple-100">Development Mode</p>
                         <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
-                          Lago est désactivé. La commande sera créée sans traitement de paiement réel.
-                          Idéal pour tester le tunnel de vente.
+                          Lago is disabled. The order will be created without real payment processing.
+                          Ideal for testing the checkout flow.
                         </p>
                       </div>
                     </div>
@@ -597,7 +597,7 @@ export default function CheckoutPage() {
                     <div className="space-y-4">
                       <h3 className="font-semibold flex items-center">
                         <Lock className="mr-2 h-4 w-4" />
-                        Mode de paiement
+                        Payment Method
                       </h3>
                       <div className="grid gap-4 sm:grid-cols-2">
                         {/* Stripe / Card */}
@@ -608,8 +608,8 @@ export default function CheckoutPage() {
                           >
                             <CreditCard className={`h-6 w-6 ${selectedMethod === 'card' ? 'text-[#CD7F32]' : 'text-muted-foreground'}`} />
                             <div>
-                              <p className="font-medium">Carte Bancaire</p>
-                              <p className="text-xs text-muted-foreground">Paiement sécurisé via Stripe</p>
+                              <p className="font-medium">Credit Card</p>
+                              <p className="text-xs text-muted-foreground">Secure payment via Stripe</p>
                             </div>
                           </div>
                         )}
@@ -634,8 +634,8 @@ export default function CheckoutPage() {
                         {!paymentConfig.stripeEnabled && !paymentConfig.paypalEnabled && (
                           <div className="col-span-2 bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800 dark:bg-yellow-950/30 dark:border-yellow-800 dark:text-yellow-200">
                             <p className="text-sm">
-                              Aucune méthode de paiement n'est configurée.
-                              Contactez l'administrateur.
+                              No payment method is configured.
+                              Contact the administrator.
                             </p>
                           </div>
                         )}
@@ -648,10 +648,10 @@ export default function CheckoutPage() {
                       <div className="flex items-start gap-2">
                         <Lock className="h-4 w-4 mt-0.5 text-muted-foreground" />
                         <div className="text-sm">
-                          <p className="font-medium mb-1">Paiement 100% sécurisé</p>
+                          <p className="font-medium mb-1">100% Secure Payment</p>
                           <p className="text-muted-foreground text-xs">
-                            Vos données de paiement sont cryptées et sécurisées.
-                            Nous ne stockons aucune information bancaire.
+                            Your payment data is encrypted and secured.
+                            We do not store any banking information.
                           </p>
                         </div>
                       </div>
@@ -663,23 +663,23 @@ export default function CheckoutPage() {
                   {isProcessing ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Traitement en cours...
+                      Processing...
                     </>
                   ) : paymentConfig.lagoMode === 'dev' ? (
                     <>
-                      Valider la commande (Test)
+                      Validate Order (Test)
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </>
                   ) : (
                     <>
-                      Payer {currencySymbol}{total.toFixed(2)}
+                      Pay {currencySymbol}{total.toFixed(2)}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </>
                   )}
                 </Button>
 
                 <p className="text-xs text-center text-muted-foreground">
-                  En cliquant sur "{paymentConfig.lagoMode === 'dev' ? 'Valider' : 'Payer'}", vous acceptez nos conditions générales de vente
+                  By clicking "{paymentConfig.lagoMode === 'dev' ? 'Validate' : 'Pay'}", you accept our terms and conditions of sale
                 </p>
               </form>
             </CardContent>
@@ -687,7 +687,7 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* Modal de s\u00e9lection de rendez-vous */}
+      {/* Appointment Time Slot Selection Modal */}
       {currentAppointmentProduct && (
         <AppointmentModal
           isOpen={appointmentModalOpen}

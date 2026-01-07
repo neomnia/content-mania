@@ -178,14 +178,11 @@ export function ProductsPageClient({ products, vatRates }: ProductsPageClientPro
                     Change Type
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
-                    <DropdownMenuItem onClick={() => tableRef.current?.bulkUpdateField('type', 'standard')}>
-                      Standard
+                    <DropdownMenuItem onClick={() => tableRef.current?.bulkUpdateField('type', 'physical')}>
+                      Physical
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => tableRef.current?.bulkUpdateField('type', 'digital')}>
                       Digital
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => tableRef.current?.bulkUpdateField('type', 'free')}>
-                      Free
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => tableRef.current?.bulkUpdateField('type', 'appointment')}>
                       Appointment
@@ -395,22 +392,16 @@ export function ProductsPageClient({ products, vatRates }: ProductsPageClientPro
           </SelectTrigger>
           <SelectContent className="w-full">
             <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="standard">
+            <SelectItem value="physical">
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-green-700" />
-                <span>Standard</span>
+                <Package className="h-4 w-4 text-orange-700" />
+                <span>Physical</span>
               </div>
             </SelectItem>
             <SelectItem value="digital">
               <div className="flex items-center gap-2">
                 <Icons.Rocket className="h-4 w-4 text-blue-700" />
                 <span>Digital</span>
-              </div>
-            </SelectItem>
-            <SelectItem value="free">
-              <div className="flex items-center gap-2">
-                <Icons.Download className="h-4 w-4 text-amber-700" />
-                <span>Free</span>
               </div>
             </SelectItem>
             <SelectItem value="appointment">

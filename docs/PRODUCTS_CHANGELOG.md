@@ -1,5 +1,179 @@
 # 🎉 CHANGELOG - Gestion des Produits
 
+## Version 4.0 - 7 janvier 2026 - Stratégie Produits Simplifiée à 3 Catégories
+
+### 🎯 Changement Majeur de Stratégie
+
+#### 📦 Nouvelle Architecture : 3 Catégories de Produits
+- **Avant v4.0** : 4 types confus (`standard`, `digital`, `free`, `appointment`)
+- **Maintenant v4.0** : 3 catégories claires et distinctes
+
+**Les 3 Catégories :**
+1. **Physical** 📦 (orange) - Produits physiques expédiés par courrier avec suivi
+2. **Digital** 💻 (bleu) - Produits digitaux avec livraison instantanée (code/téléchargement)
+3. **Appointment** 📅 (violet) - Réservation de créneaux horaires après achat
+
+#### 🗑️ Types Supprimés
+- ❌ `standard` → Remplacé par `physical` ou `digital`
+- ❌ `free` → Utiliser `isFree: true` avec n'importe quel type
+- ❌ `consulting` → Renommé en `appointment`
+
+#### 🆕 Nouveautés
+
+**Table Shipments (Nouvelle)**
+```sql
+CREATE TABLE shipments (
+  id UUID PRIMARY KEY,
+  orderId UUID REFERENCES orders(id),
+  orderItemId UUID REFERENCES order_items(id),
+  productId UUID REFERENCES products(id),
+  status TEXT DEFAULT 'pending',
+  trackingNumber TEXT,
+  carrier TEXT,
+  shippingAddress JSONB,
+  shippedAt TIMESTAMP,
+  deliveredAt TIMESTAMP,
+  emailsSent JSONB DEFAULT '{"shipping_confirmation": false, "delivery_confirmation": false}'
+)
+```
+
+**Champs Produits Digital (Nouveaux)**
+- `deliveryCode` - Code de livraison généré (ex: clé d'activation)
+- `downloadUrl` - Lien de téléchargement direct généré après achat
+- `licenseKey` - Template de clé de licence (optionnel)
+
+**Renommages**
+- `consultingMode` → `appointmentMode` (packaged | hourly)
+- Type `consulting` → `appointment`
+
+### 🔄 Interface Admin - Modifications UI
+
+#### Formulaire de Produit
+```diff
+product-form.tsx:
+- [REMOVED] 4 types (standard, digital, free, consulting)
++ [NEW] 3 types seulement (physical, digital, appointment)
++ [NEW] Descriptions claires pour chaque type
++ [NEW] "Appointment Configuration" (au lieu de "Consulting")
++ [UPDATED] Imports: Calendar ajouté, Users/Gift supprimés
+```
+
+#### Page Produits - Filtres
+```diff
+products-page-client.tsx:
+- [REMOVED] Filtres: standard, free
+- [REMOVED] Actions groupées: standard, free
++ [NEW] Filtres: physical, digital, appointment uniquement
++ [NEW] Actions groupées: physical, digital, appointment uniquement
+```
+
+### 🌐 Checkout - Traduction Complète en Anglais
+
+**Avant v4.0** : Interface mélangée français/anglais  
+**Maintenant v4.0** : 100% anglais
+
+```diff
+checkout/page.tsx:
+- "Retour au Dashboard" → "Back to Dashboard"
+- "Voir le panier" → "View Cart"
+- "Panier vide" → "Empty Cart"
+- "Rendez-vous" → "Appointment"
+- "Créneau sélectionné" → "Time Slot Selected"
+- "Sélectionner un créneau" → "Select Time Slot"
+- "Informations de facturation" → "Billing Information"
+- "Méthode de paiement" → "Payment Method"
+- "Valider la commande (Test)" → "Validate Order (Test)"
++ Et 25+ autres traductions...
+
+appointment-modal.tsx:
+- "Planifier votre rendez-vous" → "Schedule Your Appointment"
+- "Sélectionnez votre créneau" → "Select Your Time Slot"
+- "Veuillez choisir un créneau disponible pour" → "Please select an available time slot for"
+```
+
+### 🔧 Backend - Compatibilité Assurée
+
+**Checkout Flow (Vérifié)**
+```typescript
+// app/actions/ecommerce.ts
+export async function processCheckout(
+  cartId: string,
+  appointmentsData?: Record<string, AppointmentData> // ✅ Support appointments
+) {
+  // Section 7b: Création automatique des appointments
+  if (appointmentsData && Object.keys(appointmentsData).length > 0) {
+    for (const item of cart.items) {
+      if (item.product.type === 'appointment') {
+        // ✅ Crée l'appointment en DB
+        // ✅ Envoie les notifications email
+      }
+    }
+  }
+  
+  // Section 9: Nettoyage du panier
+  await db.update(carts)
+    .set({ status: "converted" }) // ✅ Panier vidé
+    .where(eq(carts.id, cart.id))
+}
+```
+
+### 📋 Migration des Produits Existants
+
+#### Rétrocompatibilité
+✅ Les anciens types restent supportés via `lib/status-configs.ts`  
+✅ Badge "(Legacy)" affiché pour anciens types  
+✅ Aucune perte de données
+
+#### Actions Recommandées
+```sql
+-- Migrer les produits standard → physical (si expédiés)
+UPDATE products 
+SET type = 'physical' 
+WHERE type = 'standard' AND requires_shipping = true;
+
+-- Migrer les produits standard → digital (si téléchargeables)
+UPDATE products 
+SET type = 'digital' 
+WHERE type = 'standard' AND file_url IS NOT NULL;
+
+-- Migrer consulting → appointment
+UPDATE products 
+SET type = 'appointment' 
+WHERE type = 'consulting';
+
+-- Gérer les produits gratuits
+UPDATE products 
+SET type = 'physical', is_free = true 
+WHERE type = 'free';
+```
+
+### 📊 Statistiques des Changements
+
+| Composant | Lignes Modifiées | Fichiers |
+|-----------|-----------------|----------|
+| product-form.tsx | ~50 lignes | 1 |
+| products-page-client.tsx | ~40 lignes | 1 |
+| checkout/page.tsx | ~120 lignes | 1 |
+| appointment-modal.tsx | ~15 lignes | 1 |
+| db/schema.ts | ~80 lignes | 1 (commit séparé) |
+
+### 🎉 Résultats
+
+- ✅ Interface admin simplifiée (3 types au lieu de 4)
+- ✅ Checkout 100% anglais (cohérence linguistique)
+- ✅ Workflow clair pour chaque type de produit
+- ✅ Support shipment tracking pour produits physiques
+- ✅ Livraison instantanée pour produits digitaux
+- ✅ Booking de créneaux pour appointments
+
+### 📚 Documentation
+
+- [PRODUCTS_STRATEGY_V4.md](./PRODUCTS_STRATEGY_V4.md) - Stratégie complète
+- [PRODUCTS_V4_UI_IMPLEMENTATION.md](./PRODUCTS_V4_UI_IMPLEMENTATION.md) - Détails implémentation
+- [db/schema.ts](../db/schema.ts) - Schéma v4.0
+
+---
+
 ## Version 3.1 - 2 janvier 2026 - Ajout du Type Digital + Réorganisation Tableau
 
 ### 🆕 Nouveautés

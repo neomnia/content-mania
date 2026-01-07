@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { ArrowLeft, Upload, X, ImageIcon, Package, Monitor, Users, Box, Gift } from "lucide-react"
+import { ArrowLeft, Upload, X, ImageIcon, Package, Monitor, Calendar, Box } from "lucide-react"
 import Link from "next/link"
 import * as Icons from "lucide-react"
 import Image from "next/image"
@@ -419,7 +419,7 @@ export function ProductForm({ initialData, products = [], vatRates }: ProductFor
           />
         </div>
 
-        {/* Product Type Selection - v3.0 */}
+        {/* Product Type Selection - v4.0 */}
         <div className="space-y-4 border p-4 rounded-md bg-muted/10">
           <div className="space-y-2">
             <Label>Product Type</Label>
@@ -435,8 +435,8 @@ export function ProductForm({ initialData, products = [], vatRates }: ProductFor
                   <div className="flex items-center gap-2">
                     <Box className="h-4 w-4 text-orange-500" />
                     <div className="flex flex-col">
-                      <span className="font-medium">Physical Product</span>
-                      <span className="text-xs text-muted-foreground">Shipped by mail</span>
+                      <span className="font-medium">Physical</span>
+                      <span className="text-xs text-muted-foreground">Shipped by mail with tracking</span>
                     </div>
                   </div>
                 </SelectItem>
@@ -444,36 +444,26 @@ export function ProductForm({ initialData, products = [], vatRates }: ProductFor
                   <div className="flex items-center gap-2">
                     <Monitor className="h-4 w-4 text-blue-500" />
                     <div className="flex flex-col">
-                      <span className="font-medium">Digital Product</span>
-                      <span className="text-xs text-muted-foreground">Download + optional license</span>
+                      <span className="font-medium">Digital</span>
+                      <span className="text-xs text-muted-foreground">Instant delivery via code/download</span>
                     </div>
                   </div>
                 </SelectItem>
-                <SelectItem value="consulting">
+                <SelectItem value="appointment">
                   <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-purple-500" />
+                    <Calendar className="h-4 w-4 text-purple-500" />
                     <div className="flex flex-col">
-                      <span className="font-medium">Consulting</span>
-                      <span className="text-xs text-muted-foreground">Packaged or hourly appointment</span>
-                    </div>
-                  </div>
-                </SelectItem>
-                <SelectItem value="standard">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-green-500" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">Standard Product</span>
-                      <span className="text-xs text-muted-foreground">Generic paid product</span>
+                      <span className="font-medium">Appointment</span>
+                      <span className="text-xs text-muted-foreground">Book a time slot after purchase</span>
                     </div>
                   </div>
                 </SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {formData.type === 'physical' && '📦 Physical product shipped by mail - Admin will be notified to ship the package'}
-              {formData.type === 'digital' && '💻 Digital product with download link and optional license key'}
-              {formData.type === 'consulting' && '👥 Consulting service with appointment booking after purchase'}
-              {formData.type === 'standard' && '📦 Standard product with payment at checkout'}
+              {formData.type === 'physical' && '📦 Physical product shipped by mail - Admin will be notified to ship the package with tracking'}
+              {formData.type === 'digital' && '💻 Digital product with instant delivery via download link or activation code'}
+              {formData.type === 'appointment' && '📅 Appointment booking - Customer selects time slot during checkout'}
             </p>
           </div>
 
@@ -616,16 +606,16 @@ export function ProductForm({ initialData, products = [], vatRates }: ProductFor
           </div>
         )}
 
-        {/* Consulting Product Configuration */}
-        {formData.type === 'consulting' && (
+        {/* Appointment Product Configuration */}
+        {formData.type === 'appointment' && (
           <div className="space-y-4 border p-4 rounded-md bg-purple-50 dark:bg-purple-950/20">
             <h3 className="font-medium flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Consulting Configuration
+              <Calendar className="h-4 w-4" />
+              Appointment Configuration
             </h3>
 
             <div className="space-y-2">
-              <Label>Consulting Mode</Label>
+              <Label>Appointment Mode</Label>
               <Select
                 value={formData.consultingMode}
                 onValueChange={(value) => setFormData({ ...formData, consultingMode: value })}

@@ -28,8 +28,8 @@ interface AppointmentModalProps {
 }
 
 /**
- * Modal qui s'ouvre pendant le checkout pour sélectionner un rendez-vous
- * Intègre le composant AppointmentBooking dans une modale
+ * Modal that opens during checkout to select an appointment
+ * Integrates the AppointmentBooking component in a modal
  */
 export function AppointmentModal({
   isOpen,
@@ -72,7 +72,7 @@ export function AppointmentModal({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-primary" />
-              <DialogTitle>Sélectionnez votre créneau</DialogTitle>
+              <DialogTitle>Select Your Time Slot</DialogTitle>
             </div>
             <Button
               variant="ghost"
@@ -87,7 +87,7 @@ export function AppointmentModal({
             </Button>
           </div>
           <DialogDescription>
-            Veuillez choisir un créneau disponible pour : {product.title}
+            Please select an available time slot for: {product.title}
           </DialogDescription>
         </DialogHeader>
 
