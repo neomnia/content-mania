@@ -10,7 +10,7 @@ import "@/styles/globals.css"
 import { GeistSans } from 'geist/font/sans'
 import { getPlatformConfig } from "@/lib/config"
 import { getThemeConfig } from "@/app/actions/theme-config"
-import { generateThemeCSS } from "@/components/common/dynamic-theme-provider"
+import { generateThemeCSS } from "@/lib/theme/generate-css"
 
 export async function generateMetadata() {
   try {

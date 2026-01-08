@@ -23,9 +23,12 @@ export {
 } from '@/app/actions/theme-config'
 
 // Composants
-export { DynamicThemeProvider, generateThemeCSS } from '@/components/common/dynamic-theme-provider'
+export { DynamicThemeProvider } from '@/components/common/dynamic-theme-provider'
 export { ThemeSettings } from '@/components/admin/theme-settings'
 export { ThemeExampleComponent } from '@/components/common/theme-example'
+
+// Utilitaires
+export { generateThemeCSS } from '@/lib/theme/generate-css'
 
 /**
  * Utilisation :
