@@ -16,10 +16,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { ArrowLeft, Upload, X, ImageIcon, Package, Monitor, Calendar, Box } from "lucide-react"
+import { ArrowLeft, Upload, X, ImageIcon, Package, Monitor, Calendar, Box, Ticket, Plus, Check, Copy, Trash } from "lucide-react"
 import Link from "next/link"
 import * as Icons from "lucide-react"
 import Image from "next/image"
+import { getCoupons, upsertCoupon, deleteCoupon } from "@/app/actions/coupons"
 
 interface VatRate {
   id: string
@@ -68,9 +69,41 @@ export function ProductForm({ initialData, products = [], vatRates }: ProductFor
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [imagePreview, setImagePreview] = useState(initialData?.imageUrl || null)
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
+  const [coupons, setCoupons] = useState<any[]>([])
+  const [showCouponForm, setShowCouponForm] = useState(false)
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const [couponFormData, setCouponFormData] = useState({
+    code: "",
+    description: "",
+    discountType: "percentage",
+    discountValue: "",
+    startDate: "",
+    endDate: "",
+    usageLimit: "",
+  })
 
   // Find default VAT rate or first active rate
   const defaultVatRate = vatRates.find(r => r.isDefault && r.isActive) || vatRates.find(r => r.isActive)
+
+  // Load coupons applicable to this product
+  useEffect(() => {
+    const loadCoupons = async () => {
+      if (!initialData?.id) return
+      
+      const result = await getCoupons()
+      if (result.success && result.data) {
+        // Filter coupons that apply to this product
+        const productCoupons = result.data.filter((coupon: any) => {
+          if (!coupon.applicableProducts) return true // All products
+          const applicableIds = coupon.applicableProducts as string[]
+          return applicableIds.includes(initialData.id)
+        })
+        setCoupons(productCoupons)
+      }
+    }
+    loadCoupons()
+  }, [initialData?.id])
 
   const [formData, setFormData] = useState({
     title: initialData?.title || "",
@@ -179,6 +212,83 @@ export function ProductForm({ initialData, products = [], vatRates }: ProductFor
     formData.type === 'standard' ||
     (formData.type === 'consulting' && formData.consultingMode === 'packaged')
   )
+
+  // Coupon management functions
+  const handleCreateCoupon = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!initialData?.id) {
+      toast.error("Please save the product first before creating coupons")
+      return
+    }
+    
+    setCouponLoading(true)
+    try {
+      const discountValue = couponFormData.discountType === 'percentage'
+        ? parseInt(couponFormData.discountValue)
+        : Math.round(parseFloat(couponFormData.discountValue) * 100)
+
+      const result = await upsertCoupon({
+        code: couponFormData.code,
+        description: couponFormData.description || null,
+        discountType: couponFormData.discountType,
+        discountValue: discountValue,
+        startDate: couponFormData.startDate ? new Date(couponFormData.startDate) : null,
+        endDate: couponFormData.endDate ? new Date(couponFormData.endDate) : null,
+        usageLimit: couponFormData.usageLimit ? parseInt(couponFormData.usageLimit) : null,
+        applicableProducts: [initialData.id],
+        isActive: true,
+      })
+
+      if (result.success) {
+        toast.success("Coupon created successfully")
+        setShowCouponForm(false)
+        setCouponFormData({
+          code: "",
+          description: "",
+          discountType: "percentage",
+          discountValue: "",
+          startDate: "",
+          endDate: "",
+          usageLimit: "",
+        })
+        // Reload coupons
+        const couponsResult = await getCoupons()
+        if (couponsResult.success && couponsResult.data) {
+          const productCoupons = couponsResult.data.filter((coupon: any) => {
+            if (!coupon.applicableProducts) return true
+            const applicableIds = coupon.applicableProducts as string[]
+            return applicableIds.includes(initialData.id)
+          })
+          setCoupons(productCoupons)
+        }
+      } else {
+        toast.error(result.error || "Failed to create coupon")
+      }
+    } catch (error) {
+      toast.error("An error occurred while creating the coupon")
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
+  const handleDeleteCoupon = async (couponId: string) => {
+    if (!confirm("Are you sure you want to delete this coupon?")) return
+    
+    const result = await deleteCoupon(couponId)
+    if (result.success) {
+      toast.success("Coupon deleted")
+      setCoupons(coupons.filter(c => c.id !== couponId))
+    } else {
+      toast.error("Failed to delete coupon")
+    }
+  }
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code)
+    setCopiedCode(code)
+    toast.success("Code copied to clipboard")
+    setTimeout(() => setCopiedCode(null), 2000)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -802,6 +912,217 @@ export function ProductForm({ initialData, products = [], vatRates }: ProductFor
             </Label>
           </div>
         </div>
+
+        {/* Discount Coupons Section */}
+        {initialData?.id && (
+          <div className="space-y-4 border p-4 rounded-md bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Ticket className="h-5 w-5 text-amber-600" />
+                <h3 className="font-medium">Discount Coupons</h3>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowCouponForm(!showCouponForm)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Coupon
+              </Button>
+            </div>
+
+            {/* Create Coupon Form */}
+            {showCouponForm && (
+              <form onSubmit={handleCreateCoupon} className="space-y-4 border p-4 rounded-md bg-white dark:bg-gray-900">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="couponCode">Coupon Code *</Label>
+                    <Input
+                      id="couponCode"
+                      value={couponFormData.code}
+                      onChange={(e) => setCouponFormData({...couponFormData, code: e.target.value.toUpperCase()})}
+                      placeholder="SUMMER2024"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="couponDiscountType">Discount Type *</Label>
+                    <Select
+                      value={couponFormData.discountType}
+                      onValueChange={(value) => setCouponFormData({...couponFormData, discountType: value, discountValue: ""})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">Percentage (%)</SelectItem>
+                        <SelectItem value="fixed_amount">Fixed Amount (€)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="couponDiscountValue">
+                      {couponFormData.discountType === 'percentage' ? 'Percentage (%)' : 'Amount (€)'} *
+                    </Label>
+                    <Input
+                      id="couponDiscountValue"
+                      type="number"
+                      step={couponFormData.discountType === 'percentage' ? '1' : '0.01'}
+                      min="0"
+                      max={couponFormData.discountType === 'percentage' ? '100' : undefined}
+                      value={couponFormData.discountValue}
+                      onChange={(e) => setCouponFormData({...couponFormData, discountValue: e.target.value})}
+                      placeholder={couponFormData.discountType === 'percentage' ? '20' : '10.00'}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="couponUsageLimit">Usage Limit</Label>
+                    <Input
+                      id="couponUsageLimit"
+                      type="number"
+                      min="1"
+                      value={couponFormData.usageLimit}
+                      onChange={(e) => setCouponFormData({...couponFormData, usageLimit: e.target.value})}
+                      placeholder="Unlimited"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="couponDescription">Description</Label>
+                  <Textarea
+                    id="couponDescription"
+                    value={couponFormData.description}
+                    onChange={(e) => setCouponFormData({...couponFormData, description: e.target.value})}
+                    placeholder="Summer promotion - 20% off this product"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="couponStartDate">Start Date</Label>
+                    <Input
+                      id="couponStartDate"
+                      type="date"
+                      value={couponFormData.startDate}
+                      onChange={(e) => setCouponFormData({...couponFormData, startDate: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="couponEndDate">End Date</Label>
+                    <Input
+                      id="couponEndDate"
+                      type="date"
+                      value={couponFormData.endDate}
+                      onChange={(e) => setCouponFormData({...couponFormData, endDate: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={couponLoading} size="sm">
+                    {couponLoading ? "Creating..." : "Create Coupon"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowCouponForm(false)
+                      setCouponFormData({
+                        code: "",
+                        description: "",
+                        discountType: "percentage",
+                        discountValue: "",
+                        startDate: "",
+                        endDate: "",
+                        usageLimit: "",
+                      })
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* Existing Coupons List */}
+            {coupons.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {coupons.length} coupon{coupons.length > 1 ? 's' : ''} applicable to this product:
+                </p>
+                <div className="space-y-2">
+                  {coupons.map((coupon) => (
+                    <div
+                      key={coupon.id}
+                      className="flex items-center justify-between p-3 border rounded-md bg-white dark:bg-gray-900"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <code className="bg-muted px-2 py-1 rounded font-mono text-sm font-bold">
+                            {coupon.code}
+                          </code>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleCopyCode(coupon.code)}
+                          >
+                            {copiedCode === coupon.code ? (
+                              <Check className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {coupon.discountType === 'percentage'
+                            ? `${coupon.discountValue}% off`
+                            : `€${(coupon.discountValue / 100).toFixed(2)} off`}
+                          {coupon.description && ` - ${coupon.description}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Used: {coupon.usageCount}/{coupon.usageLimit || '∞'}
+                          {coupon.endDate && ` • Expires: ${new Date(coupon.endDate).toLocaleDateString('fr-FR')}`}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteCoupon(coupon.id)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No coupons created for this product yet.
+              </p>
+            )}
+          </div>
+        )}
+
+        {!initialData?.id && (
+          <div className="border p-4 rounded-md bg-blue-50 dark:bg-blue-950/20">
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <Ticket className="h-4 w-4" />
+              Save the product first to create discount coupons.
+            </p>
+          </div>
+        )}
 
         <Button type="submit" disabled={loading} className="w-full">
           {loading ? "Saving..." : (initialData ? "Update Product" : "Create Product")}

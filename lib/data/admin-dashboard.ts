@@ -1,5 +1,5 @@
 import { db } from "@/db"
-import { companies, subscriptions, orders, users, userRoles, roles } from "@/db/schema"
+import { companies, subscriptions, orders, users, userRoles, roles, orderItems, products } from "@/db/schema"
 import { count, eq, sum, desc, sql, and } from "drizzle-orm"
 
 export async function getDashboardStats() {
@@ -181,6 +181,56 @@ export async function getDashboardStats() {
 
   const chartData = Array.from(chartDataMap.values());
 
+  // 11. Sales by Product Type
+  // Get all order items with their product types
+  const salesByType = await db
+    .select({
+      productType: products.type,
+      totalQuantity: sum(orderItems.quantity),
+      totalRevenue: sum(orderItems.totalPrice),
+      orderCount: count(),
+    })
+    .from(orderItems)
+    .leftJoin(products, eq(orderItems.itemId, products.id))
+    .leftJoin(orders, eq(orderItems.orderId, orders.id))
+    .where(eq(orders.paymentStatus, 'paid'))
+    .groupBy(products.type)
+
+  // Format sales by type data
+  const formattedSalesByType = salesByType.map(item => ({
+    type: item.productType || 'unknown',
+    quantity: Number(item.totalQuantity) || 0,
+    revenue: (Number(item.totalRevenue) || 0) / 100,
+    orders: Number(item.orderCount) || 0
+  }))
+
+  // 12. Top Selling Products (All Time)
+  const topProducts = await db
+    .select({
+      productId: orderItems.itemId,
+      productName: orderItems.itemName,
+      productType: products.type,
+      totalQuantity: sum(orderItems.quantity),
+      totalRevenue: sum(orderItems.totalPrice),
+      orderCount: count(),
+    })
+    .from(orderItems)
+    .leftJoin(products, eq(orderItems.itemId, products.id))
+    .leftJoin(orders, eq(orderItems.orderId, orders.id))
+    .where(eq(orders.paymentStatus, 'paid'))
+    .groupBy(orderItems.itemId, orderItems.itemName, products.type)
+    .orderBy(desc(sum(orderItems.totalPrice)))
+    .limit(10)
+
+  const formattedTopProducts = topProducts.map(item => ({
+    id: item.productId,
+    name: item.productName,
+    type: item.productType || 'unknown',
+    quantity: Number(item.totalQuantity) || 0,
+    revenue: (Number(item.totalRevenue) || 0) / 100,
+    orders: Number(item.orderCount) || 0
+  }))
+
   return {
     metrics: {
       revenue: totalRevenue,
@@ -191,7 +241,9 @@ export async function getDashboardStats() {
     recentSubscriptions,
     recentCompanies,
     recentInvoices,
-    chartData
+    chartData,
+    salesByType: formattedSalesByType,
+    topProducts: formattedTopProducts
   }
 }
 

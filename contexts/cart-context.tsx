@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import { getCart, addToCart as addToCartAction } from "@/app/actions/ecommerce"
+import { getCart, addToCart as addToCartAction, clearActiveCart } from "@/app/actions/ecommerce"
 import { toast } from "sonner"
 import { usePathname } from "next/navigation"
 
@@ -9,7 +9,7 @@ interface CartContextType {
   itemCount: number
   isLoading: boolean
   addToCart: (productId: string) => Promise<void>
-  clearCart: () => void
+  clearCart: () => Promise<void>
   refreshCart: () => Promise<void>
 }
 
@@ -72,13 +72,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const clearCart = useCallback(() => {
-    console.log("[CartContext] Clearing cart")
-    setItemCount(0)
-    // Force refresh after a short delay to sync with server
-    setTimeout(() => {
-      refreshCart()
-    }, 500)
+  const clearCart = useCallback(async () => {
+    console.log("[CartContext] Clearing cart via server action")
+    try {
+      const result = await clearActiveCart()
+      if (result.success) {
+        setItemCount(0)
+        console.log("[CartContext] ✅ Cart cleared successfully")
+        // Refresh to confirm
+        await refreshCart()
+      } else {
+        console.error("[CartContext] ❌ Failed to clear cart:", result.error)
+      }
+    } catch (error) {
+      console.error("[CartContext] ❌ Error clearing cart:", error)
+    }
   }, [refreshCart])
 
   return (

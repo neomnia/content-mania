@@ -222,3 +222,283 @@ export async function notifyAdminNewAppointment(params: {
     }
   })
 }
+
+/**
+ * Send notification for orders with physical products to ship
+ * Lists all physical items that need shipping
+ */
+export async function notifyAdminPhysicalProductsToShip(params: {
+  orderId: string
+  orderNumber: string
+  userId: string
+  userEmail: string
+  userName: string
+  physicalProducts: Array<{
+    title: string
+    quantity: number
+    requiresShipping: boolean
+    shippingNotes?: string
+  }>
+  shippingAddress?: {
+    address?: string
+    city?: string
+    postalCode?: string
+    country?: string
+  }
+}) {
+  const {
+    orderId,
+    orderNumber,
+    userId,
+    userEmail,
+    userName,
+    physicalProducts,
+    shippingAddress
+  } = params
+
+  let message = `📦 New order with physical products to ship!\n\n`
+  message += `**Order:** ${orderNumber}\n`
+  message += `**Customer:** ${userName} (${userEmail})\n\n`
+  
+  message += `**Products to ship:**\n`
+  physicalProducts.forEach(product => {
+    message += `• ${product.title} (x${product.quantity})`
+    if (product.shippingNotes) {
+      message += ` - ${product.shippingNotes}`
+    }
+    message += `\n`
+  })
+  message += `\n`
+
+  if (shippingAddress) {
+    message += `**Shipping Address:**\n`
+    if (shippingAddress.address) message += `${shippingAddress.address}\n`
+    if (shippingAddress.postalCode || shippingAddress.city) {
+      message += `${shippingAddress.postalCode || ''} ${shippingAddress.city || ''}\n`
+    }
+    if (shippingAddress.country) message += `${shippingAddress.country}\n`
+    message += `\n`
+  }
+
+  message += `**Action required:** Prepare shipment and mark as shipped once sent.\n\n`
+  message += `Manage order: [admin dashboard](/admin/orders/${orderId})`
+
+  return sendAdminNotification({
+    subject: `Shipment required - Order ${orderNumber}`,
+    message,
+    type: 'order',
+    userId,
+    userEmail,
+    userName,
+    priority: 'high',
+    metadata: {
+      orderId,
+      orderNumber,
+      physicalProducts,
+      shippingAddress,
+      actionRequired: 'ship_products'
+    }
+  })
+}
+
+/**
+ * Send notification to client when physical product is shipped
+ * Returns formatted message for chat
+ */
+export async function notifyClientProductShipped(params: {
+  orderId: string
+  orderNumber: string
+  userId: string
+  userEmail: string
+  userName: string
+  shippedProducts: Array<{
+    title: string
+    quantity: number
+  }>
+  trackingNumber?: string
+  carrier?: string
+  estimatedDelivery?: string
+}) {
+  const {
+    orderId,
+    orderNumber,
+    userId,
+    userEmail,
+    userName,
+    shippedProducts,
+    trackingNumber,
+    carrier,
+    estimatedDelivery
+  } = params
+
+  let message = `✅ Your order has been shipped!\n\n`
+  message += `**Order:** ${orderNumber}\n\n`
+  
+  message += `**Shipped items:**\n`
+  shippedProducts.forEach(product => {
+    message += `• ${product.title} (x${product.quantity})\n`
+  })
+  message += `\n`
+
+  if (trackingNumber) {
+    message += `**Tracking Number:** ${trackingNumber}\n`
+  }
+  if (carrier) {
+    message += `**Carrier:** ${carrier}\n`
+  }
+  if (estimatedDelivery) {
+    message += `**Estimated Delivery:** ${estimatedDelivery}\n`
+  }
+  message += `\n`
+  message += `You will receive your package soon. Thank you for your order!`
+
+  return sendAdminNotification({
+    subject: `Order ${orderNumber} - Shipped`,
+    message,
+    type: 'system',
+    userId,
+    userEmail,
+    userName,
+    priority: 'normal',
+    metadata: {
+      orderId,
+      orderNumber,
+      shippedProducts,
+      trackingNumber,
+      carrier,
+      estimatedDelivery,
+      notificationType: 'shipment_confirmation'
+    }
+  })
+}
+
+/**
+ * Send notification to client with digital product access
+ * Provides download URL and license key
+ */
+export async function notifyClientDigitalProductAccess(params: {
+  orderId: string
+  orderNumber: string
+  userId: string
+  userEmail: string
+  userName: string
+  digitalProducts: Array<{
+    title: string
+    downloadUrl?: string | null
+    licenseKey?: string | null
+    licenseInstructions?: string | null
+  }>
+}) {
+  const {
+    orderId,
+    orderNumber,
+    userId,
+    userEmail,
+    userName,
+    digitalProducts
+  } = params
+
+  let message = `🎉 Your digital products are ready!\n\n`
+  message += `**Order:** ${orderNumber}\n\n`
+  
+  digitalProducts.forEach(product => {
+    message += `📦 **${product.title}**\n\n`
+    
+    if (product.downloadUrl) {
+      message += `**Download Link:** ${product.downloadUrl}\n`
+    }
+    
+    if (product.licenseKey) {
+      message += `**License Key:** \`${product.licenseKey}\`\n\n`
+      
+      if (product.licenseInstructions) {
+        message += `**Activation Instructions:**\n${product.licenseInstructions}\n`
+      }
+    }
+    
+    message += `\n---\n\n`
+  })
+  
+  message += `Thank you for your purchase! Your digital products are now available for instant access.\n\n`
+  message += `View your order details: [dashboard](/dashboard/checkout/confirmation?orderId=${orderId})`
+
+  return sendAdminNotification({
+    subject: `Your digital products - Order ${orderNumber}`,
+    message,
+    type: 'system',
+    userId,
+    userEmail,
+    userName,
+    priority: 'normal',
+    metadata: {
+      orderId,
+      orderNumber,
+      digitalProducts: digitalProducts.map(p => ({
+        title: p.title,
+        hasDownloadUrl: !!p.downloadUrl,
+        hasLicenseKey: !!p.licenseKey
+      })),
+      notificationType: 'digital_product_delivery'
+    }
+  })
+}
+
+/**
+ * Send notification to admin about digital products order
+ * Notifies admin about digital sale for tracking purposes
+ */
+export async function notifyAdminDigitalProductSale(params: {
+  orderId: string
+  orderNumber: string
+  userId: string
+  userEmail: string
+  userName: string
+  digitalProducts: Array<{
+    title: string
+    quantity: number
+  }>
+  totalAmount: number
+  currency: string
+}) {
+  const {
+    orderId,
+    orderNumber,
+    userId,
+    userEmail,
+    userName,
+    digitalProducts,
+    totalAmount,
+    currency
+  } = params
+
+  let message = `💻 New digital product sale!\n\n`
+  message += `**Order:** ${orderNumber}\n`
+  message += `**Customer:** ${userName} (${userEmail})\n`
+  message += `**Total:** ${(totalAmount / 100).toFixed(2)} ${currency}\n\n`
+  
+  message += `**Digital products:**\n`
+  digitalProducts.forEach(product => {
+    message += `• ${product.title} (x${product.quantity})\n`
+  })
+  message += `\n`
+  message += `✅ License keys generated and sent to customer automatically.\n\n`
+  message += `Manage order: [admin dashboard](/admin/orders/${orderId})`
+
+  return sendAdminNotification({
+    subject: `Digital sale - Order ${orderNumber}`,
+    message,
+    type: 'order',
+    userId,
+    userEmail,
+    userName,
+    priority: 'normal',
+    metadata: {
+      orderId,
+      orderNumber,
+      digitalProducts,
+      totalAmount,
+      currency,
+      notificationType: 'digital_product_sale'
+    }
+  })
+}

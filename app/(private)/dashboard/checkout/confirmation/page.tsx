@@ -17,7 +17,11 @@ import {
   ExternalLink,
   ShoppingBag,
   Package,
-  Home
+  Home,
+  Download,
+  Key,
+  Copy,
+  CheckCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -54,6 +58,12 @@ interface Order {
     quantity: number
     unitPrice: number
     totalPrice: number
+    metadata?: {
+      productType?: string
+      downloadUrl?: string | null
+      generatedLicenseKey?: string | null
+      licenseInstructions?: string | null
+    }
   }>
 }
 
@@ -68,10 +78,18 @@ export default function ConfirmationPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [simulating, setSimulating] = useState(false)
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
 
   // Determine mode
   const isBookingMode = !!bookingId
   const isOrderMode = !!orderId
+  
+  // Helper to copy license key to clipboard
+  const copyToClipboard = (text: string, productName: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedKey(productName)
+    setTimeout(() => setCopiedKey(null), 2000)
+  }
 
   // Fetch data based on mode
   useEffect(() => {
@@ -182,12 +200,14 @@ export default function ConfirmationPage() {
     switch (status) {
       case 'confirmed':
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800">Confirmé</Badge>
+        return <Badge className="bg-green-100 text-green-800">Confirmed</Badge>
       case 'pending_payment':
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">En attente de paiement</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800">Pending Payment</Badge>
       case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800">Annulé</Badge>
+        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>
+      case 'shipped':
+        return <Badge className="bg-blue-100 text-blue-800">Shipped</Badge>
       default:
         return <Badge>{status}</Badge>
     }
@@ -238,8 +258,8 @@ export default function ConfirmationPage() {
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <Check className="w-10 h-10" />
           </div>
-          <h1 className="text-2xl font-bold mb-2">Commande confirmée !</h1>
-          <p className="text-white/80">Merci pour votre commande</p>
+          <h1 className="text-2xl font-bold mb-2">Order Confirmed!</h1>
+          <p className="text-white/80">Thank you for your purchase</p>
         </div>
 
         {/* Order Details */}
@@ -249,10 +269,10 @@ export default function ConfirmationPage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="w-5 h-5" />
-                  Commande {order.orderNumber}
+                  Order {order.orderNumber}
                 </CardTitle>
                 <CardDescription>
-                  {format(new Date(order.createdAt), "d MMMM yyyy 'à' HH:mm", { locale: fr })}
+                  {format(new Date(order.createdAt), "MMMM d, yyyy 'at' HH:mm")}
                 </CardDescription>
               </div>
               {getStatusBadge(order.status)}
@@ -262,9 +282,9 @@ export default function ConfirmationPage() {
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
               <Check className="w-6 h-6 text-green-600" />
               <div>
-                <p className="text-green-800 font-medium">Commande reçue avec succès</p>
+                <p className="text-green-800 font-medium">Order Successfully Received</p>
                 <p className="text-green-700 text-sm">
-                  Un email de confirmation vous a été envoyé.
+                  A confirmation email has been sent to you.
                 </p>
               </div>
             </div>
@@ -273,16 +293,117 @@ export default function ConfirmationPage() {
               <>
                 <Separator />
                 <div className="space-y-3">
-                  <h3 className="font-medium">Articles commandés</h3>
+                  <h3 className="font-medium">Ordered Items</h3>
                   {order.items.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between py-2 border-b last:border-b-0">
                       <div>
                         <p className="font-medium">{item.itemName}</p>
-                        <p className="text-sm text-gray-500">Quantité: {item.quantity}</p>
+                        <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                       </div>
                       <p className="font-medium">{formatPrice(item.totalPrice)}</p>
                     </div>
                   ))}
+                </div>
+              </>
+            )}
+
+            {/* Digital Products Section - Download URLs and License Keys */}
+            {order.items && order.items.filter(item => item.metadata?.productType === 'digital').length > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-4">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Download className="w-5 h-5 text-blue-500" />
+                    Your Digital Products
+                  </h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                    <p className="text-sm text-blue-800">
+                      🎉 Your digital products are ready for instant access! Download links and license keys are provided below.
+                    </p>
+                  </div>
+                  {order.items
+                    .filter(item => item.metadata?.productType === 'digital')
+                    .map((item, idx) => (
+                      <div key={idx} className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-5 space-y-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold text-lg text-purple-900">{item.itemName}</p>
+                            <p className="text-sm text-purple-700">Digital Product • Instant Access</p>
+                          </div>
+                          <Badge className="bg-green-500 text-white">Ready</Badge>
+                        </div>
+
+                        {/* Download URL */}
+                        {item.metadata?.downloadUrl && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                              <Download className="w-4 h-4" />
+                              Download Link
+                            </p>
+                            <a
+                              href={item.metadata.downloadUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-3 bg-white border border-purple-300 rounded-lg hover:bg-purple-50 transition-colors group"
+                            >
+                              <ExternalLink className="w-4 h-4 text-purple-600" />
+                              <span className="text-purple-900 font-medium group-hover:underline">
+                                Download {item.itemName}
+                              </span>
+                            </a>
+                          </div>
+                        )}
+
+                        {/* License Key */}
+                        {item.metadata?.generatedLicenseKey && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                              <Key className="w-4 h-4" />
+                              License Key
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 px-4 py-3 bg-white border border-purple-300 rounded-lg font-mono text-sm text-purple-900 font-semibold">
+                                {item.metadata.generatedLicenseKey}
+                              </code>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => copyToClipboard(item.metadata!.generatedLicenseKey!, item.itemName)}
+                                className="shrink-0"
+                              >
+                                {copiedKey === item.itemName ? (
+                                  <>
+                                    <CheckCircle className="w-4 h-4 mr-1 text-green-600" />
+                                    Copied!
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-4 h-4 mr-1" />
+                                    Copy
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* License Instructions */}
+                        {item.metadata?.licenseInstructions && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-gray-700">Activation Instructions</p>
+                            <div className="px-4 py-3 bg-white border border-purple-300 rounded-lg text-sm text-gray-700 whitespace-pre-wrap">
+                              {item.metadata.licenseInstructions}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-sm text-gray-700">
+                      <Mail className="w-4 h-4 inline mr-1" />
+                      A copy of your license keys and download links has been sent to your email.
+                    </p>
+                  </div>
                 </div>
               </>
             )}
@@ -294,7 +415,7 @@ export default function ConfirmationPage() {
                 <div className="space-y-3">
                   <h3 className="font-medium flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-[#CD7F32]" />
-                    Rendez-vous programmés
+                    Scheduled Appointments
                   </h3>
                   {order.appointments.map((apt: any, idx: number) => (
                     <div key={idx} className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -315,9 +436,9 @@ export default function ConfirmationPage() {
                         </Badge>
                       </div>
                       <div className="mt-3 pt-3 border-t border-amber-200 flex items-center justify-between text-sm">
-                        <span className="text-amber-700">Statut de paiement</span>
+                        <span className="text-amber-700">Payment Status</span>
                         <span className={apt.isPaid ? "text-green-600 font-medium" : "text-orange-600"}>
-                          {apt.isPaid ? '✓ Payé' : 'En attente'}
+                          {apt.isPaid ? '✓ Paid' : 'Pending'}
                         </span>
                       </div>
                     </div>
@@ -325,7 +446,7 @@ export default function ConfirmationPage() {
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-sm text-blue-800">
                       <Mail className="w-4 h-4 inline mr-1" />
-                      Un email de confirmation avec les détails de vos rendez-vous vous a été envoyé.
+                      A confirmation email with your appointment details has been sent to you.
                     </p>
                   </div>
                 </div>
@@ -356,13 +477,13 @@ export default function ConfirmationPage() {
               <Link href="/dashboard" className="flex-1">
                 <Button className="w-full bg-[#CD7F32] hover:bg-[#B8860B]">
                   <Home className="w-4 h-4 mr-2" />
-                  Retour au dashboard
+                  Back to Dashboard
                 </Button>
               </Link>
               <Link href="/store" className="flex-1">
                 <Button variant="outline" className="w-full">
                   <ShoppingBag className="w-4 h-4 mr-2" />
-                  Continuer mes achats
+                  Continue Shopping
                 </Button>
               </Link>
             </div>

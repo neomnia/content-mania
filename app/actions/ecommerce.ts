@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from "@/db"
-import { products, carts, cartItems, orders, orderItems, appointments, outlookIntegrations } from "@/db/schema"
+import { products, carts, cartItems, orders, orderItems, appointments, outlookIntegrations, users } from "@/db/schema"
 import { eq, and, desc, asc, isNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getCurrentUser } from "@/lib/auth"
@@ -812,9 +812,43 @@ export async function processCheckout(
 
     console.log('[processCheckout] ✅ Order created in database', { orderId: order.id, orderNumber: order.orderNumber })
 
-    // 7. Create Order Items
+    // 7. Create Order Items with License Keys for Digital Products
     console.log('[processCheckout] 📦 Creating order items')
+    const { generateProductLicenseKey } = await import('@/lib/license-key-generator')
+    
     for (const item of cart.items) {
+      // Generate license key for digital products
+      let itemMetadata: any = {}
+      
+      if (item.product.type === 'digital') {
+        // Generate unique license key
+        const generatedLicenseKey = generateProductLicenseKey(
+          item.product.title,
+          item.product.licenseKey
+        )
+        
+        itemMetadata = {
+          productType: 'digital',
+          downloadUrl: item.product.fileUrl || item.product.downloadUrl,
+          generatedLicenseKey,
+          licenseInstructions: item.product.licenseInstructions
+        }
+        
+        console.log('[processCheckout] 🔑 Generated license key for digital product', {
+          productTitle: item.product.title,
+          licenseKey: generatedLicenseKey
+        })
+      } else if (item.product.type === 'physical') {
+        itemMetadata = {
+          productType: 'physical',
+          requiresShipping: true
+        }
+      } else if (item.product.type === 'appointment') {
+        itemMetadata = {
+          productType: 'appointment'
+        }
+      }
+      
       await db.insert(orderItems).values({
         orderId: order.id,
         itemType: "product",
@@ -823,18 +857,191 @@ export async function processCheckout(
         quantity: item.quantity,
         unitPrice: item.product.price,
         totalPrice: item.product.price * item.quantity,
+        metadata: itemMetadata
       })
       console.log('[processCheckout] ✅ Order item created', {
         itemName: item.product.title,
         quantity: item.quantity,
+        type: item.product.type,
         unitPrice: (item.product.price / 100).toFixed(2),
         totalPrice: ((item.product.price * item.quantity) / 100).toFixed(2)
       })
     }
 
+    // 7a. Send Admin Notification for New Order
+    console.log('[processCheckout] 📢 Sending admin notification for new order')
+    try {
+      const { 
+        notifyAdminNewOrder, 
+        notifyAdminPhysicalProductsToShip,
+        notifyClientDigitalProductAccess,
+        notifyAdminDigitalProductSale
+      } = await import('@/lib/notifications')
+      
+      // Check if order has physical products requiring shipment
+      const physicalProducts = cart.items
+        .filter(item => item.product.type === 'physical' || item.product.requiresShipping)
+        .map(item => ({
+          title: item.product.title,
+          quantity: item.quantity,
+          requiresShipping: item.product.requiresShipping || false,
+          shippingNotes: item.product.shippingNotes || undefined
+        }))
+
+      const hasPhysicalProducts = physicalProducts.length > 0
+      
+      // Check if order has digital products
+      const digitalProducts = cart.items
+        .filter(item => item.product.type === 'digital')
+        .map(item => ({
+          title: item.product.title,
+          quantity: item.quantity
+        }))
+      
+      const hasDigitalProducts = digitalProducts.length > 0
+
+      // Get user details for shipping
+      const userDetails = await db.query.users.findFirst({
+        where: eq(users.id, user.userId)
+      })
+
+      // Send general order notification
+      await notifyAdminNewOrder({
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        userId: user.userId,
+        userEmail: user.email,
+        userName: userDetails?.firstName && userDetails?.lastName 
+          ? `${userDetails.firstName} ${userDetails.lastName}` 
+          : user.email,
+        totalAmount,
+        currency: 'EUR',
+        hasAppointment: appointmentsData ? Object.keys(appointmentsData).length > 0 : false,
+        appointmentDetails: appointmentsData ? Object.values(appointmentsData)[0] : undefined
+      })
+
+      // If there are physical products, send additional shipment notification
+      if (hasPhysicalProducts) {
+        console.log('[processCheckout] 📦 Sending shipment notification for physical products')
+        await notifyAdminPhysicalProductsToShip({
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          userId: user.userId,
+          userEmail: user.email,
+          userName: userDetails?.firstName && userDetails?.lastName 
+            ? `${userDetails.firstName} ${userDetails.lastName}` 
+            : user.email,
+          physicalProducts,
+          shippingAddress: userDetails ? {
+            address: userDetails.address || undefined,
+            city: userDetails.city || undefined,
+            postalCode: userDetails.postalCode || undefined,
+            country: userDetails.country || undefined
+          } : undefined
+        })
+      }
+      
+      // If there are digital products, send access notifications
+      if (hasDigitalProducts) {
+        console.log('[processCheckout] 💻 Processing digital products')
+        
+        // Get order items with metadata to retrieve license keys
+        const createdOrderItems = await db.query.orderItems.findMany({
+          where: eq(orderItems.orderId, order.id)
+        })
+        
+        // Build digital products list with access credentials
+        const digitalProductsWithAccess = createdOrderItems
+          .filter(item => item.metadata && (item.metadata as any).productType === 'digital')
+          .map(item => ({
+            title: item.itemName,
+            downloadUrl: (item.metadata as any).downloadUrl || null,
+            licenseKey: (item.metadata as any).generatedLicenseKey || null,
+            licenseInstructions: (item.metadata as any).licenseInstructions || null
+          }))
+        
+        if (digitalProductsWithAccess.length > 0) {
+          // Send client notification with download URLs and license keys
+          console.log('[processCheckout] 📧 Sending digital product access to client')
+          await notifyClientDigitalProductAccess({
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            userId: user.userId,
+            userEmail: user.email,
+            userName: userDetails?.firstName && userDetails?.lastName 
+              ? `${userDetails.firstName} ${userDetails.lastName}` 
+              : user.email,
+            digitalProducts: digitalProductsWithAccess
+          })
+          
+          // Send admin notification about digital product sale
+          console.log('[processCheckout] 📧 Notifying admin about digital product sale')
+          await notifyAdminDigitalProductSale({
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            userId: user.userId,
+            userEmail: user.email,
+            userName: userDetails?.firstName && userDetails?.lastName 
+              ? `${userDetails.firstName} ${userDetails.lastName}` 
+              : user.email,
+            digitalProducts,
+            totalAmount,
+            currency: 'EUR'
+          })
+        }
+      }
+
+      console.log('[processCheckout] ✅ Admin notifications sent successfully')
+    } catch (notifError) {
+      console.warn('[processCheckout] ⚠️ Failed to send admin notification (non-critical):', notifError instanceof Error ? notifError.message : notifError)
+      // Non-blocking - continuer le checkout même si la notification échoue
+    }
+
     // 7b. Create Appointments for appointment-type products
     if (appointmentsData && Object.keys(appointmentsData).length > 0) {
       console.log('[processCheckout] 📅 Creating appointments for appointment products')
+      
+      // 🔒 VALIDATION SERVEUR : Valider les données des appointments AVANT création
+      console.log('[processCheckout] 🔍 Validating appointment data server-side')
+      for (const item of cart.items) {
+        if (item.product.type === 'appointment') {
+          const appointmentData = appointmentsData[item.product.id]
+          
+          // Vérifier que les données existent
+          if (!appointmentData) {
+            throw new Error(`Missing appointment data for product: ${item.product.title}`)
+          }
+          
+          // Vérifier que les créneaux horaires sont présents
+          if (!appointmentData.startTime || !appointmentData.endTime) {
+            throw new Error(`Missing time slots for appointment: ${item.product.title}`)
+          }
+          
+          // Convertir et valider les dates
+          const start = new Date(appointmentData.startTime)
+          const end = new Date(appointmentData.endTime)
+          
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            throw new Error(`Invalid appointment dates for: ${item.product.title}`)
+          }
+          
+          if (start >= end) {
+            throw new Error(`Start time must be before end time for: ${item.product.title}`)
+          }
+          
+          if (start < new Date()) {
+            throw new Error(`Appointment cannot be in the past for: ${item.product.title}`)
+          }
+          
+          // Vérifier les données attendee
+          if (!appointmentData.attendeeEmail || !appointmentData.attendeeName) {
+            throw new Error(`Missing attendee information for: ${item.product.title}`)
+          }
+        }
+      }
+      console.log('[processCheckout] ✅ All appointment data validated')
+      
+      // Créer les appointments après validation
       for (const item of cart.items) {
         if (item.product.type === 'appointment' && appointmentsData[item.product.id]) {
           const appointmentData = appointmentsData[item.product.id]
@@ -880,6 +1087,21 @@ export async function processCheckout(
             status: appointment.status,
             paymentStatus: appointment.paymentStatus
           })
+
+          // 📅 SYNCHRONISATION CALENDRIER : Sync avec Google Calendar / Outlook (non-bloquant)
+          console.log('[processCheckout] 📅 Syncing appointment to external calendars')
+          try {
+            const { syncAppointmentToCalendars } = await import('@/lib/calendar/sync')
+            const syncResults = await syncAppointmentToCalendars(appointment.id)
+            
+            console.log('[processCheckout] ✅ Calendar sync completed:', {
+              google: syncResults.google?.success ? '✅ Synced' : syncResults.google?.error || 'Not configured',
+              microsoft: syncResults.microsoft?.success ? '✅ Synced' : syncResults.microsoft?.error || 'Not configured'
+            })
+          } catch (syncError) {
+            console.warn('[processCheckout] ⚠️ Calendar sync failed (non-critical):', syncError instanceof Error ? syncError.message : syncError)
+            // Non-bloquant - le checkout continue même si la sync échoue
+          }
 
           // Envoyer les notifications email pour le rendez-vous (non-bloquant)
           console.log('[processCheckout] 📧 Attempting to send appointment notifications (DEV mode - non-blocking)')
@@ -984,6 +1206,172 @@ export async function processCheckout(
       stack: error instanceof Error ? error.stack : undefined
     })
     return { success: false, error: error instanceof Error ? error.message : "Checkout failed" }
+  }
+}
+
+// --- Clear Cart ---
+
+/**
+ * Clear the active cart for the current user
+ * Used after successful checkout to ensure clean state
+ */
+export async function clearActiveCart() {
+  console.log('[clearActiveCart] 🧹 Clearing active cart')
+  
+  try {
+    const user = await getCurrentUser()
+    
+    if (user) {
+      // For logged-in users, mark their active cart as converted
+      console.log('[clearActiveCart] 👤 Clearing cart for logged-in user', { userId: user.userId })
+      const cart = await db.query.carts.findFirst({
+        where: and(
+          eq(carts.userId, user.userId),
+          eq(carts.status, "active")
+        )
+      })
+
+      if (cart) {
+        await db.update(carts)
+          .set({ status: "converted" })
+          .where(eq(carts.id, cart.id))
+        console.log('[clearActiveCart] ✅ User cart marked as converted', { cartId: cart.id })
+      }
+    } else {
+      // For guest users, clear the cookie cart
+      console.log('[clearActiveCart] 👻 Clearing cart for guest user')
+      const cookieStore = await cookies()
+      const cartId = cookieStore.get("cart_id")?.value
+
+      if (cartId) {
+        const cart = await db.query.carts.findFirst({
+          where: and(
+            eq(carts.id, cartId),
+            eq(carts.status, "active")
+          )
+        })
+
+        if (cart) {
+          await db.update(carts)
+            .set({ status: "converted" })
+            .where(eq(carts.id, cart.id))
+          console.log('[clearActiveCart] ✅ Guest cart marked as converted', { cartId: cart.id })
+        }
+
+        // Clear the cookie
+        cookieStore.delete("cart_id")
+      }
+    }
+
+    revalidatePath("/cart")
+    revalidatePath("/dashboard/cart")
+    
+    console.log('[clearActiveCart] ✅ Cart cleared successfully')
+    return { success: true }
+  } catch (error) {
+    console.error('[clearActiveCart] ❌ Failed to clear cart:', error)
+    return { success: false, error: error instanceof Error ? error.message : "Failed to clear cart" }
+  }
+}
+
+// --- Order Management ---
+
+/**
+ * Mark an order as shipped and notify the customer
+ * Used by admins when they ship physical products
+ */
+export async function markOrderAsShipped(params: {
+  orderId: string
+  trackingNumber?: string
+  carrier?: string
+  estimatedDelivery?: string
+  shippedProducts?: Array<{
+    title: string
+    quantity: number
+  }>
+}) {
+  console.log('[markOrderAsShipped] 📦 Marking order as shipped', { orderId: params.orderId })
+  
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return { success: false, error: "Not authenticated" }
+    }
+
+    // TODO: Check if user is admin
+    
+    // Get the order
+    const order = await db.query.orders.findFirst({
+      where: eq(orders.id, params.orderId),
+      with: {
+        user: true,
+        items: {
+          with: {
+            product: true
+          }
+        }
+      }
+    })
+
+    if (!order) {
+      return { success: false, error: "Order not found" }
+    }
+
+    // Update order status to shipped
+    await db.update(orders)
+      .set({ 
+        status: "shipped",
+        metadata: {
+          ...order.metadata as any,
+          shippedAt: new Date().toISOString(),
+          trackingNumber: params.trackingNumber,
+          carrier: params.carrier,
+          estimatedDelivery: params.estimatedDelivery
+        }
+      })
+      .where(eq(orders.id, params.orderId))
+
+    console.log('[markOrderAsShipped] ✅ Order marked as shipped in database')
+
+    // Send notification to customer
+    try {
+      const { notifyClientProductShipped } = await import('@/lib/notifications')
+      
+      // Get shipped products from order items if not provided
+      const shippedProducts = params.shippedProducts || order.items
+        .filter(item => item.product?.type === 'physical' || item.product?.requiresShipping)
+        .map(item => ({
+          title: item.itemName,
+          quantity: item.quantity
+        }))
+
+      if (order.user) {
+        await notifyClientProductShipped({
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          userId: order.user.id,
+          userEmail: order.user.email,
+          userName: `${order.user.firstName} ${order.user.lastName}`,
+          shippedProducts,
+          trackingNumber: params.trackingNumber,
+          carrier: params.carrier,
+          estimatedDelivery: params.estimatedDelivery
+        })
+
+        console.log('[markOrderAsShipped] ✅ Customer notification sent')
+      }
+    } catch (notifError) {
+      console.warn('[markOrderAsShipped] ⚠️ Failed to send customer notification:', notifError)
+      // Non-blocking
+    }
+
+    revalidatePath("/admin/orders")
+    revalidatePath(`/orders/${params.orderId}`)
+    
+    return { success: true }
+  } catch (error) {
+    console.error('[markOrderAsShipped] ❌ Error:', error)
+    return { success: false, error: error instanceof Error ? error.message : "Failed to mark order as shipped" }
   }
 }
 

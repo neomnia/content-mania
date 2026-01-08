@@ -321,6 +321,87 @@ export function DashboardStats() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Sales by Product Type */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Sales by Product Type</CardTitle>
+            <CardDescription>Revenue breakdown by product category</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {stats?.salesByType?.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No sales data yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {stats?.salesByType?.map((item: any) => {
+                  const typeLabels: Record<string, string> = {
+                    physical: 'Physical Products',
+                    digital: 'Digital Products',
+                    appointment: 'Appointments/Consultations',
+                    standard: 'Standard Products',
+                    unknown: 'Unknown'
+                  }
+                  
+                  const typeColors: Record<string, string> = {
+                    physical: 'bg-blue-500',
+                    digital: 'bg-purple-500',
+                    appointment: 'bg-green-500',
+                    standard: 'bg-gray-500',
+                    unknown: 'bg-gray-400'
+                  }
+
+                  return (
+                    <div key={item.type} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full ${typeColors[item.type] || typeColors.unknown}`} />
+                        <div>
+                          <p className="font-medium text-sm">{typeLabels[item.type] || item.type}</p>
+                          <p className="text-xs text-muted-foreground">{item.orders} orders • {item.quantity} items</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-primary">${item.revenue.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Selling Products */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Selling Products</CardTitle>
+            <CardDescription>Best performing products all time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {stats?.topProducts?.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No products sold yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {stats?.topProducts?.slice(0, 5).map((product: any, index: number) => (
+                  <div key={product.id} className="flex items-center gap-3 p-2 border-b last:border-b-0">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{product.name}</p>
+                      <p className="text-xs text-muted-foreground">{product.quantity} sold</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-sm">${product.revenue.toFixed(2)}</p>
+                      <Badge variant="outline" className="text-xs">{product.type}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
