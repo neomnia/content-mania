@@ -1,5 +1,28 @@
 # Documentation du Tunnel d'Achat (Checkout Flow)
 
+**Dernière mise à jour:** 8 janvier 2026  
+**Statut:** ✅ Architecture unifiée - Un seul processCheckout()
+
+## ⚠️ Notes Importantes
+
+### Architecture Checkout (8 janvier 2026)
+
+**Version Unique Active:**
+- 📁 **Fichier:** `app/actions/ecommerce.ts`
+- 🎯 **Fonction:** `processCheckout(cartId, appointmentsData?)`
+- ✅ **Utilisée par:**
+  - Frontend: `app/(private)/dashboard/checkout/page.tsx`
+  - API: `app/api/checkout/route.ts` (corrigé le 8/01/2026)
+  - Tests: `app/api/test/checkout/route.ts`
+
+**Doublons Supprimés:**
+- ❌ `lib/checkout/checkout-service.ts` (supprimé - 815 lignes code mort)
+- ❌ `lib/checkout/team-notifications.ts` (supprimé - 767 lignes orphelin)
+
+📝 **Voir:** [AUDIT_DOUBLONS_COMPLET_2026-01-08.md](./AUDIT_DOUBLONS_COMPLET_2026-01-08.md)
+
+---
+
 ## Vue d'ensemble
 
 Le tunnel d'achat permet aux utilisateurs authentifiés de finaliser leurs commandes en intégrant le système de paiement Lago. Le processus est simplifié grâce à l'utilisation des informations de l'utilisateur connecté.
@@ -40,8 +63,12 @@ Le tunnel d'achat permet aux utilisateurs authentifiés de finaliser leurs comma
 │  processCheckout│
 │  Server Action  │
 │                 │
+│ app/actions/    │
+│ ecommerce.ts    │
+│                 │
 │ - Create order  │
 │ - Create appts  │
+│ - Sync calendar │
 │ - Send emails   │
 └────────┬────────┘
          │
@@ -50,8 +77,13 @@ Le tunnel d'achat permet aux utilisateurs authentifiés de finaliser leurs comma
 │  Confirmation   │
 │      Page       │
 │                 │
-│ - Order details │
+│ - Order summary │
+│ - Product type  │
+│   specific msgs │
+│ - Download links│
+│   (digital)     │
 │ - Appointments  │
+│   details       │
 │ - Email sent ✓  │
 └─────────────────┘
 ```

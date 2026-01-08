@@ -118,14 +118,16 @@ export default function ConfirmationPage() {
             setError(data.error || 'Commande non trouvée')
           }
         } catch (err) {
-          // If API doesn't exist yet, show success anyway
+          console.error('[Confirmation] Failed to fetch order:', err)
+          // If API doesn't exist yet, show generic success
           setOrder({
             id: orderId,
             orderNumber: `ORD-${orderId.slice(0, 8).toUpperCase()}`,
             status: 'completed',
             paymentStatus: 'pending',
             totalAmount: 0,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            items: []
           })
         }
       } else {
@@ -251,15 +253,45 @@ export default function ConfirmationPage() {
 
   // ORDER CONFIRMATION VIEW
   if (isOrderMode && order) {
+    // Detect product types in the order
+    const hasAppointments = order.appointments && order.appointments.length > 0
+    const hasDigital = order.items?.some(item => item.metadata?.productType === 'digital') || false
+    const hasPhysical = order.items?.some(item => item.metadata?.productType === 'physical') || false
+    const productTypeCount = [hasAppointments, hasDigital, hasPhysical].filter(Boolean).length
+    const isMixed = productTypeCount > 1
+    
+    // Determine header message and color based on product type
+    let headerTitle = "Commande confirmée !"
+    let headerSubtitle = "Merci pour votre achat"
+    let headerIcon = <Check className="w-10 h-10" />
+    let headerColor = "from-green-500 to-green-600"
+    
+    if (hasAppointments && !isMixed) {
+      headerTitle = "Rendez-vous confirmé !"
+      headerSubtitle = "Votre rendez-vous a été réservé avec succès"
+      headerIcon = <Calendar className="w-10 h-10" />
+      headerColor = "from-[#CD7F32] to-[#B8860B]"
+    } else if (hasDigital && !isMixed) {
+      headerTitle = "Produits numériques prêts !"
+      headerSubtitle = "Accès immédiat à vos téléchargements"
+      headerIcon = <Download className="w-10 h-10" />
+      headerColor = "from-blue-500 to-blue-600"
+    } else if (hasPhysical && !isMixed) {
+      headerTitle = "Commande confirmée !"
+      headerSubtitle = "Votre colis sera préparé et expédié"
+      headerIcon = <Package className="w-10 h-10" />
+      headerColor = "from-purple-500 to-purple-600"
+    }
+    
     return (
       <div className="max-w-2xl mx-auto space-y-6 p-6">
         {/* Success Header */}
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white text-center">
+        <div className={`bg-gradient-to-r ${headerColor} rounded-lg p-6 text-white text-center`}>
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-10 h-10" />
+            {headerIcon}
           </div>
-          <h1 className="text-2xl font-bold mb-2">Order Confirmed!</h1>
-          <p className="text-white/80">Thank you for your purchase</p>
+          <h1 className="text-2xl font-bold mb-2">{headerTitle}</h1>
+          <p className="text-white/80">{headerSubtitle}</p>
         </div>
 
         {/* Order Details */}
@@ -279,15 +311,62 @@ export default function ConfirmationPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-              <Check className="w-6 h-6 text-green-600" />
-              <div>
-                <p className="text-green-800 font-medium">Order Successfully Received</p>
-                <p className="text-green-700 text-sm">
-                  A confirmation email has been sent to you.
-                </p>
+            {/* Contextual success message based on product type */}
+            {hasAppointments && !isMixed && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                <Calendar className="w-6 h-6 text-amber-600 mt-0.5" />
+                <div>
+                  <p className="text-amber-800 font-medium">Rendez-vous confirmé !</p>
+                  <p className="text-amber-700 text-sm">
+                    Un email de confirmation avec les détails de votre rendez-vous et un fichier .ics pour l'ajouter à votre calendrier vous a été envoyé.
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
+            {hasDigital && !isMixed && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                <Download className="w-6 h-6 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="text-blue-800 font-medium">Produits numériques disponibles !</p>
+                  <p className="text-blue-700 text-sm">
+                    Vos liens de téléchargement et clés de licence sont disponibles ci-dessous. Un email de confirmation a également été envoyé.
+                  </p>
+                </div>
+              </div>
+            )}
+            {hasPhysical && !isMixed && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 flex items-start gap-3">
+                <Package className="w-6 h-6 text-purple-600 mt-0.5" />
+                <div>
+                  <p className="text-purple-800 font-medium">Commande en préparation !</p>
+                  <p className="text-purple-700 text-sm">
+                    Votre commande sera préparée sous 24-48h. Vous recevrez un email avec le numéro de suivi dès l'expédition.
+                  </p>
+                </div>
+              </div>
+            )}
+            {isMixed && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+                <Check className="w-6 h-6 text-green-600" />
+                <div>
+                  <p className="text-green-800 font-medium">Commande mixte confirmée !</p>
+                  <p className="text-green-700 text-sm">
+                    Votre commande contient plusieurs types de produits. Consultez les détails ci-dessous et vérifiez votre email.
+                  </p>
+                </div>
+              </div>
+            )}
+            {!hasAppointments && !hasDigital && !hasPhysical && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+                <Check className="w-6 h-6 text-green-600" />
+                <div>
+                  <p className="text-green-800 font-medium">Commande reçue avec succès</p>
+                  <p className="text-green-700 text-sm">
+                    Un email de confirmation vous a été envoyé.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {order.items && order.items.length > 0 && (
               <>

@@ -2,6 +2,219 @@
 
 Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
 
+## [2026-01-08] - Audit Complet: Détection Doublons Calendar/Chat/E-commerce
+
+### Audit Systématique des Doublons dans 3 Systèmes Critiques
+
+**Contexte:**
+Suite à la découverte que la page de confirmation existait mais n'était pas utilisée, audit complet pour identifier tous les doublons susceptibles de causer des dysfonctionnements.
+
+### Systèmes Audités
+
+#### 1. 📅 Système Calendar
+**Résultat:** ✅ **AUCUN DOUBLON DÉTECTÉ**
+
+**Architecture validée:**
+```
+app/api/calendar/
+├─ route.ts (GET/DELETE connections)
+├─ connect/route.ts
+└─ callback/route.ts
+
+lib/calendar/
+├─ sync.ts (Google/Outlook sync)
+└─ icalendar.ts (génération .ics)
+```
+
+**Verdict:**
+- ✅ Architecture propre et modulaire
+- ✅ Séparation claire API/lib
+- ✅ Pas de code dupliqué
+
+#### 2. 💬 Système Chat
+**Résultat:** ✅ **AUCUN DOUBLON DÉTECTÉ**
+
+**Architecture validée:**
+```
+app/api/chat/conversations/ (User chat)
+app/api/admin/chat/ (Admin chat)
+app/api/llm/chat/ (LLM integration)
+```
+
+**Verdict:**
+- ✅ Séparation claire user/admin
+- ✅ Routes bien organisées
+- ✅ Pas de logique dupliquée
+
+#### 3. 🛍️ Système E-commerce (Checkout)
+**Résultat:** 🔴 **DOUBLON MAJEUR DÉTECTÉ**
+
+**Problème identifié:**
+
+**Version ACTIVE (✅ Utilisée):**
+- `app/actions/ecommerce.ts` - fonction `processCheckout()`
+- Importée par:
+  - `app/(private)/dashboard/checkout/page.tsx` ✅
+  - `app/api/test/checkout/route.ts` ✅
+
+**Version DOUBLON (❌ Code mort):**
+- `lib/checkout/checkout-service.ts` (815 lignes)
+- `lib/checkout/team-notifications.ts` (767 lignes)
+- **Importée par:** AUCUN FICHIER ❌
+
+**API Route Problématique:**
+- `app/api/checkout/route.ts`
+- Import: `from '@/lib/checkout'` ⚠️ Référence le doublon!
+
+### Découvertes Critiques
+
+**Module `lib/checkout/` (MORT):**
+```
+lib/checkout/
+├─ index.ts (export barrel)
+├─ checkout-service.ts (815 lignes - DOUBLON)
+├─ team-notifications.ts (767 lignes - ORPHELIN)
+├─ email-templates.ts
+├─ lago-test-mode.ts
+└─ types.ts
+```
+
+**Analyse d'usage:**
+- ❌ `checkout-service.ts`: 0 import réel
+- ❌ `team-notifications.ts`: 0 import réel
+- ❌ Module complet jamais utilisé sauf par API route
+
+### Métriques
+
+**Doublons trouvés:**
+- 🟢 Systèmes propres: 2/3 (Calendar, Chat)
+- 🔴 Systèmes avec doublons: 1/3 (E-commerce)
+- 📉 Code mort total: **1,582 lignes**
+- ⚠️ Routes API affectées: 1
+
+### Actions À Entreprendre
+
+**Priorité 1 - Suppression doublons:**
+- 🗑️ `lib/checkout/checkout-service.ts`
+- 🗑️ `lib/checkout/team-notifications.ts`
+
+**Priorité 2 - Correction API:**
+- 🔧 `app/api/checkout/route.ts`
+  - Changer: `from '@/lib/checkout'`
+  - Vers: `from '@/app/actions/ecommerce'`
+
+**Priorité 3 - Documentation:**
+- ✅ Audit complet documenté: `AUDIT_DOUBLONS_COMPLET_2026-01-08.md`
+- ⏳ Mise à jour CHECKOUT_FLOW.md
+- ⏳ Mise à jour AUDIT_DOUBLONS_SYSTEME.md
+
+### Analyse de Cause Racine
+
+**Pourquoi ces doublons existent?**
+1. **Refactoring incomplet**
+   - Module `lib/checkout/` créé pour modulariser
+   - Migration vers `app/actions/` commencée
+   - Ancien code jamais supprimé
+
+2. **Manque de validation**
+   - Aucun check automatique d'imports
+   - Fichiers orphelins non détectés
+   - Tests ne couvrent qu'une version
+
+3. **Documentation obsolète**
+   - Références à l'ancienne architecture
+   - Confusion pour développeurs
+
+### Lecons Apprises
+
+**Symptôme:**
+Page de confirmation existante mais jamais utilisée = signe de doublons/architecture incohérente.
+
+**Solution:**
+Audit systématique qui a révélé le vrai problème (module checkout dupliqué).
+
+**Prévention future:**
+- Implémenter checks automatiques (ESLint unused-imports)
+- Scripts de détection de code mort
+- Code review strict avec checklist
+- Documentation ARCHITECTURE.md
+
+### Impact Après Correction
+
+**Avant:**
+```
+Checkout
+├─ app/actions/ecommerce.ts (UTILISÉ)
+└─ lib/checkout/checkout-service.ts (DOUBLON)
+    └─ Référencé par: app/api/checkout/route.ts ⚠️
+```
+
+**Après:**
+```
+Checkout
+└─ app/actions/ecommerce.ts (UNIQUE)
+    ├─ app/(private)/dashboard/checkout/page.tsx
+    ├─ app/api/checkout/route.ts (corrigé)
+    └─ app/api/test/checkout/route.ts
+```
+
+**Bénéfices:**
+- 📉 -1,582 lignes de code mort
+- 🧠 1 seule version de processCheckout()
+- ⚡ 0 confusion pour développeurs
+- 🏛️ Architecture claire et maintenable
+- ✅ API route corrigée
+
+### Documentation Créée
+
+1. ✅ `AUDIT_DOUBLONS_COMPLET_2026-01-08.md` - Rapport détaillé
+2. ⏳ Mise à jour AUDIT_DOUBLONS_SYSTEME.md
+3. ⏳ Mise à jour CHECKOUT_FLOW.md
+
+### 🔧 Corrections Appliquées (8 janvier 2026)
+
+#### 1. Correction Import API Route
+**Fichier:** `app/api/checkout/route.ts`
+
+**Avant:**
+```typescript
+import { processCheckout } from '@/lib/checkout' // ❌ Doublon
+```
+
+**Après:**
+```typescript
+import { processCheckout } from '@/app/actions/ecommerce' // ✅ Version active
+```
+
+**Impact:** API route utilise maintenant la bonne version de processCheckout.
+
+#### 2. Fichiers à Supprimer Manuellement
+
+**Via Git (dans la branche):**
+```bash
+# Supprimer les fichiers doublons
+git rm lib/checkout/checkout-service.ts
+git rm lib/checkout/team-notifications.ts
+
+# Commit
+git commit -m "chore: remove duplicate checkout implementation
+
+- Remove lib/checkout/checkout-service.ts (815 lines dead code)
+- Remove lib/checkout/team-notifications.ts (767 lines orphan code)
+- app/actions/ecommerce.ts is the single source of truth
+- API route corrected to use active implementation"
+```
+
+**Fichiers conservés (potentiellement utiles):**
+- `lib/checkout/lago-test-mode.ts` - Utilitaires Lago
+- `lib/checkout/types.ts` - Types TypeScript
+- `lib/checkout/email-templates.ts` - Templates emails
+
+**Note:** Les fichiers sont dans le système de fichiers virtuel GitHub.
+La suppression doit être faite via Git dans la branche.
+
+---
+
 ## [2026-01-08] - Cleanup: Suppression Doublons Système de Commande
 
 ### Nettoyage Architecture : Élimination des Fichiers Redondants

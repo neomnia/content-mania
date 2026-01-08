@@ -310,29 +310,15 @@ export default function CheckoutPage() {
       const result = await processCheckout(cartId, appointmentsObj)
 
       if (result.success) {
-        // Determine success message based on product types
-        const hasAppointments = appointmentProducts.length > 0
-        const hasDigital = cartItems.some(item => item.type === 'digital')
-        const hasPhysical = cartItems.some(item => item.type === 'physical')
-        
-        let successMessage = "Order processed successfully!"
-        if (hasAppointments) {
-          successMessage = "Appointment booked successfully! Check your email for confirmation."
-        } else if (hasDigital) {
-          successMessage = "Order confirmed! You'll receive your digital products by email."
-        } else if (hasPhysical) {
-          successMessage = "Order confirmed! We'll process your shipment shortly."
-        }
-        
         toast.dismiss('checkout-processing')
-        toast.success(successMessage)
-        console.log('[Checkout] ✅ Order completed successfully')
+        console.log('[Checkout] ✅ Order completed successfully', { orderId: result.orderId })
 
         // Clear cart in context to update header
         clearCart()
 
-        // Redirect to dashboard overview after brief delay to show success message
-        setTimeout(() => router.push('/dashboard'), 1500)
+        // Redirect to dedicated confirmation page with order ID
+        // The confirmation page will display appropriate messages based on product types
+        router.push(`/dashboard/checkout/confirmation?orderId=${result.orderId}`)
       } else {
         toast.dismiss('checkout-processing')
         console.error('[Checkout] ❌ Checkout failed:', result.error)

@@ -1,13 +1,27 @@
-# Audit Complet : Doublons et Incohérences - 8 janvier 2026
+# Audit Complet : Doublons et Incohérences - 7-8 janvier 2026
 
 ## 🔍 Résumé Exécutif
 
-Audit complet du système de commande, notifications et calendrier pour identifier les doublons et incohérences.
+**Période d'audit:** 7-8 janvier 2026  
+**Audits réalisés:** 2 passes (Checkout initial + Audit complet 3 systèmes)
+
+### Phase 1 - Audit Initial Checkout (7 janvier)
+Audit du système de commande suite à détection de problèmes de redirection.
+
+### Phase 2 - Audit Complet (8 janvier)
+Audit étendu à Calendar, Chat et E-commerce suite découverte page confirmation non utilisée.
+
+📝 **Rapport détaillé Phase 2:** [AUDIT_DOUBLONS_COMPLET_2026-01-08.md](./AUDIT_DOUBLONS_COMPLET_2026-01-08.md)
 
 ### ✅ Statut Global
-- **Checkout** : 🔴 1 DOUBLON MAJEUR détecté
+- **Checkout** : 🔴 1 DOUBLON MAJEUR détecté + module `lib/checkout/` mort
+- **Calendar** : ✅ Architecture propre, pas de doublons
+- **Chat** : ✅ Architecture propre, pas de doublons
 - **Notifications** : ✅ Architecture propre, pas de doublons
-- **Calendrier** : ✅ Architecture unifiée, pas de doublons
+
+---
+
+## 📋 Résultats Audit Initial (7 janvier)
 - **Documentation** : ⚠️ Références obsolètes à corriger
 
 ---

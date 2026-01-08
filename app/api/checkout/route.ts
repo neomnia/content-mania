@@ -6,12 +6,16 @@
  * - Cart checkout (standard, digital, free products)
  * - Direct appointment booking
  * - Mixed cart with appointments
+ * 
+ * NOTE: This API route is currently NOT used by the frontend.
+ * The frontend uses the server action directly: app/actions/ecommerce.ts
+ * This route is kept for potential future API integrations.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { verifyAuth } from '@/lib/auth/server'
-import { processCheckout } from '@/lib/checkout'
+import { processCheckout } from '@/app/actions/ecommerce'
 import { db } from '@/db'
 import { users } from '@/db/schema'
 import { eq } from 'drizzle-orm'
