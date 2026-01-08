@@ -2,6 +2,97 @@
 
 Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
 
+## [2026-01-08] - Cleanup: Suppression Doublons Système de Commande
+
+### Nettoyage Architecture : Élimination des Fichiers Redondants
+
+**Objectif:**
+Supprimer les fichiers en double qui créaient de la confusion et pouvaient causer des erreurs de développement ("hallucinations").
+
+### Fichiers Supprimés
+
+#### 1. `lib/checkout/checkout-service.ts` (815 lignes)
+
+**Raison de la suppression** :
+- ❌ Fichier doublon de `app/actions/ecommerce.ts`
+- ❌ NON UTILISÉ dans le code de production
+- ❌ Référencé uniquement dans la documentation obsolète
+- ⚠️ Risque élevé de confusion pour les développeurs
+
+**Version active conservée** :
+- ✅ `app/actions/ecommerce.ts` - fonction `processCheckout()`
+- ✅ Utilisée par le frontend
+- ✅ Contient toute la logique complète et à jour
+
+#### 2. `lib/checkout/team-notifications.ts` (767 lignes)
+
+**Raison de la suppression** :
+- ❌ Fichier orphelin utilisé UNIQUEMENT par checkout-service.ts (le doublon)
+- ❌ Fonctionnalités déjà présentes dans `lib/notifications/admin-notifications.ts`
+- ❌ Redondance avec le système de notifications existant
+
+**Alternative conservée** :
+- ✅ `lib/notifications/admin-notifications.ts` - Notifications admin
+- ✅ `lib/notifications/appointment-notifications.ts` - Emails appointments
+
+### Impact
+
+**Avant** :
+```
+Système de Checkout
+├─ app/actions/ecommerce.ts (ACTIF)
+└─ lib/checkout/checkout-service.ts (DOUBLON - CONFUSION)
+```
+
+**Après** :
+```
+Système de Checkout
+└─ app/actions/ecommerce.ts (UNIQUE - CLAIR)
+```
+
+### Architecture Finale (Propre)
+
+**Checkout** :
+- ✅ `app/actions/ecommerce.ts` - Point d'entrée unique
+
+**Notifications** :
+- ✅ `lib/notifications/appointment-notifications.ts` - Emails RDV + .ics
+- ✅ `lib/notifications/admin-notifications.ts` - Notifications chat admin
+
+**Calendrier** :
+- ✅ `lib/calendar/sync.ts` - Synchronisation Google/Outlook
+- ✅ `lib/calendar/icalendar.ts` - Génération fichiers .ics
+
+### Documentation Mise à Jour
+
+**Fichiers modifiés** :
+1. ✅ `docs/APPOINTMENT_CHECKOUT_ANALYSIS.md` - Retrait des références aux doublons
+2. ✅ `docs/AUDIT_DOUBLONS_SYSTEME.md` - Rapport d'audit complet
+3. ✅ `docs/CHECKOUT_FLOW_FIX.md` - Déjà à jour
+
+### Résultats
+
+**Vérifications** :
+- ✅ Aucun import de `checkout-service.ts` dans le code
+- ✅ Aucun import de `team-notifications.ts` dans le code
+- ✅ Tous les tests passent sans erreur
+- ✅ Flux de commande fonctionne correctement
+- ✅ Notifications fonctionnent correctement
+- ✅ Synchronisation calendrier opérationnelle
+
+**Bénéfices** :
+- 🧠 Clarté du code - Un seul fichier à modifier pour le checkout
+- ⚡ Moins de confusion - Pas de fichiers redondants
+- 🐛 Réduction des bugs - Pas de modifications dans le mauvais fichier
+- 📚 Documentation cohérente - Références exactes
+
+**Métriques** :
+- 📉 1582 lignes de code mort supprimées
+- 📉 2 fichiers redondants éliminés
+- 📈 100% du code de checkout utilisé
+
+---
+
 ## [2026-01-07] - Feature: Admin Appointment Request & Client Confirmation System
 
 ### New: Admin Can Request Appointments with Clients

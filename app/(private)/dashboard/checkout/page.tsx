@@ -272,9 +272,25 @@ export default function CheckoutPage() {
     }
 
     setIsProcessing(true)
+    
+    // Show processing message based on product types
+    const hasAppointments = appointmentProducts.length > 0
+    const hasDigital = cartItems.some(item => item.type === 'digital')
+    const hasPhysical = cartItems.some(item => item.type === 'physical')
+    
+    let processingMsg = "Processing your order..."
+    if (hasAppointments) {
+      processingMsg = "Booking your appointment..."
+    } else if (hasDigital) {
+      processingMsg = "Processing your digital order..."
+    } else if (hasPhysical) {
+      processingMsg = "Processing your order and preparing shipment..."
+    }
+    toast.loading(processingMsg, { id: 'checkout-processing' })
 
     try {
       if (!cartId) {
+        toast.dismiss('checkout-processing')
         toast.warning("No active cart. Redirecting to cart...")
         router.push("/dashboard/cart")
         setIsProcessing(false)
@@ -294,16 +310,31 @@ export default function CheckoutPage() {
       const result = await processCheckout(cartId, appointmentsObj)
 
       if (result.success) {
-        toast.success("Order processed successfully!")
+        // Determine success message based on product types
+        const hasAppointments = appointmentProducts.length > 0
+        const hasDigital = cartItems.some(item => item.type === 'digital')
+        const hasPhysical = cartItems.some(item => item.type === 'physical')
+        
+        let successMessage = "Order processed successfully!"
+        if (hasAppointments) {
+          successMessage = "Appointment booked successfully! Check your email for confirmation."
+        } else if (hasDigital) {
+          successMessage = "Order confirmed! You'll receive your digital products by email."
+        } else if (hasPhysical) {
+          successMessage = "Order confirmed! We'll process your shipment shortly."
+        }
+        
+        toast.dismiss('checkout-processing')
+        toast.success(successMessage)
         console.log('[Checkout] ✅ Order completed successfully')
 
         // Clear cart in context to update header
         clearCart()
 
-        // Appointments were created automatically during checkout
-        // Redirect to confirmation page with order ID
-        router.push(`/dashboard/checkout/confirmation?orderId=${result.orderId}`)
+        // Redirect to dashboard overview after brief delay to show success message
+        setTimeout(() => router.push('/dashboard'), 1500)
       } else {
+        toast.dismiss('checkout-processing')
         console.error('[Checkout] ❌ Checkout failed:', result.error)
         
         // Specific error message if cart no longer exists
@@ -317,6 +348,7 @@ export default function CheckoutPage() {
         }
       }
     } catch (error) {
+      toast.dismiss('checkout-processing')
       console.error("Checkout error:", error)
       toast.error("An error occurred. Please try again.")
     } finally {
