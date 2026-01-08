@@ -2,6 +2,14 @@
 
 Bienvenue dans la documentation principale du projet.
 
+## 🏗️ Architecture & Maintenance
+
+- [**ARCHITECTURE**](./ARCHITECTURE.md) - Structure du projet, règles anti-doublons, workflow de développement (⭐ LECTURE OBLIGATOIRE)
+- [**ACTION_LOG**](./ACTION_LOG.md) - Journal des modifications et actions de maintenance
+- [**Vérification Globale 2026-01-08**](./VERIFICATION_GLOBALE_2026-01-08.md) - État de santé du projet et recommandations
+- [**Audit Doublons Complet**](./AUDIT_DOUBLONS_COMPLET_2026-01-08.md) - Audit des doublons dans Calendar/Chat/E-commerce
+- [**Corrections Doublons**](./CORRECTIONS_DOUBLONS_2026-01-08.md) - Corrections appliquées suite à l'audit
+
 ## Liens utiles
 
 - [Guide de démarrage rapide](./QUICK_START.md)

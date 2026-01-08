@@ -541,27 +541,24 @@ rm lib/checkout/checkout-service.ts
 **Option B : Migrer vers checkout-service.ts (meilleure architecture mais plus de travail)**
 ```
 
-### 3. RESTANT : Choisir une seule implémentation
+### 3. ✅ COMPLÉTÉ : Consolidation en Une Seule Implémentation
 
-**Option A : Garder ecommerce.ts (actuelle - recommandé)**
-```bash
-# Supprimer le fichier non utilisé
-rm lib/checkout/checkout-service.ts
-```
+**✅ IMPLÉMENTATION UNIQUE ACTIVE :**
 
-**Option B : Migrer vers checkout-service.ts (meilleure architecture mais plus de travail)**
+L'architecture a été consolidée le 8 janvier 2026. Il n'existe plus qu'une seule implémentation :
+
 ```typescript
-// 1. Dans app/(private)/dashboard/checkout/page.tsx
-- import { processCheckout } from '@/app/actions/ecommerce'
-+ import { processCheckout } from '@/lib/checkout/checkout-service'
-
-// 2. Ajouter les fonctionnalités manquantes de ecommerce.ts dans checkout-service
-//    - Gestion des coupons
-//    - Gestion des subscriptions Lago
-//    - Tout autre logique spécifique
-
-// 3. Supprimer app/actions/ecommerce.ts (ou garder seulement les autres actions)
+// Version Unique et Active :
+import { processCheckout } from '@/app/actions/ecommerce'
 ```
+
+**Fichiers supprimés :**
+- ❌ `lib/checkout/checkout-service.ts` (815 lignes - supprimé)
+- ❌ `lib/checkout/team-notifications.ts` (767 lignes - supprimé)
+
+**Références :**
+- Voir [AUDIT_DOUBLONS_COMPLET_2026-01-08.md](./AUDIT_DOUBLONS_COMPLET_2026-01-08.md)
+- Voir [CORRECTIONS_DOUBLONS_2026-01-08.md](./CORRECTIONS_DOUBLONS_2026-01-08.md)
 
 ### 4. RESTANT (OPTIONNEL) : Transaction globale
 
@@ -627,12 +624,13 @@ Le système de prise de rendez-vous fonctionne **correctement** dans son ensembl
 ### Prochaines Étapes
 
 ```
-1. 🔴 URGENT : Ajouter syncAppointmentToCalendars() dans ecommerce.ts
-2. 🔴 URGENT : Choisir et consolider une seule implémentation de processCheckout
-3. 🟡 MOYEN : Ajouter validation serveur des créneaux horaires
-4. 🟡 MOYEN : Wrapper dans une transaction database
-5. 🟢 PLUS TARD : Système de retry pour notifications échouées
+1. 🔴 CRITIQUE : Vérifier que syncAppointmentToCalendars() fonctionne correctement
+2. 🟡 RECOMMANDÉ : Ajouter validation serveur des créneaux horaires
+3. 🟡 RECOMMANDÉ : Wrapper dans une transaction database
+4. 🟢 FUTUR : Système de retry pour notifications échouées
 ```
+
+**REMARQUE :** Le doublon de code a été éliminé le 8 janvier 2026. Voir documentation d'audit pour détails.
 
 ---
 
