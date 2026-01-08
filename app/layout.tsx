@@ -2,12 +2,15 @@ import type React from "react"
 import Script from "next/script"
 
 import { ThemeProvider } from "@/components/common/theme-provider"
+import { DynamicThemeProvider } from "@/components/common/dynamic-theme-provider"
 import { BackToTop } from "@/components/common/back-to-top"
 import { Toaster } from "@/components/ui/sonner"
 import "@/styles/globals.css"
 
 import { GeistSans } from 'geist/font/sans'
 import { getPlatformConfig } from "@/lib/config"
+import { getThemeConfig } from "@/app/actions/theme-config"
+import { generateThemeCSS } from "@/components/common/dynamic-theme-provider"
 
 export async function generateMetadata() {
   try {
@@ -55,6 +58,7 @@ export default async function RootLayout({
   children: React.ReactNode
 }) {
   const config = await getPlatformConfig()
+  const themeConfig = await getThemeConfig()
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -62,6 +66,7 @@ export default async function RootLayout({
         {config.customHeaderCode && (
           <div dangerouslySetInnerHTML={{ __html: config.customHeaderCode }} />
         )}
+        <style dangerouslySetInnerHTML={{ __html: generateThemeCSS(themeConfig) }} />
       </head>
       <body className={GeistSans.className}>
         {config.gtmCode && (
@@ -76,9 +81,11 @@ export default async function RootLayout({
         )}
         
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          {children}
-          <BackToTop />
-          <Toaster />
+          <DynamicThemeProvider theme={themeConfig}>
+            {children}
+            <BackToTop />
+            <Toaster />
+          </DynamicThemeProvider>
         </ThemeProvider>
 
         {config.customFooterCode && (

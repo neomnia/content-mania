@@ -36,6 +36,7 @@ import {
 import { useRequireAdmin } from "@/lib/hooks/use-require-admin"
 import { LogsClient } from "@/app/(private)/admin/logs/logs-client"
 import { PagesSettings } from "@/components/admin/pages-settings"
+import { ThemeSettings } from "@/components/admin/theme-settings"
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -501,6 +502,9 @@ export default function AdminSettingsPage() {
           <TabsTrigger value="general" className="data-[state=active]:bg-[#CD7F32] data-[state=active]:text-white">
             General
           </TabsTrigger>
+          <TabsTrigger value="styles" className="data-[state=active]:bg-[#CD7F32] data-[state=active]:text-white">
+            Styles
+          </TabsTrigger>
           <TabsTrigger value="logs" className="data-[state=active]:bg-[#CD7F32] data-[state=active]:text-white">
             System Logs
           </TabsTrigger>
@@ -511,6 +515,10 @@ export default function AdminSettingsPage() {
 
         <TabsContent value="pages">
           <PagesSettings />
+        </TabsContent>
+
+        <TabsContent value="styles">
+          <ThemeSettings />
         </TabsContent>
 
         <TabsContent value="logs">

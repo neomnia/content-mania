@@ -2,6 +2,76 @@
 
 Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
 
+## [2026-01-08] - Système de Personnalisation de Thème 🎨
+
+### Nouvelle Fonctionnalité : Customisation Complète du Thème
+
+**Contexte:**
+Développement d'un système complet permettant aux administrateurs de personnaliser l'apparence du site (couleurs, styles) depuis l'interface admin, sans modification de code.
+
+**Fonctionnalités ajoutées:**
+
+1. **Interface Admin de Configuration**
+   - ✅ Nouvel onglet "Styles" dans Admin > Settings
+   - ✅ Color pickers avec conversion HSL ↔ HEX automatique
+   - ✅ Configuration séparée pour modes Clair et Sombre
+   - ✅ Sélection du mode d'affichage (Clair/Sombre/Auto)
+   - ✅ Prévisualisation en temps réel
+   - ✅ Bouton de réinitialisation
+   - ✅ Sauvegarde avec rechargement automatique
+
+2. **Système de Variables CSS**
+   - ✅ 25+ variables CSS configurables
+   - ✅ Variables de couleurs (primary, secondary, accent, etc.)
+   - ✅ Variables de typographie
+   - ✅ Variables d'espacement
+   - ✅ Support complet modes clair/sombre
+
+3. **Infrastructure Technique**
+   - ✅ Types TypeScript (`ThemeConfig`, `ColorPalette`)
+   - ✅ Actions serveur (get, update, reset, updateColors)
+   - ✅ Provider React (`DynamicThemeProvider`)
+   - ✅ Génération CSS pour SSR
+   - ✅ Stockage dans `platform_config` (pas de nouvelle table)
+
+**Fichiers créés:**
+- `types/theme-config.ts` - Types et thème par défaut
+- `app/actions/theme-config.ts` - Actions serveur
+- `components/admin/theme-settings.tsx` - Interface admin
+- `components/common/dynamic-theme-provider.tsx` - Provider React
+- `components/common/theme-example.tsx` - Composant d'exemple
+- `lib/theme/index.ts` - Point d'entrée centralisé
+- `scripts/init-theme.ts` - Script d'initialisation
+- `scripts/theme/README.md` - Documentation scripts
+
+**Documentation créée:**
+- ✅ `docs/THEME_CUSTOMIZATION_SYSTEM.md` - Documentation complète
+- ✅ `docs/THEME_CUSTOMIZATION_SUMMARY.md` - Résumé exécutif
+- ✅ `docs/THEME_QUICK_START.md` - Guide démarrage rapide
+- ✅ `docs/THEME_CHANGELOG.md` - Changelog détaillé
+
+**Fichiers modifiés:**
+- `app/layout.tsx` - Intégration DynamicThemeProvider
+- `app/(private)/admin/settings/page.tsx` - Ajout onglet Styles
+- `docs/README.md` - Référence à la documentation thème
+
+**Caractéristiques techniques:**
+- ✅ **Rétrocompatible** : Aucune modification requise aux composants existants
+- ✅ **Pas de migration** : Utilise `platform_config` existante
+- ✅ **Type-safe** : TypeScript strict
+- ✅ **SSR-ready** : Génération côté serveur
+- ✅ **Performant** : Variables CSS natives
+
+**Impact:**
+- ✅ Personnalisation complète sans code
+- ✅ Adaptation à la marque client en quelques clics
+- ✅ Interface intuitive pour non-développeurs
+- ✅ Maintien de la cohérence visuelle automatique
+
+**Référence:** Voir `docs/THEME_CUSTOMIZATION_SUMMARY.md` pour le résumé complet.
+
+---
+
 ## [2026-01-08] - Vérification Globale et Mise à Jour Documentation
 
 ### Audit de Vérification Complet du Projet

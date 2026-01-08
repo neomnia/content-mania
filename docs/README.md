@@ -22,10 +22,18 @@ Documentation technique sur l'architecture et les décisions de conception :
 
 ### � [E-Commerce & Admin](./admin/)
 Système d'administration et e-commerce :
+
 #### Interface Admin & UX 🎨
 - **[Admin UX Patterns](./ADMIN_UX_PATTERNS.md)** - 🎯 Règles UX pour l'interface admin (Sheet vs Dialog, Tables, Formulaires)
 - **[Admin Users & Companies Tables](./ADMIN_USERS_COMPANIES_TABLES.md)** - 👥🏢 Documentation des tableaux Users et Companies (tri, filtres, édition)
 - **[Admin Tables Responsive Rules](./ADMIN_TABLES_RESPONSIVE_RULES.md)** - 📱 Règles responsive pour les tableaux admin
+
+#### Personnalisation du Thème 🎨 🆕
+- **[Theme Customization Summary](./THEME_CUSTOMIZATION_SUMMARY.md)** - 📋 Résumé exécutif du système de personnalisation
+- **[Theme Customization System](./THEME_CUSTOMIZATION_SYSTEM.md)** - ⭐ Documentation complète du système de thème
+- **[Theme Quick Start](./THEME_QUICK_START.md)** - 🚀 Guide de démarrage rapide (5 minutes)
+- **[Theme Changelog](./THEME_CHANGELOG.md)** - 📝 Changelog et historique des versions
+
 #### Gestion des Produits (v2.0 - Panneau Unifié) 🆕
 - **[Products Summary](./PRODUCTS_SUMMARY.md)** - 📋 Résumé exécutif des modifications
 - **[Products Unified Panel](./PRODUCTS_UNIFIED_PANEL.md)** - ⭐ Documentation complète du panneau unifié
@@ -110,4 +118,4 @@ Pour toute question ou suggestion concernant la documentation :
 
 ---
 
-**Dernière mise à jour** : 2026-01-05
+**Dernière mise à jour** : 2026-01-08
