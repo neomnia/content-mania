@@ -130,7 +130,7 @@ Aucune migration requise. Le système :
 ### 👥 Contributeurs
 
 - Système développé le 8 janvier 2026
-- Intégration complète dans NeoSaaS
+- Intégration complète dans Content Mania
 
 ---
 

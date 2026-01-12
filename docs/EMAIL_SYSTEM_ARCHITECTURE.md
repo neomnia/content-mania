@@ -134,7 +134,7 @@ Pour éviter les rejets d'emails, il est crucial de définir une adresse d'expé
 
 1. Accédez à `/admin/config` (Configuration Générale)
 2. Dans la section "Email Settings", remplissez le champ **Default Sender Email**
-3. Exemple : `no-reply@neosaas.tech`
+3. Exemple : `no-reply@content-mania.tech`
 
 Cette adresse sera utilisée si aucun expéditeur n'est défini spécifiquement dans le template d'email.
 
@@ -192,7 +192,7 @@ const template = await db
 // 2. Remplacer les variables
 const variables = {
   firstName: 'Jean',
-  siteName: 'NeoSaaS',
+  siteName: 'Content Mania',
   actionUrl: 'https://example.com/verify',
 };
 
@@ -270,7 +270,7 @@ import { emailRouter } from '@/lib/email/services/email-router.service';
 const result = await emailRouter.sendEmail({
   to: 'destinataire@example.com',
   from: 'expediteur@votre-domaine.com',
-  fromName: 'NeoSaaS',
+  fromName: 'Content Mania',
   subject: 'Test email',
   htmlContent: '<h1>Bonjour</h1><p>Ceci est un email de test.</p>',
   textContent: 'Bonjour\n\nCeci est un email de test.',
@@ -291,7 +291,7 @@ curl -X POST http://localhost:3000/api/email/send \
   -d '{
     "to": "destinataire@example.com",
     "from": "expediteur@votre-domaine.com",
-    "fromName": "NeoSaaS",
+    "fromName": "Content Mania",
     "subject": "Test email",
     "htmlContent": "<h1>Bonjour</h1>",
     "textContent": "Bonjour"

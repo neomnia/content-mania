@@ -1,6 +1,6 @@
 # Guide de Configuration du Site
 
-Ce guide explique comment configurer les aspects globaux de votre site NeoSaaS via le panneau d'administration.
+Ce guide explique comment configurer les aspects globaux de votre site Content Mania via le panneau d'administration.
 
 ## Accès à la Configuration
 
@@ -36,7 +36,7 @@ Vous pouvez ajouter du code HTML/JS/CSS personnalisé globalement :
 
 ### 3. SEO & Social
 
-- **Site Title Template** : Format du titre des pages (ex: `%s | NeoSaaS`).
+- **Site Title Template** : Format du titre des pages (ex: `%s | Content Mania`).
 - **Base URL** : L'URL canonique de votre site.
 - **Default Meta Description** : Description par défaut pour les moteurs de recherche.
 - **Social Links** : Liens vers vos profils sociaux (Twitter, Facebook, LinkedIn, etc.).

@@ -4,7 +4,7 @@
 
 ### ✅ 1. Page de Confirmation de Commande - Traduction en Anglais
 
-**Fichier modifié :** [app/(private)/dashboard/checkout/confirmation/page.tsx](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/app/(private)/dashboard/checkout/confirmation/page.tsx)
+**Fichier modifié :** [app/(private)/dashboard/checkout/confirmation/page.tsx](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/app/(private)/dashboard/checkout/confirmation/page.tsx)
 
 #### Messages Traduits :
 
@@ -49,11 +49,11 @@
 
 #### Fichiers modifiés :
 
-1. **[lib/data/admin-dashboard.ts](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/lib/data/admin-dashboard.ts)**
+1. **[lib/data/admin-dashboard.ts](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/lib/data/admin-dashboard.ts)**
    - Import de `orderItems` et `products`
    - Ajout de 2 nouvelles requêtes SQL
 
-2. **[components/admin/dashboard-stats.tsx](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/components/admin/dashboard-stats.tsx)**
+2. **[components/admin/dashboard-stats.tsx](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/components/admin/dashboard-stats.tsx)**
    - Ajout de 2 nouveaux composants de carte
 
 #### Nouvelles Statistiques Ajoutées :

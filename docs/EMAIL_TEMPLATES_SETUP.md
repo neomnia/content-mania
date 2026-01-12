@@ -1,6 +1,6 @@
 # Configuration des Templates d'Email
 
-Ce document explique comment configurer et utiliser les templates d'email dans NeoSaaS.
+Ce document explique comment configurer et utiliser les templates d'email dans Content Mania.
 
 ## Templates Disponibles
 
@@ -53,7 +53,7 @@ Avant d'envoyer des emails, vous devez configurer un provider email (actuellemen
 ### Template `user_invitation`
 - `{{inviterName}}` - Nom de la personne qui invite
 - `{{companyName}}` - Nom de l'entreprise
-- `{{siteName}}` - Nom du site (NeoSaaS)
+- `{{siteName}}` - Nom du site (Content Mania)
 - `{{roleName}}` - Rôle assigné (Reader/Writer)
 - `{{actionUrl}}` - Lien d'acceptation de l'invitation
 
@@ -106,7 +106,7 @@ curl -X POST http://localhost:3000/api/email/send \
     "variables": {
       "firstName": "Test",
       "companyName": "Test Company",
-      "siteName": "NeoSaaS",
+      "siteName": "Content Mania",
       "actionUrl": "http://localhost:3000/dashboard"
     }
   }'
@@ -165,4 +165,4 @@ Pour activer les notifications admin lors de changements importants (création/m
 Pour toute question ou problème, consultez :
 - Documentation complète : `/docs/EMAIL_SYSTEM_ARCHITECTURE.md`
 - Logs système : Admin > Logs
-- Support : contact@neosaas.tech
+- Support : contact@content-mania.tech

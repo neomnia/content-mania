@@ -236,7 +236,7 @@ USER ACTION                  SYSTEM RESPONSE
 ## Hiérarchie des Fichiers
 
 ```
-neosaas-website/
+content-mania-website/
 ├── types/
 │   └── theme-config.ts           ← Types & Default Theme
 │

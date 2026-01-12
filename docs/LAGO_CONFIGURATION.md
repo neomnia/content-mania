@@ -1,6 +1,6 @@
 # Lago Billing Configuration
 
-NeoSaaS uses [Lago](https://getlago.com/) for billing and invoicing. You can connect to either a self-hosted Lago instance or the Lago Cloud.
+Content Mania uses [Lago](https://getlago.com/) for billing and invoicing. You can connect to either a self-hosted Lago instance or the Lago Cloud.
 
 ## Configuration
 
@@ -66,7 +66,7 @@ Payment methods are configured via toggles in Admin > Settings > Payments:
 
 ## Customer Portal & Payment Methods
 
-NeoSaaS integrates with Lago's **Customer Portal** to securely manage payment methods.
+Content Mania integrates with Lago's **Customer Portal** to securely manage payment methods.
 
 ### How it works
 
@@ -86,4 +86,4 @@ NeoSaaS integrates with Lago's **Customer Portal** to securely manage payment me
     *   `getCustomerPortalUrl()`: Generates the magic link for the portal.
     *   `getInvoices()`: Retrieves billing history.
 
-This approach ensures PCI compliance as sensitive card data is never handled directly by the NeoSaaS application.
+This approach ensures PCI compliance as sensitive card data is never handled directly by the Content Mania application.

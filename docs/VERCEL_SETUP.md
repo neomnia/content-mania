@@ -33,7 +33,7 @@ Vous devez ajouter les variables d'environnement suivantes dans votre projet Ver
 
 1. **Accédez à votre projet sur Vercel**
    - Allez sur [vercel.com](https://vercel.com)
-   - Sélectionnez votre projet `neosaas-website`
+   - Sélectionnez votre projet `content-mania-website`
 
 2. **Ouvrez les Paramètres**
    - Cliquez sur "Settings" dans le menu du projet

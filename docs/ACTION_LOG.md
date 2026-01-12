@@ -1,6 +1,6 @@
 # Journal des Actions et Modifications
 
-Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet NeoSaaS.
+Ce document retrace l'historique des modifications, des nouvelles fonctionnalités et des actions de maintenance effectuées sur le projet Content Mania.
 
 ## [2026-01-08] - Système de Personnalisation de Thème 🎨
 
@@ -1403,7 +1403,7 @@ Création d'une vraie page de liste avec :
 - **Nouveaux Templates** :
   - `email_update_notification` : Notification de sécurité lors du changement d'email.
   - `password_reset` : Envoi du lien de réinitialisation de mot de passe.
-  - `account_deletion` : Mise à jour avec branding NeoSaaS et confirmation de suppression des données.
+  - `account_deletion` : Mise à jour avec branding Content Mania et confirmation de suppression des données.
 - **Corrections Backend** :
   - **Inscription** : Correction de la clé `email_verification` et de la variable `actionUrl`.
   - **Invitation** : Correction du mapping `actionUrl` et gestion du `companyId` pour les admins plateforme.
@@ -1609,7 +1609,7 @@ Puisque `middleware.ts` n'existe plus dans Next.js 16, le mode maintenance est g
 ### API publique de configuration
 - **Nouveau fichier `app/api/config/route.ts`** :
   - Endpoint GET public (sans authentification) pour récupérer le nom du site et le logo.
-  - Fallback sur "NeoSaaS" si aucune configuration n'est définie en base.
+  - Fallback sur "Content Mania" si aucune configuration n'est définie en base.
 
 ### Layouts mis à jour
 - **`app/(public)/layout.tsx`** : Ajout du `PlatformConfigProvider` pour les pages publiques.

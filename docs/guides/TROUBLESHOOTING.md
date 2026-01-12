@@ -11,7 +11,7 @@ Si vous testez l'inscription/connexion et que rien ne se passe ou que vous obten
 ### Option A : Via l'Interface Vercel
 
 1. Allez sur [vercel.com](https://vercel.com)
-2. Ouvrez votre projet `neosaas-website`
+2. Ouvrez votre projet `content-mania-website`
 3. Cliquez sur **Deployments**
 4. Cliquez sur le déploiement actuel
 5. Allez dans l'onglet **Functions**

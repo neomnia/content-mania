@@ -6,7 +6,7 @@ Votre token est déjà configuré dans le script. Exécutez simplement :
 
 \`\`\`bash
 # Sur votre machine locale (pas dans le sandbox)
-cd /chemin/vers/neosaas-website
+cd /chemin/vers/content-mania-website
 bash configure-vercel-preview.sh
 \`\`\`
 
@@ -26,7 +26,7 @@ Vercel va détecter les nouvelles variables et redéployer automatiquement votre
 ### 2. Trouver votre URL Preview
 Votre URL Preview se trouve dans :
 - **GitHub** : Pull Request → Checks → Vercel → Details
-- **Format** : `https://neosaas-website-git-[branch]-[team].vercel.app`
+- **Format** : `https://content-mania-website-git-[branch]-[team].vercel.app`
 
 ### 3. Vérifier que les variables sont configurées
 \`\`\`bash
@@ -103,7 +103,7 @@ Remplissez le formulaire et créez un utilisateur admin.
 
 Si le script ne fonctionne pas, configurez manuellement :
 
-1. **Allez sur** https://vercel.com/team_CcA0AyPtSPVhRijEsDRmyjpa/neosaas-website/settings/environment-variables
+1. **Allez sur** https://vercel.com/team_CcA0AyPtSPVhRijEsDRmyjpa/content-mania-website/settings/environment-variables
 
 2. **Ajoutez ces 3 variables pour Preview** :
 

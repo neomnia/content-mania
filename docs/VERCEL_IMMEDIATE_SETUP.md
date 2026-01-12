@@ -16,7 +16,7 @@
 
 \`\`\`bash
 # Sur votre machine locale
-cd /path/to/neosaas-website
+cd /path/to/content-mania-website
 bash scripts/vercel-api-setup.sh YOUR_VERCEL_TOKEN
 \`\`\`
 
@@ -33,7 +33,7 @@ Si vous préférez le contrôle total, utilisez ces commandes :
 \`\`\`bash
 export VERCEL_TOKEN="votre_token_ici"
 export TEAM_ID="team_CcA0AyPtSPVhRijEsDRmyjpa"
-export PROJECT_NAME="neosaas-website"
+export PROJECT_NAME="content-mania-website"
 \`\`\`
 
 ### 1. Obtenir l'ID du Projet
@@ -110,7 +110,7 @@ Remplacez `YOUR_TOKEN_HERE` et exécutez :
 # Configuration
 export VERCEL_TOKEN="YOUR_TOKEN_HERE"
 export TEAM_ID="team_CcA0AyPtSPVhRijEsDRmyjpa"
-export PROJECT_NAME="neosaas-website"
+export PROJECT_NAME="content-mania-website"
 
 # Obtenir l'ID du projet
 PROJECT_ID=$(curl -s "https://api.vercel.com/v9/projects/$PROJECT_NAME?teamId=$TEAM_ID" \
@@ -170,7 +170,7 @@ Après configuration (attendez le redéploiement ~2 min) :
 ### 1. Vérifier les Variables
 
 \`\`\`bash
-curl https://neosaas-website-git-claude-verify-login-drizzle-[...].vercel.app/api/debug/env
+curl https://content-mania-website-git-claude-verify-login-drizzle-[...].vercel.app/api/debug/env
 \`\`\`
 
 **Réponse attendue :**
@@ -214,7 +214,7 @@ L'URL Preview de votre branche est visible dans :
 
 1. **GitHub** : Pull Request → Checks → Vercel → Details
 2. **Vercel Dashboard** : Deployments → Cliquez sur le déploiement Preview
-3. **Format** : `https://neosaas-website-git-[branch-name]-[team-slug].vercel.app`
+3. **Format** : `https://content-mania-website-git-[branch-name]-[team-slug].vercel.app`
 
 ---
 

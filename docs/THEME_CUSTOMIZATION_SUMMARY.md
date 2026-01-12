@@ -114,8 +114,8 @@ const theme = await getThemeConfig()
 
 ### Modifications sur l'Existant
 - ✅ **Minimal** : Seulement 2 fichiers modifiés
-  - [app/layout.tsx](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/neosaastech/neosaas-website/app/layout.tsx) (ajout du provider)
-  - [app/(private)/admin/settings/page.tsx](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/neosaastech/neosaas-website/app/%28private%29/admin/settings/page.tsx) (ajout de l'onglet)
+  - [app/layout.tsx](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/content-maniatech/content-mania-website/app/layout.tsx) (ajout du provider)
+  - [app/(private)/admin/settings/page.tsx](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/content-maniatech/content-mania-website/app/%28private%29/admin/settings/page.tsx) (ajout de l'onglet)
 
 ### Aucune Migration Requise
 - ✅ Utilise la table `platform_config` existante
@@ -137,7 +137,7 @@ const theme = await getThemeConfig()
 
 ## 📖 Documentation
 
-Documentation complète disponible dans [docs/THEME_CUSTOMIZATION_SYSTEM.md](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/neosaastech/neosaas-website/docs/THEME_CUSTOMIZATION_SYSTEM.md)
+Documentation complète disponible dans [docs/THEME_CUSTOMIZATION_SYSTEM.md](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/content-maniatech/content-mania-website/docs/THEME_CUSTOMIZATION_SYSTEM.md)
 
 Contient :
 - Guide d'utilisation complet
@@ -148,7 +148,7 @@ Contient :
 
 ## 🧪 Exemple de Composant
 
-Un composant d'exemple est disponible dans [components/common/theme-example.tsx](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/neosaastech/neosaas-website/components/common/theme-example.tsx) démontrant toutes les utilisations possibles.
+Un composant d'exemple est disponible dans [components/common/theme-example.tsx](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/content-maniatech/content-mania-website/components/common/theme-example.tsx) démontrant toutes les utilisations possibles.
 
 ## 🔄 Prochaines Étapes Possibles
 
@@ -191,7 +191,7 @@ Un composant d'exemple est disponible dans [components/common/theme-example.tsx]
 ## 📞 Support
 
 En cas de problème :
-1. Consulter [docs/THEME_CUSTOMIZATION_SYSTEM.md](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/neosaastech/neosaas-website/docs/THEME_CUSTOMIZATION_SYSTEM.md)
+1. Consulter [docs/THEME_CUSTOMIZATION_SYSTEM.md](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/content-maniatech/content-mania-website/docs/THEME_CUSTOMIZATION_SYSTEM.md)
 2. Vérifier la console du navigateur
 3. Tester la réinitialisation du thème
 4. Vérifier la base de données (`platform_config` avec clé `theme_config`)

@@ -1,6 +1,6 @@
 # 🚀 Quick Start - Initialisation en 3 Minutes
 
-Ce guide vous permet de démarrer rapidement avec l'authentification NeoSaaS.
+Ce guide vous permet de démarrer rapidement avec l'authentification Content Mania.
 
 ---
 

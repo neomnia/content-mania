@@ -70,9 +70,9 @@ L'onglet "General" est organisé en **modules logiques indépendants** pour une 
 
 **Contenu** :
 - **Site Title Template** - Template du titre de page (utiliser `%s` pour le titre de la page)
-  - Exemple : `%s | NeoSaaS`
+  - Exemple : `%s | Content Mania`
 - **Base URL** - URL de base pour les métadonnées
-  - Exemple : `https://neosaas.com`
+  - Exemple : `https://content-mania.com`
 - **Default Meta Description** - Description par défaut pour les pages sans description spécifique
 
 **Auto-sauvegarde** : ✅ Toutes les modifications sont sauvegardées automatiquement
@@ -310,10 +310,10 @@ onClick={() => setForceHttps(!forceHttps)}
 
 ```typescript
 const seoSettings = {
-  titleTemplate: "%s | NeoSaaS",
-  baseUrl: "https://neosaas.com",
+  titleTemplate: "%s | Content Mania",
+  baseUrl: "https://content-mania.com",
   description: "The ultimate solution for your SaaS application.",
-  ogTitle: "NeoSaaS - Modern Admin Dashboard",
+  ogTitle: "Content Mania - Modern Admin Dashboard",
   ogDescription: "The ultimate solution for your SaaS application.",
   ogImage: "/og-image.jpg"
 }

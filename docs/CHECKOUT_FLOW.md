@@ -1049,7 +1049,7 @@ pnpm tsx scripts/test-checkout-flow.ts --no-cleanup
 #### Ce que le script teste
 
 1. ✅ **Création/Recherche utilisateur de test**
-   - Email: `test-checkout@neosaas.com`
+   - Email: `test-checkout@content-mania.com`
    - Création automatique si inexistant
 
 2. ✅ **Récupération/Création de produits de test**
@@ -1084,7 +1084,7 @@ pnpm tsx scripts/test-checkout-flow.ts --no-cleanup
 🔍 Étape 1: Recherche/Création utilisateur de test
 ✅ Recherche utilisateur test
    Utilisateur existant trouvé
-   Data: { "userId": "...", "email": "test-checkout@neosaas.com" }
+   Data: { "userId": "...", "email": "test-checkout@content-mania.com" }
 
 🛍️ Étape 2: Récupération des produits de test
 ✅ Récupération produits
