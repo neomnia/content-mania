@@ -1,8 +1,8 @@
-# Architecture du Projet NeoSaaS
+# Architecture du Projet Content Mania
 
 ## 🎯 Vue d'Ensemble
 
-NeoSaaS est une plateforme SaaS Next.js 14+ avec App Router, construite sur une architecture modulaire et scalable.
+Content Mania est une plateforme SaaS Next.js 14+ avec App Router, construite sur une architecture modulaire et scalable.
 
 **Stack Technique Principal:**
 - **Framework:** Next.js 14+ (App Router)
@@ -370,4 +370,4 @@ npm run lint
 
 **Date de création:** 8 janvier 2026  
 **Dernière mise à jour:** 8 janvier 2026  
-**Mainteneurs:** Équipe de développement NeoSaaS
+**Mainteneurs:** Équipe de développement Content Mania

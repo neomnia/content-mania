@@ -2,7 +2,7 @@
 
 ## Vue d'Ensemble
 
-Ce document décrit le flux d'authentification et le processus d'onboarding pour les nouveaux utilisateurs de NeoSaaS.
+Ce document décrit le flux d'authentification et le processus d'onboarding pour les nouveaux utilisateurs de Content Mania.
 
 ## Flux de Connexion
 

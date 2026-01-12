@@ -539,7 +539,7 @@ rm app/(private)/admin/products/product-form.tsx
 
 ## 📄 Licence
 
-Même licence que le projet NeoSaaS
+Même licence que le projet Content Mania
 
 ---
 

@@ -1,6 +1,6 @@
 # Modèle de Données (Data Model)
 
-Ce document décrit la structure de la base de données de NeoSaaS, en particulier les tables principales modifiées récemment.
+Ce document décrit la structure de la base de données de Content Mania, en particulier les tables principales modifiées récemment.
 
 ## 🏢 Companies (Entreprises)
 

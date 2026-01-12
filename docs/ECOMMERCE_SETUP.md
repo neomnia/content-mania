@@ -1,6 +1,6 @@
 # E-Commerce Plugin Setup
 
-This module adds e-commerce capabilities to the NeoSaaS application, allowing you to sell products and services directly from the dashboard.
+This module adds e-commerce capabilities to the Content Mania application, allowing you to sell products and services directly from the dashboard.
 
 ## Features
 

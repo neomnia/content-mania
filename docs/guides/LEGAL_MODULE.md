@@ -1,6 +1,6 @@
 # Guide du Module Légal (DSA & RGPD)
 
-Ce guide explique comment configurer et gérer les aspects légaux de votre plateforme NeoSaaS, incluant la conformité DSA (Digital Services Act) et RGPD.
+Ce guide explique comment configurer et gérer les aspects légaux de votre plateforme Content Mania, incluant la conformité DSA (Digital Services Act) et RGPD.
 
 ## 1. Vue d'ensemble
 

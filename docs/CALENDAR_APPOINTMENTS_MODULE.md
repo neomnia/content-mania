@@ -757,7 +757,7 @@ The client dashboard includes a Support/Help Center page (`/dashboard/support`) 
 - **Quick Actions**:
   - Documentation link
   - Live chat button
-  - Email contact (support@neosaas.com)
+  - Email contact (support@content-mania.com)
 - **Contact Form**: Submit support tickets with category selection
 - **Tips Section**: Helpful guidance for users
 

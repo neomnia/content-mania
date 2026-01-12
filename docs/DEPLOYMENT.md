@@ -1,4 +1,4 @@
-# 🚀 Guide de Déploiement - NeoSaaS
+# Guide de Deploiement - Content Mania
 
 ## Architecture de branches
 
@@ -10,13 +10,41 @@ main     → Production (auto-deploy sur Vercel Production)
 
 ## Variables d'environnement
 
-### Obligatoires pour tous les environnements
+### Configuration Neon PostgreSQL
+
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| `DATABASE_URL` | URL avec pooler PgBouncer (recommande) | `postgresql://user:pass@host-pooler.region.aws.neon.tech/db?sslmode=require` |
+| `DATABASE_URL_UNPOOLED` | URL directe (pour migrations) | `postgresql://user:pass@host.region.aws.neon.tech/db?sslmode=require` |
+
+### Parametres individuels PostgreSQL (optionnel)
+
+| Variable | Description |
+|----------|-------------|
+| `PGHOST` | Hostname avec pooler |
+| `PGHOST_UNPOOLED` | Hostname direct |
+| `PGUSER` | Nom d'utilisateur |
+| `PGPASSWORD` | Mot de passe |
+| `PGDATABASE` | Nom de la base |
+
+### Variables Vercel Postgres (compatibilite)
+
+| Variable | Description |
+|----------|-------------|
+| `POSTGRES_URL` | URL avec pooler |
+| `POSTGRES_URL_NON_POOLING` | URL directe |
+| `POSTGRES_USER` | Utilisateur |
+| `POSTGRES_HOST` | Hostname |
+| `POSTGRES_PASSWORD` | Mot de passe |
+| `POSTGRES_DATABASE` | Base de donnees |
+| `POSTGRES_PRISMA_URL` | URL optimisee pour Prisma |
+
+### Configuration NextAuth
 
 | Variable | Description | Exemple |
 |----------|-------------|---------|
 | `NEXTAUTH_SECRET` | Secret pour JWT + Cryptage (min 32 chars) | `bGpraDUyNDk4Nzk4Nzk4Nzk4Nw==` |
-| `NEXTAUTH_URL` | URL de l'application | `https://app.neosaas.com` |
-| `DATABASE_URL` | PostgreSQL Neon | `postgresql://user:pass@host/db` |
+| `NEXTAUTH_URL` | URL de l'application | `https://app.content-mania.com` |
 
 ### Configuration Vercel
 
@@ -212,5 +240,5 @@ openssl rand -base64 32
 ## Support
 
 Pour toute question :
-- GitHub Issues : [neosaastech/neosaas-website](https://github.com/neosaastech/neosaas-website)
+- GitHub Issues : [content-maniatech/content-mania-website](https://github.com/content-maniatech/content-mania-website)
 - Documentation : `/docs`

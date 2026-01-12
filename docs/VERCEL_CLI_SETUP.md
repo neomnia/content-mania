@@ -12,8 +12,8 @@ Vous devez avoir Node.js installé sur votre machine locale.
 
 \`\`\`bash
 # 1. Clonez le projet (si pas déjà fait)
-git clone https://github.com/neosaastech/neosaas-website.git
-cd neosaas-website
+git clone https://github.com/content-maniatech/content-mania-website.git
+cd content-mania-website
 
 # 2. Checkout la branche
 git checkout claude/verify-login-drizzle-01HF1jqGHBTx6NzXTUqr3suS
@@ -55,11 +55,11 @@ Suivez les instructions pour vous connecter avec votre compte Vercel.
 ### 3. Lier le Projet
 
 \`\`\`bash
-cd /path/to/neosaas-website
+cd /path/to/content-mania-website
 vercel link
 \`\`\`
 
-Sélectionnez votre projet `neosaas-website`.
+Sélectionnez votre projet `content-mania-website`.
 
 ### 4. Ajouter les Variables
 
@@ -145,7 +145,7 @@ vercel whoami
 Si vous préférez l'interface graphique :
 
 1. **Allez sur** [vercel.com/dashboard](https://vercel.com/dashboard)
-2. **Sélectionnez** votre projet `neosaas-website`
+2. **Sélectionnez** votre projet `content-mania-website`
 3. **Cliquez** sur **Settings**
 4. **Cliquez** sur **Environment Variables**
 5. **Ajoutez** chaque variable avec le bouton "Add New"
@@ -304,7 +304,7 @@ npm install -g vercel
 vercel login
 
 # 2. Lier le projet
-cd /path/to/neosaas-website
+cd /path/to/content-mania-website
 vercel link
 
 # 3. Ajouter les variables (automatique)

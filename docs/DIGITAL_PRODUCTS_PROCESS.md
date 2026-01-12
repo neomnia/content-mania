@@ -10,7 +10,7 @@ Ce document décrit le processus complet de commande pour les produits numériqu
 
 ### 1. **Génération Automatique de Clés de Licence**
 
-**Fichier:** [lib/license-key-generator.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/lib/license-key-generator.ts)
+**Fichier:** [lib/license-key-generator.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/lib/license-key-generator.ts)
 
 #### Fonctions disponibles :
 
@@ -50,7 +50,7 @@ return `${prefix}-${randomSegments()}` // "ADOB-A3F2-9K7M-1B4N"
 
 Lors du checkout, chaque produit digital génère une clé de licence unique qui est stockée dans le champ `metadata` de l'`orderItem`.
 
-**Fichier:** [app/actions/ecommerce.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/app/actions/ecommerce.ts) - fonction `processCheckout()`
+**Fichier:** [app/actions/ecommerce.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/app/actions/ecommerce.ts) - fonction `processCheckout()`
 
 ```typescript
 // Génération de clé pour produit digital
@@ -96,7 +96,7 @@ await db.insert(orderItems).values({
 
 ### 3. **Notifications Client - Accès aux Produits Digitaux**
 
-**Fichier:** [lib/notifications/admin-notifications.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/lib/notifications/admin-notifications.ts)
+**Fichier:** [lib/notifications/admin-notifications.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/lib/notifications/admin-notifications.ts)
 
 #### Fonction : `notifyClientDigitalProductAccess()`
 
@@ -135,7 +135,7 @@ View your order details: [dashboard](/dashboard/checkout/confirmation?orderId=xx
 
 ### 4. **Notifications Admin - Vente de Produits Digitaux**
 
-**Fichier:** [lib/notifications/admin-notifications.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/lib/notifications/admin-notifications.ts)
+**Fichier:** [lib/notifications/admin-notifications.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/lib/notifications/admin-notifications.ts)
 
 #### Fonction : `notifyAdminDigitalProductSale()`
 
@@ -167,7 +167,7 @@ Manage order: [admin dashboard](/admin/orders/xxx)
 
 ## 🎨 Page de Confirmation - Affichage des Produits Digitaux
 
-**Fichier:** [app/(private)/dashboard/checkout/confirmation/page.tsx](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/app/(private)/dashboard/checkout/confirmation/page.tsx)
+**Fichier:** [app/(private)/dashboard/checkout/confirmation/page.tsx](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/app/(private)/dashboard/checkout/confirmation/page.tsx)
 
 ### Fonctionnalités ajoutées :
 
@@ -343,11 +343,11 @@ sequenceDiagram
 
 | Fichier | Statut | Description |
 |---------|--------|-------------|
-| [lib/license-key-generator.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/lib/license-key-generator.ts) | ✅ Créé | Générateur de clés de licence |
-| [lib/notifications/admin-notifications.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/lib/notifications/admin-notifications.ts) | ✅ Modifié | +2 fonctions notification |
-| [lib/notifications/index.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/lib/notifications/index.ts) | ✅ Modifié | Exports ajoutés |
-| [app/actions/ecommerce.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/app/actions/ecommerce.ts) | ✅ Modifié | Génération clé + notifications |
-| [app/(private)/dashboard/checkout/confirmation/page.tsx](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/neosaastech/neosaas-website/app/(private)/dashboard/checkout/confirmation/page.tsx) | ✅ Modifié | Section produits digitaux |
+| [lib/license-key-generator.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/lib/license-key-generator.ts) | ✅ Créé | Générateur de clés de licence |
+| [lib/notifications/admin-notifications.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/lib/notifications/admin-notifications.ts) | ✅ Modifié | +2 fonctions notification |
+| [lib/notifications/index.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/lib/notifications/index.ts) | ✅ Modifié | Exports ajoutés |
+| [app/actions/ecommerce.ts](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/app/actions/ecommerce.ts) | ✅ Modifié | Génération clé + notifications |
+| [app/(private)/dashboard/checkout/confirmation/page.tsx](vscode-vfs://github+7b2276223a312c22726566223a7b2274797065223a342c226964223a22636c617564652f6669782d63616c656e6461722d636c69636b2d6572726f72732d734e6a6a76227d7d/content-maniatech/content-mania-website/app/(private)/dashboard/checkout/confirmation/page.tsx) | ✅ Modifié | Section produits digitaux |
 
 ---
 

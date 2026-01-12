@@ -1,11 +1,11 @@
-# 📚 Documentation NeoSaaS
+# Documentation Content Mania
 
-Bienvenue dans la documentation complète de NeoSaaS. Cette documentation est organisée par catégories pour faciliter la navigation et la maintenance.
+Bienvenue dans la documentation de Content Mania. Cette documentation est organisee par categories pour faciliter la navigation et la maintenance.
 
 ## 📖 Table des Matières
 
 ### 🚀 [Guides](./guides/)
-Guides pratiques pour démarrer et utiliser NeoSaaS :
+Guides pratiques pour démarrer et utiliser Content Mania :
 
 - **[Quick Start](./guides/QUICK_START.md)** - Démarrage rapide du projet
 - **[Authentication & Onboarding](./AUTHENTICATION_ONBOARDING.md)** - Système d'authentification et onboarding utilisateur

@@ -1,4 +1,4 @@
-# 🔐 Bonnes Pratiques de Sécurité - NeoSaaS
+# 🔐 Bonnes Pratiques de Sécurité - Content Mania
 
 ## Architecture de sécurité
 

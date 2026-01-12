@@ -1,6 +1,6 @@
 # Module E-Commerce & Marketplace
 
-Ce document décrit le fonctionnement et l'architecture du module E-Commerce intégré à NeoSaaS.
+Ce document décrit le fonctionnement et l'architecture du module E-Commerce intégré à Content Mania.
 
 ## Vue d'Ensemble
 

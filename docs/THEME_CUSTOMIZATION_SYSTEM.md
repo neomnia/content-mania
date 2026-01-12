@@ -257,14 +257,14 @@ Le composant `ThemeSettings` inclut des fonctions de conversion automatique :
 
 ### Ajouter une nouvelle couleur
 
-1. Ajouter à `ColorPalette` dans [types/theme-config.ts](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/neosaastech/neosaas-website/types/theme-config.ts)
+1. Ajouter à `ColorPalette` dans [types/theme-config.ts](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/content-maniatech/content-mania-website/types/theme-config.ts)
 2. Ajouter aux thèmes par défaut `light` et `dark`
 3. Ajouter dans `ThemeSettings` pour l'interface admin
 4. La variable CSS sera automatiquement générée
 
 ### Modifier le thème par défaut
 
-Éditez [types/theme-config.ts](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/neosaastech/neosaas-website/types/theme-config.ts) :
+Éditez [types/theme-config.ts](vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a22636f6e74656e74227d7d/content-maniatech/content-mania-website/types/theme-config.ts) :
 
 ```typescript
 export const defaultTheme: ThemeConfig = {

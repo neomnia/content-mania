@@ -80,7 +80,7 @@ Ces variables **doivent être configurées** dans Vercel pour l'environnement **
 | `ADMIN_SECRET_KEY` | Clé pour endpoint /api/setup | ⚠️ Optionnel |
 
 **Configuration via Vercel Dashboard** :
-👉 https://vercel.com/[team]/neosaas-website/settings/environment-variables
+👉 https://vercel.com/[team]/content-mania-website/settings/environment-variables
 
 **Pour chaque variable** :
 - ✅ Cochez **Preview** uniquement
@@ -289,7 +289,7 @@ git push origin feature/new-auth
 # ✅ L'application est prête à tester
 
 # 6. Tester l'URL Preview
-open https://neosaas-website-git-feature-new-auth-[team].vercel.app
+open https://content-mania-website-git-feature-new-auth-[team].vercel.app
 \`\`\`
 
 ## 📝 Notes
